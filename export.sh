@@ -1,0 +1,5 @@
+pyuic5 -x "designer/MainWindow.ui" -o "src/ui/MainWindow.py"
+pyuic5 -x "designer/tf_window.ui" -o "src/ui/tf_window.py"
+pyuic5 -x "designer/case_window.ui" -o "src/ui/case_window.py"
+pyuic5 -x "designer/response_window.ui" -o "src/ui/response_window.py"
+echo "DONE"

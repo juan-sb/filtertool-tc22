@@ -1,0 +1,639 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>case_dialog</class>
+ <widget class="QDialog" name="case_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>464</width>
+    <height>364</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Case line addition</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_3">
+   <item row="2" column="0">
+    <widget class="QDialogButtonBox" name="OK_btn">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="error_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout" rowstretch="10,0,0,0,0,0,0,0,0" columnstretch="0,0,0,0,0">
+     <item row="6" column="0">
+      <widget class="QLabel" name="label_13">
+       <property name="text">
+        <string>X offset</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="ScienDSpinBox" name="case_xscale_sb">
+       <property name="value">
+        <double>1.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="3">
+      <widget class="QLabel" name="label_12">
+       <property name="text">
+        <string>Y scale</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QComboBox" name="case_style_cb">
+       <property name="currentText">
+        <string>None</string>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>None</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Solid</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Dashed</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Dash-dot</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Dotted</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="4" column="4">
+      <widget class="QComboBox" name="case_transform_cb">
+       <item>
+        <property name="text">
+         <string>None</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>dB: 20log(.)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>dBW: 10log(.)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>dBm: 10log(.) + 30</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>First case:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="4">
+      <widget class="ScienDSpinBox" name="case_yscale_sb">
+       <property name="value">
+        <double>1.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>X data</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="3">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>Line width</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QComboBox" name="case_render_cb">
+       <item>
+        <property name="text">
+         <string>Plot 1</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plot 2.1</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plot 2.2</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plot 3</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plot 4.1</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plot 4.2</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plot 5</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="8" column="4">
+      <widget class="QDoubleSpinBox" name="case_markersize_sb">
+       <property name="decimals">
+        <number>1</number>
+       </property>
+       <property name="minimum">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>20.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="value">
+        <double>2.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="case_first_cb"/>
+     </item>
+     <item row="0" column="3">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Last case:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="4">
+      <widget class="QComboBox" name="case_last_cb"/>
+     </item>
+     <item row="8" column="0">
+      <widget class="QLabel" name="label_8">
+       <property name="text">
+        <string>Mark style</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Y data</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="3">
+      <widget class="QLabel" name="label_9">
+       <property name="text">
+        <string>Mark width</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_10">
+       <property name="text">
+        <string>Plot</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="4">
+      <widget class="QComboBox" name="case_ydata_cb"/>
+     </item>
+     <item row="6" column="3">
+      <widget class="QLabel" name="label_14">
+       <property name="text">
+        <string>Y offset</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="1">
+      <widget class="QComboBox" name="case_marker_cb">
+       <property name="currentText">
+        <string>Point</string>
+       </property>
+       <property name="currentIndex">
+        <number>1</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>None</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Point</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pixel</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Circle</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Triangle down</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Triangle up</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Triangle left</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Triangle right</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tri down</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tri up</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tri left</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tri right</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Octagon</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Square</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pentagon</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plus (filled)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Star</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Hexagon</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Hexagon alt.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Plus</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>x</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>x (filled)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Diamond</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Diamond (thin)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Vline</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Hline</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="5">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>Color</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="1">
+         <widget class="QRadioButton" name="case_presetcol_rb">
+          <property name="text">
+           <string>Preset:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QComboBox" name="case_palettecol_cb">
+          <item>
+           <property name="text">
+            <string>Solid palette</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Blue palette</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Green palette</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Red palette</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Hot palette</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Cold palette</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Diverging palette</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Diverging palette 2</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QRadioButton" name="case_randomcol_rb">
+          <property name="text">
+           <string>Random</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QRadioButton" name="case_singlecol_rb">
+            <property name="text">
+             <string>Single:</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="case_pickcol_btn">
+            <property name="text">
+             <string>Pick</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="0" column="3">
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="3" column="0" colspan="5">
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="title">
+        <string>Naming</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,0,0" columnstretch="1,0,0,0">
+        <item row="1" column="0">
+         <widget class="QCheckBox" name="case_addlegend_cb">
+          <property name="text">
+           <string>Add labels to legend</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3">
+         <widget class="QRadioButton" name="case_inforname_rb">
+          <property name="text">
+           <string>Case info</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QRadioButton" name="case_numname_rb">
+          <property name="text">
+           <string>Numbered</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Line style</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QComboBox" name="case_xdata_cb"/>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_11">
+       <property name="text">
+        <string>X scale</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="3">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>Transform</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="4">
+      <widget class="QDoubleSpinBox" name="case_linewidth_sb">
+       <property name="decimals">
+        <number>1</number>
+       </property>
+       <property name="minimum">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="value">
+        <double>1.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="ScienDSpinBox" name="case_xoffset_sb">
+       <property name="value">
+        <double>0.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="4">
+      <widget class="ScienDSpinBox" name="case_yoffset_sb">
+       <property name="value">
+        <double>0.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ScienDSpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>src.widgets.scientific_spinbox</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>OK_btn</sender>
+   <signal>accepted()</signal>
+   <receiver>case_dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>OK_btn</sender>
+   <signal>rejected()</signal>
+   <receiver>case_dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
