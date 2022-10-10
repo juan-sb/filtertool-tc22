@@ -10,6 +10,7 @@ pi = np.pi
 
 LOW_PASS, HIGH_PASS, BAND_PASS, BAND_REJECT, GROUP_DELAY = range(5)
 BUTTERWORTH, CHEBYSHEV, CHEBYSHEV2, CAUER, LEGENDRE, BESSEL, GAUSS = range(7)
+TEMPLATE_FREQS, F0_BW = range(2)
 filter_types = ['lowpass', 'highpass', 'bandpass', 'bandstop']
 
 def get_Leps(n, eps):
@@ -77,12 +78,42 @@ class Filter():
                 assert self.gp_dB > self.ga_dB
                 assert self.fp > self.fa
             if self.filter_type == BAND_PASS:
-                assert self.gp_dB > self.ga_dB
-                assert self.fp < self.fa
+                assert self.gp_dB > self.ga_dB 
+                if self.define_with == TEMPLATE_FREQS:
+                    assert self.fa_min < self.fp_min
+                    assert self.fp_min < self.fp_max
+                    assert self.fp_max < self.fa_max
+                    self.f0 = np.sqrt(self.fp_min*self.fp_max) # me quedo con las frecuencias centrales
+                    self.bw_min = self.fp_max - self.fp_min # y los anchos de banda
+                    self.bw_max = self.fa_max - self.fa_min
+                elif self.define_with == F0_BW:
+                    assert self.bw_min < self.bw_max
+                    self.fp_min = 0.5 * (-self.bw_min + np.sqrt(self.bw_min**2 + 4*(self.f0**2))) #defino las frecuencias centrales a partir del ancho de banda
+                    self.fp_max = self.fp_min + self.bw_min
+                self.fa_min = 0.5 * (-self.bw_max + np.sqrt(self.bw_max**2 + 4*(self.f0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
+                self.fa_max = self.fa_min + self.bw_max
+
             if self.filter_type == BAND_REJECT:
-                assert self.gp_dB > self.ga_dB
-                assert self.fp < self.fa
+                assert self.gp_dB > self.ga_dB 
+                if self.define_with == TEMPLATE_FREQS:
+                    assert self.fp_min < self.fa_min
+                    assert self.fa_min < self.fa_max
+                    assert self.fa_max < self.fp_max
+                    self.f0 = np.sqrt(self.fa_min*self.fa_max) # me quedo con las frecuencias centrales
+                    self.bw_min = self.fa_max - self.fa_min # y los anchos de banda
+                    self.bw_max = self.fp_max - self.fp_min
+                elif self.define_with == F0_BW:
+                    assert self.bw_min < self.bw_max
+                    self.fa_min = 0.5 * (-self.bw_min + np.sqrt(self.bw_min**2 + 4*(self.f0**2))) #defino las frecuencias centrales a partir del ancho de banda
+                    self.fa_max = self.fa_min + self.bw_min
+                self.fp_min = 0.5 * (-self.bw_max + np.sqrt(self.bw_max**2 + 4*(self.f0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
+                self.fp_max = self.fp_min + self.bw_max
+
             if self.filter_type == GROUP_DELAY:
+                assert self.gamma > 0 and self.gamma < 1
+                assert self.filter_type in [LOW_PASS, HIGH_PASS]
+
+            self.tf = None
             self.get_filter_tf()
             assert self.tf
             self.get_template_limits()
@@ -131,6 +162,7 @@ class Filter():
             if self.approx_type == LEGENDRE:
                 self.compute_normalized_gains()
                 self.N = 1
+                eps = np.sqrt(((10 ** (self.gp_dB / 10)) - 1))
 
                 while True:
                     L_eps = get_Leps(self.N, eps)
@@ -148,10 +180,12 @@ class Filter():
                     self.N += 1
                     if self.N > 25: #excedí el límite
                         break
+                
+                #AHORA HAY QUE DESNORMALIZAR
             
             if self.approx_type == BESSEL:
                 self.N = 1
-                self.wrg_n = self.tau0 * self.wrg
+                self.wrg_n = self.tau0 * 2 * pi * self.frg
                 while True:
                     z, p, k = signal.bessel(self.N, self.wrg_n, btype=filter_types[self.filter_type], analog=True, output='zpk', norm='delay')
                     tf2 = TFunction(z, p, k)
@@ -164,7 +198,7 @@ class Filter():
 
             if self.approx_type == GAUSS:
                 self.N = 1
-                self.wrg_n = self.tau0 * self.wrg
+                self.wrg_n = self.tau0 * 2 * pi * self.frg
                 gauss_poly = [self.gamma, 0, 1]
                 fact_prod = 1
                 while True:

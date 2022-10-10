@@ -217,7 +217,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "fp_min": self.fp_min_box.value(),
             "fa_max": self.fa_max_box.value(),
             "fp_max": self.fp_max_box.value(),
-            "tol": self.tol_box.value(),
+            "gamma": self.tol_box.value(),
             "tau0": self.tau0_box.value(),
             "frg": self.frg_box.value(),
         }
@@ -259,7 +259,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "fp_min": self.fp_min_box.value(),
             "fa_max": self.fa_max_box.value(),
             "fp_max": self.fp_max_box.value(),
-            "tol": self.tol_box.value(),
+            "gamma": self.tol_box.value(),
             "tau0": self.tau0_box.value(),
             "frg": self.frg_box.value(),
         }
