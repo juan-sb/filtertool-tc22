@@ -13,10 +13,7 @@ BUTTERWORTH, CHEBYSHEV, CHEBYSHEV2, CAUER, LEGENDRE, BESSEL, GAUSS = range(7)
 filter_types = ['lowpass', 'highpass', 'bandpass', 'bandstop']
 
 def get_Leps(n, eps):
-    if n % 2 == 0:
-        k = int(n / 2 - 1)
-    else:
-        k = int((n - 1) / 2)
+    k = int(n / 2 - 1) if (n % 2 == 0) else int((n - 1) / 2)
         
     a = []
     for i in range(k + 1):
@@ -60,8 +57,6 @@ def select_roots(p):
         if root.real <= 0:
             valid_roots.append(root)
     return valid_roots
-    
-    
 
 class Filter():
     def __init__(self, **kwargs):
@@ -74,14 +69,20 @@ class Filter():
         
     def validate(self):
         try:
-            if self.filter_type == GROUP_DELAY:
-                assert self.tol > 0 and self.tol < 100
+            assert self.N_min <= self.N_max
             if self.filter_type == LOW_PASS:
-                assert self.fa > self.fp
+                assert self.gp_dB > self.ga_dB
+                assert self.fp < self.fa
             if self.filter_type == HIGH_PASS:
-                assert self.fa < self.fp
-            #validar para el pasa banda y el recorta banda
-            assert self.N_min < self.N_max
+                assert self.gp_dB > self.ga_dB
+                assert self.fp > self.fa
+            if self.filter_type == BAND_PASS:
+                assert self.gp_dB > self.ga_dB
+                assert self.fp < self.fa
+            if self.filter_type == BAND_REJECT:
+                assert self.gp_dB > self.ga_dB
+                assert self.fp < self.fa
+            if self.filter_type == GROUP_DELAY:
             self.get_filter_tf()
             assert self.tf
             self.get_template_limits()
@@ -107,23 +108,23 @@ class Filter():
                 wan = max(w_test_arr) / min(w_test_arr)
             
             if self.approx_type == BUTTERWORTH:
-                self.N, self.Wn = signal.buttord(wp, wa, self.gp_dB, self.ga_dB, analog=True)
-                z, p, k = signal.butter(self.N, self.Wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
+                self.N, self.wn = signal.buttord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
+                z, p, k = signal.butter(self.N, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
                 self.tf = TFunction(z, p, self.gain)
 
             if self.approx_type == CHEBYSHEV:
-                self.N, self.Wn = signal.cheb1ord(wp, wa, self.gp_dB, self.ga_dB, analog=True)
-                z, p, k = signal.cheby1(self.N, self.rp, Wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
+                self.N, self.wn = signal.cheb1ord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
+                z, p, k = signal.cheby1(self.N, self.rp, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
                 self.tf = TFunction(z, p, self.gain)
 
             if self.approx_type == CHEBYSHEV2:
-                self.N, self.Wn = signal.cheb2ord(wp, wa, self.gp_dB, self.ga_dB, analog=True)
-                z, p, k = signal.cheby2(self.N, self.ra, Wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
+                self.N, self.wn = signal.cheb2ord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
+                z, p, k = signal.cheby2(self.N, self.ra, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
                 self.tf = TFunction(z, p, self.gain)
             
             if self.approx_type == CAUER:
-                self.N, self.Wn = signal.ellipord(wp, wa, self.gp_dB, self.ga_dB, analog=True)
-                z, p, k = signal.ellip(self.N, self.rp, self.ra, Wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
+                self.N, self.wn = signal.ellipord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
+                z, p, k = signal.ellip(self.N, self.rp, self.ra, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
                 self.tf = TFunction(z, p, self.gain)
             
             
@@ -217,6 +218,6 @@ class Filter():
         self.limits_y = [limit[1] for limit in limits]
     
     def compute_normalized_gains(self):
-        self.ga = np.power(10, (-self.ga_dB / 20))
-        self.gp = np.power(10, (-self.gp_dB / 20))
+        self.ga = np.power(10, (self.ga_dB / 20))
+        self.gp = np.power(10, (self.gp_dB / 20))
                    

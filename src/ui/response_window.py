@@ -29,10 +29,6 @@ class Ui_Dialog(object):
         self.expr_plot = ExprWidget(self.layoutWidget)
         self.expr_plot.setObjectName("expr_plot")
         self.gridLayout.addWidget(self.expr_plot, 3, 0, 1, 1)
-        self.check_btn = QtWidgets.QPushButton(self.layoutWidget)
-        self.check_btn.setEnabled(True)
-        self.check_btn.setObjectName("check_btn")
-        self.gridLayout.addWidget(self.check_btn, 4, 0, 1, 1)
         self.error_label = QtWidgets.QLabel(self.layoutWidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -43,42 +39,38 @@ class Ui_Dialog(object):
         self.error_label.setAlignment(QtCore.Qt.AlignCenter)
         self.error_label.setObjectName("error_label")
         self.gridLayout.addWidget(self.error_label, 5, 0, 1, 1)
+        self.check_btn = QtWidgets.QPushButton(self.layoutWidget)
+        self.check_btn.setEnabled(True)
+        self.check_btn.setObjectName("check_btn")
+        self.gridLayout.addWidget(self.check_btn, 4, 0, 1, 1)
         self.tf_raw = QtWidgets.QLineEdit(self.layoutWidget)
         self.tf_raw.setEnabled(False)
         self.tf_raw.setObjectName("tf_raw")
         self.gridLayout.addWidget(self.tf_raw, 0, 0, 1, 1)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.verticalLayout = QtWidgets.QVBoxLayout()
-        self.verticalLayout.setObjectName("verticalLayout")
+        self.formLayout = QtWidgets.QFormLayout()
+        self.formLayout.setObjectName("formLayout")
         self.label = QtWidgets.QLabel(self.layoutWidget)
         self.label.setObjectName("label")
-        self.verticalLayout.addWidget(self.label)
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
         self.minbox = QtWidgets.QDoubleSpinBox(self.layoutWidget)
         self.minbox.setObjectName("minbox")
-        self.verticalLayout.addWidget(self.minbox)
-        self.horizontalLayout.addLayout(self.verticalLayout)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.minbox)
         self.label_2 = QtWidgets.QLabel(self.layoutWidget)
         self.label_2.setObjectName("label_2")
-        self.verticalLayout_2.addWidget(self.label_2)
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_2)
         self.maxbox = QtWidgets.QDoubleSpinBox(self.layoutWidget)
         self.maxbox.setObjectName("maxbox")
-        self.verticalLayout_2.addWidget(self.maxbox)
-        self.horizontalLayout.addLayout(self.verticalLayout_2)
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.maxbox)
         self.label_3 = QtWidgets.QLabel(self.layoutWidget)
         self.label_3.setObjectName("label_3")
-        self.verticalLayout_3.addWidget(self.label_3)
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_3)
         self.stepbox = QtWidgets.QDoubleSpinBox(self.layoutWidget)
         self.stepbox.setObjectName("stepbox")
-        self.verticalLayout_3.addWidget(self.stepbox)
-        self.horizontalLayout.addLayout(self.verticalLayout_3)
-        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.stepbox)
+        self.gridLayout.addLayout(self.formLayout, 1, 0, 1, 1)
         self.textBrowser = QtWidgets.QTextBrowser(Dialog)
-        self.textBrowser.setGeometry(QtCore.QRect(310, 10, 401, 161))
+        self.textBrowser.setEnabled(True)
+        self.textBrowser.setGeometry(QtCore.QRect(310, 10, 401, 321))
         self.textBrowser.setObjectName("textBrowser")
 
         self.retranslateUi(Dialog)
@@ -100,11 +92,17 @@ class Ui_Dialog(object):
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">AYUDA:</p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">delta(t) # respuesta al impulso unitario</p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">delta # respuesta al impulso unitario</p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">step # respuesta al escalón</p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">np.heaviside(t0, a) # escalón unitario centrado en t=t0 y con valor 0&lt;a&lt;1 en t0</p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">np.sin(t), np.cos(t), np.exp(t) # seno, coseno, exponencial</p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">np.sin(t) # seno</p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">np.cos(t) # coseno</p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">np.exp(t) # exponencial</p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">signal.sawtooth(t, w) # diente de sierra con -1&lt;=w&lt;=1 (w=0.5 para triangular)</p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"

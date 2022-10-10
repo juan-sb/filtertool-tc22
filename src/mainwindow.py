@@ -200,7 +200,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
             "approx_type": self.aprox_box.currentIndex(),
+            "N_min": self.N_min_box.value(),
+            "N_max": self.N_max_box.value(),
+            "Q_max": self.Q_max_box.value(),
             "gain": self.gain_box.value(),
+            "denorm": self.denorm_box.value(),
             "ga_dB": self.ga_box.value(),
             "gp_dB": self.gp_box.value(),
             "fa": self.fa_box.value(),
@@ -209,16 +213,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "rp": self.rp_box.value(),
             "f0": self.f0_box.value(),
             "bw": self.bw_box.value(),
-            "Q": self.Q_box.value(),
             "fa_min": self.fa_min_box.value(),
             "fp_min": self.fp_min_box.value(),
             "fa_max": self.fa_max_box.value(),
             "fp_max": self.fp_max_box.value(),
             "tol": self.tol_box.value(),
-            "g_delay": self.g_delay_box.value(),
-            "N_min": self.N_min_box.value(),
-            "N_max": self.N_max_box.value(),
-            "Q_max": self.Q_max_box.value()
+            "tau0": self.tau0_box.value(),
+            "frg": self.frg_box.value(),
         }
         
         newFilter = Filter(**params) #CREO EL OBJETO FILTRO
@@ -241,7 +242,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
             "approx_type": self.aprox_box.currentIndex(),
+            "N_min": self.N_min_box.value(),
+            "N_max": self.N_max_box.value(),
+            "Q_max": self.Q_max_box.value(),
             "gain": self.gain_box.value(),
+            "denorm": self.denorm_box.value(),
             "ga_dB": self.ga_box.value(),
             "gp_dB": self.gp_box.value(),
             "fa": self.fa_box.value(),
@@ -250,16 +255,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "rp": self.rp_box.value(),
             "f0": self.f0_box.value(),
             "bw": self.bw_box.value(),
-            "Q": self.Q_box.value(),
             "fa_min": self.fa_min_box.value(),
             "fp_min": self.fp_min_box.value(),
             "fa_max": self.fa_max_box.value(),
             "fp_max": self.fp_max_box.value(),
             "tol": self.tol_box.value(),
-            "g_delay": self.g_delay_box.value(),
-            "N_min": self.N_min_box.value(),
-            "N_max": self.N_max_box.value(),
-            "Q_max": self.Q_max_box.value()
+            "tau0": self.tau0_box.value(),
+            "frg": self.frg_box.value(),
         }
         
         newFilter = Filter(**params) #CREO EL OBJETO FILTRO
