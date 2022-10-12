@@ -196,6 +196,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
     
     def resolveFilterDialog(self):
+        if self.tipo_box.currentIndex() == BAND_PASS or self.tipo_box.currentIndex() == BAND_STOP:
+            wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
+            wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
+        else:
+            wa = 2 * np.pi * self.fa_box.value()
+            wp = 2 * np.pi * self.fp_box.value()
+
         params =         {
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
@@ -207,19 +214,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "denorm": self.denorm_box.value(),
             "ga_dB": self.ga_box.value(),
             "gp_dB": self.gp_box.value(),
-            "fa": self.fa_box.value(),
-            "fp": self.fp_box.value(),
-            "ra": self.ra_box.value(),
-            "rp": self.rp_box.value(),
-            "f0": self.f0_box.value(),
-            "bw": self.bw_box.value(),
-            "fa_min": self.fa_min_box.value(),
-            "fp_min": self.fp_min_box.value(),
-            "fa_max": self.fa_max_box.value(),
-            "fp_max": self.fp_max_box.value(),
+            "wa": wa,
+            "wp": wp,
+            "w0": 2 * np.pi * self.f0_box.value(),
+            "bw": [2 * np.pi * self.bw_min_box.value(), 2 * np.pi * self.bw_max_box.value()],
             "gamma": self.tol_box.value(),
             "tau0": self.tau0_box.value(),
-            "frg": self.frg_box.value(),
+            "wrg": 2 * np.pi * self.frg_box.value(),
         }
         
         newFilter = Filter(**params) #CREO EL OBJETO FILTRO
@@ -238,6 +239,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
     
     def updateSelectedFilter(self):
+        if self.tipo_box.currentIndex() == BAND_PASS or self.tipo_box.currentIndex() == BAND_STOP:
+            wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
+            wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
+        else:
+            wa = 2 * np.pi * self.fa_box.value()
+            wp = 2 * np.pi * self.fp_box.value()
+
         params =         {
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
@@ -249,19 +257,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "denorm": self.denorm_box.value(),
             "ga_dB": self.ga_box.value(),
             "gp_dB": self.gp_box.value(),
-            "fa": self.fa_box.value(),
-            "fp": self.fp_box.value(),
-            "ra": self.ra_box.value(),
-            "rp": self.rp_box.value(),
-            "f0": self.f0_box.value(),
-            "bw": self.bw_box.value(),
-            "fa_min": self.fa_min_box.value(),
-            "fp_min": self.fp_min_box.value(),
-            "fa_max": self.fa_max_box.value(),
-            "fp_max": self.fp_max_box.value(),
+            "wa": wa,
+            "wp": wp,
+            "w0": 2 * np.pi * self.f0_box.value(),
+            "bw": [2 * np.pi * self.bw_min_box.value(), 2 * np.pi * self.bw_max_box.value()],
             "gamma": self.tol_box.value(),
             "tau0": self.tau0_box.value(),
-            "frg": self.frg_box.value(),
+            "wrg": 2 * np.pi * self.frg_box.value(),
         }
         
         newFilter = Filter(**params) #CREO EL OBJETO FILTRO

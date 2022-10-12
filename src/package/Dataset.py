@@ -19,7 +19,7 @@ class Dataset:
         self.poles = []
         self.type = ''
         self.origin = filepath if origin == '' else origin
-        self.tf = type('TransferFunction', (), {})()
+        self.tf = type('TFunction', (), {})()
         self.title = qfi.fileName() if title == '' else title
         self.text = self.title
         self.datalines = []

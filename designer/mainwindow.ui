@@ -667,7 +667,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -1138,7 +1138,7 @@
            <x>0</x>
            <y>20</y>
            <width>184</width>
-           <height>621</height>
+           <height>675</height>
           </rect>
          </property>
          <layout class="QFormLayout" name="formLayout_2">
@@ -1247,6 +1247,30 @@
             </item>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_37">
+            <property name="text">
+             <string>Definir con</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QComboBox" name="define_with_box">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <item>
+             <property name="text">
+              <string>fa, fp</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>f0, Bw</string>
+             </property>
+            </item>
+           </widget>
+          </item>
           <item row="4" column="0">
            <widget class="QLabel" name="label_49">
             <property name="text">
@@ -1319,6 +1343,9 @@
             <property name="singleStep">
              <double>0.010000000000000</double>
             </property>
+            <property name="value">
+             <double>1.000000000000000</double>
+            </property>
            </widget>
           </item>
           <item row="8" column="0">
@@ -1340,7 +1367,7 @@
              <double>0.001000000000000</double>
             </property>
             <property name="value">
-             <double>1.000000000000000</double>
+             <double>0.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -1419,50 +1446,13 @@
            </widget>
           </item>
           <item row="13" column="0">
-           <widget class="QLabel" name="label_36">
-            <property name="text">
-             <string>rp [dB]</string>
-            </property>
-           </widget>
-          </item>
-          <item row="13" column="1">
-           <widget class="QDoubleSpinBox" name="rp_box">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="minimum">
-             <double>0.000000000000000</double>
-            </property>
-            <property name="maximum">
-             <double>9999.989999999999782</double>
-            </property>
-           </widget>
-          </item>
-          <item row="14" column="0">
-           <widget class="QLabel" name="label_60">
-            <property name="text">
-             <string>ra [dB]</string>
-            </property>
-           </widget>
-          </item>
-          <item row="14" column="1">
-           <widget class="QDoubleSpinBox" name="ra_box">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="maximum">
-             <double>9999.989999999999782</double>
-            </property>
-           </widget>
-          </item>
-          <item row="15" column="0">
            <widget class="QLabel" name="label_34">
             <property name="text">
              <string>fa min</string>
             </property>
            </widget>
           </item>
-          <item row="15" column="1">
+          <item row="13" column="1">
            <widget class="QDoubleSpinBox" name="fa_min_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1472,14 +1462,14 @@
             </property>
            </widget>
           </item>
-          <item row="16" column="0">
+          <item row="14" column="0">
            <widget class="QLabel" name="label_35">
             <property name="text">
              <string>fp min</string>
             </property>
            </widget>
           </item>
-          <item row="16" column="1">
+          <item row="14" column="1">
            <widget class="QDoubleSpinBox" name="fp_min_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1489,14 +1479,14 @@
             </property>
            </widget>
           </item>
-          <item row="17" column="0">
+          <item row="15" column="0">
            <widget class="QLabel" name="label_57">
             <property name="text">
              <string>fp max</string>
             </property>
            </widget>
           </item>
-          <item row="17" column="1">
+          <item row="15" column="1">
            <widget class="QDoubleSpinBox" name="fp_max_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1506,14 +1496,14 @@
             </property>
            </widget>
           </item>
-          <item row="18" column="0">
+          <item row="16" column="0">
            <widget class="QLabel" name="label_58">
             <property name="text">
              <string>fa max</string>
             </property>
            </widget>
           </item>
-          <item row="18" column="1">
+          <item row="16" column="1">
            <widget class="QDoubleSpinBox" name="fa_max_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1526,14 +1516,14 @@
             </property>
            </widget>
           </item>
-          <item row="19" column="0">
+          <item row="17" column="0">
            <widget class="QLabel" name="label_31">
             <property name="text">
              <string>f0</string>
             </property>
            </widget>
           </item>
-          <item row="19" column="1">
+          <item row="17" column="1">
            <widget class="QDoubleSpinBox" name="f0_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1549,14 +1539,14 @@
             </property>
            </widget>
           </item>
-          <item row="20" column="0">
+          <item row="18" column="0">
            <widget class="QLabel" name="label_32">
             <property name="text">
              <string>Bw min</string>
             </property>
            </widget>
           </item>
-          <item row="20" column="1">
+          <item row="18" column="1">
            <widget class="QDoubleSpinBox" name="bw_min_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1569,28 +1559,28 @@
             </property>
            </widget>
           </item>
-          <item row="21" column="0">
+          <item row="19" column="0">
            <widget class="QLabel" name="label_33">
             <property name="text">
              <string>Bw max</string>
             </property>
            </widget>
           </item>
-          <item row="21" column="1">
+          <item row="19" column="1">
            <widget class="QDoubleSpinBox" name="bw_max_box">
             <property name="enabled">
              <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="22" column="0">
+          <item row="20" column="0">
            <widget class="QLabel" name="label_39">
             <property name="text">
              <string>tau0</string>
             </property>
            </widget>
           </item>
-          <item row="22" column="1">
+          <item row="20" column="1">
            <widget class="QDoubleSpinBox" name="tau0_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1600,14 +1590,14 @@
             </property>
            </widget>
           </item>
-          <item row="23" column="0">
+          <item row="21" column="0">
            <widget class="QLabel" name="label_62">
             <property name="text">
              <string>fRG</string>
             </property>
            </widget>
           </item>
-          <item row="23" column="1">
+          <item row="21" column="1">
            <widget class="QDoubleSpinBox" name="frg_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1620,14 +1610,14 @@
             </property>
            </widget>
           </item>
-          <item row="24" column="0">
+          <item row="22" column="0">
            <widget class="QLabel" name="label_38">
             <property name="text">
              <string>tolerancia</string>
             </property>
            </widget>
           </item>
-          <item row="24" column="1">
+          <item row="22" column="1">
            <widget class="QDoubleSpinBox" name="tol_box">
             <property name="enabled">
              <bool>false</bool>
@@ -1643,7 +1633,7 @@
             </property>
            </widget>
           </item>
-          <item row="25" column="0">
+          <item row="23" column="0">
            <widget class="QPushButton" name="new_filter_btn">
             <property name="enabled">
              <bool>true</bool>
@@ -1653,7 +1643,7 @@
             </property>
            </widget>
           </item>
-          <item row="25" column="1">
+          <item row="23" column="1">
            <widget class="QPushButton" name="chg_filter_btn">
             <property name="enabled">
              <bool>true</bool>
@@ -1661,30 +1651,6 @@
             <property name="text">
              <string>change filter</string>
             </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_37">
-            <property name="text">
-             <string>Definir con</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QComboBox" name="define_with_box">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <item>
-             <property name="text">
-              <string>fa, fp</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>f0, Bw</string>
-             </property>
-            </item>
            </widget>
           </item>
          </layout>

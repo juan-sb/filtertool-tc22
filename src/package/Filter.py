@@ -5,6 +5,7 @@ from src.package.transfer_function import TFunction
 import scipy.signal as signal
 import scipy.special as special
 import numpy as np
+import sympy as sp
 
 pi = np.pi
 
@@ -59,11 +60,14 @@ def select_roots(p):
             valid_roots.append(root)
     return valid_roots
 
+
+
 class Filter():
     def __init__(self, **kwargs):
-        self.tf = type('TransferFunction', (), {})()
         self.limits_x = []
         self.limits_y = []
+        self.tf = type('TFunction', (), {})()
+        self.tf_norm = type('TFunction', (), {})()
         for k, v in kwargs.items():
             setattr(self, k, v) #Seteo todos los atributos de 1
         
@@ -71,51 +75,57 @@ class Filter():
     def validate(self):
         try:
             assert self.N_min <= self.N_max
+
             if self.filter_type == LOW_PASS:
                 assert self.gp_dB > self.ga_dB
-                assert self.fp < self.fa
+                assert self.wp < self.wa
+
             if self.filter_type == HIGH_PASS:
                 assert self.gp_dB > self.ga_dB
-                assert self.fp > self.fa
+                assert self.wp > self.wa
+
             if self.filter_type == BAND_PASS:
                 assert self.gp_dB > self.ga_dB 
                 if self.define_with == TEMPLATE_FREQS:
-                    assert self.fa_min < self.fp_min
-                    assert self.fp_min < self.fp_max
-                    assert self.fp_max < self.fa_max
-                    self.f0 = np.sqrt(self.fp_min*self.fp_max) # me quedo con las frecuencias centrales
-                    self.bw_min = self.fp_max - self.fp_min # y los anchos de banda
-                    self.bw_max = self.fa_max - self.fa_min
+                    assert self.wa[0] < self.wp[0]
+                    assert self.wp[0] < self.wp[1]
+                    assert self.wp[1] < self.wa[1]
+                    self.w0 = np.sqrt(self.wp[0]*self.wp[1]) # me quedo con las frecuencias centrales
+                    self.bw[0] = self.wp[1] - self.wp[0] # y los anchos de banda
+                    self.bw[1] = self.wa[1] - self.wa[0]
                 elif self.define_with == F0_BW:
-                    assert self.bw_min < self.bw_max
-                    self.fp_min = 0.5 * (-self.bw_min + np.sqrt(self.bw_min**2 + 4*(self.f0**2))) #defino las frecuencias centrales a partir del ancho de banda
-                    self.fp_max = self.fp_min + self.bw_min
-                self.fa_min = 0.5 * (-self.bw_max + np.sqrt(self.bw_max**2 + 4*(self.f0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
-                self.fa_max = self.fa_min + self.bw_max
+                    assert self.bw[0] < self.bw[1]
+                    self.wp[0] = 0.5 * (-self.bw[0] + np.sqrt(self.bw[0]**2 + 4*(self.w0**2))) #defino las frecuencias centrales a partir del ancho de banda
+                    self.wp[1] = self.wp[0] + self.bw[0]
+                self.wa[0] = 0.5 * (-self.bw[1] + np.sqrt(self.bw[1]**2 + 4*(self.w0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
+                self.wa[1] = self.wa[0] + self.bw[1]
 
             if self.filter_type == BAND_REJECT:
                 assert self.gp_dB > self.ga_dB 
                 if self.define_with == TEMPLATE_FREQS:
-                    assert self.fp_min < self.fa_min
-                    assert self.fa_min < self.fa_max
-                    assert self.fa_max < self.fp_max
-                    self.f0 = np.sqrt(self.fa_min*self.fa_max) # me quedo con las frecuencias centrales
-                    self.bw_min = self.fa_max - self.fa_min # y los anchos de banda
-                    self.bw_max = self.fp_max - self.fp_min
+                    assert self.wp[0] < self.wa[0]
+                    assert self.wa[0] < self.wa[1]
+                    assert self.wa[1] < self.wp[1]
+                    self.w0 = np.sqrt(self.wa[0]*self.wa[1]) # me quedo con las frecuencias centrales
+                    self.bw[0] = self.wa[1] - self.wa[0] # y los anchos de banda
+                    self.bw[1] = self.wp[1] - self.wp[0]
                 elif self.define_with == F0_BW:
-                    assert self.bw_min < self.bw_max
-                    self.fa_min = 0.5 * (-self.bw_min + np.sqrt(self.bw_min**2 + 4*(self.f0**2))) #defino las frecuencias centrales a partir del ancho de banda
-                    self.fa_max = self.fa_min + self.bw_min
-                self.fp_min = 0.5 * (-self.bw_max + np.sqrt(self.bw_max**2 + 4*(self.f0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
-                self.fp_max = self.fp_min + self.bw_max
+                    assert self.bw[0] < self.bw[1]
+                    self.wa[0] = 0.5 * (-self.bw[0] + np.sqrt(self.bw[0]**2 + 4*(self.w0**2))) #defino las frecuencias centrales a partir del ancho de banda
+                    self.wa[1] = self.wa[0] + self.bw[0]
+                self.wp[0] = 0.5 * (-self.bw[1] + np.sqrt(self.bw[1]**2 + 4*(self.w0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
+                self.wp[1] = self.wp[0] + self.bw[1]
 
             if self.filter_type == GROUP_DELAY:
                 assert self.gamma > 0 and self.gamma < 1
-                assert self.filter_type in [LOW_PASS, HIGH_PASS]
+                assert self.tau0 > 0
+                assert self.wrg > 0
 
             self.tf = None
+            self.compute_normalized_parameters(init=True)
             self.get_filter_tf()
             assert self.tf
+            self.compute_denormalized_parameters()
             self.get_template_limits()
             
         except:
@@ -126,71 +136,67 @@ class Filter():
         return True, "OK"
 
     def get_filter_tf(self):
-        if self.filter_type < GROUP_DELAY:
-            wp, wa = None, None
-            if self.filter_type == BAND_PASS or self.filter_type == BAND_REJECT:
-                wp, wa = [2*pi*self.fp_min, 2*pi*self.fp_max], [2*pi*self.fa_min, 2*pi*self.fa_max]
-                wan = max(self.wa, self.wp) / min(self.wa, self.wp)
-            else:
-                wp, wa = 2*pi*self.fp, 2*pi*self.fa
-                self.w0 = np.sqrt(wp[1]*wp[0])
-                self.B = abs(wp[1] - wp[0])
-                w_test_arr = [abs(wa[1] - wa[0]), abs(wp[1] - wp[0])]
-                wan = max(w_test_arr) / min(w_test_arr)
             
             if self.approx_type == BUTTERWORTH:
-                self.N, self.wn = signal.buttord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
-                z, p, k = signal.butter(self.N, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
-                self.tf = TFunction(z, p, self.gain)
+                self.N, self.wc = signal.buttord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                if self.N > self.N_max:
+                    return
+                elif self.N < self.N_min:
+                    self.N = self.N_min
+                z, p, k = signal.butter(self.N, self.wc, analog=True, output='zpk')
+                self.tf_norm = TFunction(z, p, self.gain)
 
             if self.approx_type == CHEBYSHEV:
-                self.N, self.wn = signal.cheb1ord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
-                z, p, k = signal.cheby1(self.N, self.rp, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
-                self.tf = TFunction(z, p, self.gain)
+                self.N, self.wc = signal.cheb1ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                if self.N > self.N_max:
+                    return
+                elif self.N < self.N_min:
+                    self.N = self.N_min
+                z, p, k = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='zpk')
+                self.tf_norm = TFunction(z, p, self.gain)
 
             if self.approx_type == CHEBYSHEV2:
-                self.N, self.wn = signal.cheb2ord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
-                z, p, k = signal.cheby2(self.N, self.ra, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
-                self.tf = TFunction(z, p, self.gain)
+                self.N, self.wc = signal.cheb2ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                if self.N > self.N_max:
+                    return
+                elif self.N < self.N_min:
+                    self.N = self.N_min
+                z, p, k = signal.cheby2(self.N, -self.ga_dB, self.wc, analog=True, output='zpk')
+                self.tf_norm = TFunction(z, p, self.gain)
             
             if self.approx_type == CAUER:
-                self.N, self.wn = signal.ellipord(wp, wa, -self.gp_dB, -self.ga_dB, analog=True)
-                z, p, k = signal.ellip(self.N, self.rp, self.ra, self.wn, btype=filter_types[self.filter_type], analog=True, output='zpk')
-                self.tf = TFunction(z, p, self.gain)
+                self.N, self.wc = signal.ellipord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                if self.N > self.N_max:
+                    return
+                elif self.N < self.N_min:
+                    self.N = self.N_min
+                z, p, k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
+                self.tf_norm = TFunction(z, p, self.gain)
             
             
             if self.approx_type == LEGENDRE:
-                self.compute_normalized_gains()
-                self.N = 1
-                eps = np.sqrt(((10 ** (self.gp_dB / 10)) - 1))
+                self.N = self.N_min
+                eps = np.sqrt(((10 ** (-0.1 * self.gp_dB)) - 1))
 
                 while True:
                     L_eps = get_Leps(self.N, eps)
                     z = []
                     p = select_roots(L_eps)
                     tf2 = TFunction(z, p, 1)
-                    ok = True
-                    for w_pass in wp: #chequeo si cumple con la plantilla normalizada
-                        ok = ok and abs(tf2.at(1j*w_pass)) > self.gp
-                    for w_ate in wa:
-                        ok = ok and abs(tf2.at(1j*w_ate)) < self.ga
-                    if ok: #si el gd es menor-igual que el esperado, estamos
-                        self.tf = TFunction(z, p, self.gain)
+                    if abs(tf2.at(1j*self.wan)) < self.ga:
+                        self.tf_norm = TFunction(z, p, self.gain)
                         break
                     self.N += 1
                     if self.N > 25: #excedí el límite
                         break
-                
-                #AHORA HAY QUE DESNORMALIZAR
             
             if self.approx_type == BESSEL:
-                self.N = 1
-                self.wrg_n = self.tau0 * 2 * pi * self.frg
+                self.N = self.N_min
                 while True:
-                    z, p, k = signal.bessel(self.N, self.wrg_n, btype=filter_types[self.filter_type], analog=True, output='zpk', norm='delay')
+                    z, p, k = signal.bessel(self.N, self.wrg_n, analog=True, output='zpk', norm='delay')
                     tf2 = TFunction(z, p, k)
                     if abs(tf2.gd_at(self.wrg_n) - 1) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
-                        self.tf = TFunction(z, p, self.gain)
+                        self.tf_norm = TFunction(z, p, self.gain)
                         break
                     self.N += 1
                     if self.N > 25: #excedí el límite
@@ -198,60 +204,97 @@ class Filter():
 
             if self.approx_type == GAUSS:
                 self.N = 1
-                self.wrg_n = self.tau0 * 2 * pi * self.frg
-                gauss_poly = [self.gamma, 0, 1]
+                gauss_poly = [1, 0, 1]
                 fact_prod = 1
                 while True:
-                    z = []
-                    p = select_roots(np.poly1d(gauss_poly))
-                    tf2 = TFunction(z, p, 1)
-                    if abs(tf2.gd_at(self.wrg_n) - 1) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
-                        self.tf = TFunction(z, p, self.gain)
-                        break
+                    if self.N >= self.N_min:
+                        z = []
+                        p = select_roots(np.poly1d(gauss_poly))
+                        tf2 = TFunction(z, p, 1)
+                        if abs(tf2.gd_at(self.wrg_n) - 1) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
+                            self.tf_norm = TFunction(z, p, self.gain)
+                            break
                     self.N += 1
                     if self.N > 25: #excedí el límite
                         break
                     fact_prod *= self.N
                     gauss_poly.insert(0, 0)
-                    gauss_poly.insert(0, (self.gamma**self.N)/fact_prod)
+                    gauss_poly.insert(0, 1/fact_prod)
 
         
     def get_template_limits(self):
+        #### FALTA MULTIPLICAR TODO POR self.gain (es la ganancia 'extra' que se le pone al filtro)
         limits = []
-        self.compute_normalized_gains()
+        self.compute_normalized_parameters()
         if self.filter_type == LOW_PASS:
-            limits.extend([[1e-9, self.gp], [self.fp, self.gp]]) # Extiende tus límites!
-            limits.extend([[self.fp, self.gp], [self.fp, 1e-9]])
-            limits.extend([[self.fa, self.ga], [self.fa, 1e9]])
-            limits.extend([[self.fa, self.ga], [1e9, self.ga]])
+            limits.extend([[1e-9, self.gp], [self.wp, self.gp]]) # Extiende tus límites!
+            limits.extend([[self.wp, self.gp], [self.wp, 1e-9]])
+            limits.extend([[self.wa, self.ga], [self.wa, 1e9]])
+            limits.extend([[self.wa, self.ga], [1e9, self.ga]])
         if self.filter_type == HIGH_PASS:
-            limits.extend([[1e-9, self.ga], [self.fa, self.ga]])
-            limits.extend([[self.fa, self.ga], [self.fa, 1e9]])
-            limits.extend([[self.fp, self.gp], [self.fp, 1e-9]])
-            limits.extend([[self.fp, self.gp], [1e9, self.gp]])
+            limits.extend([[1e-9, self.ga], [self.wa, self.ga]])
+            limits.extend([[self.wa, self.ga], [self.wa, 1e9]])
+            limits.extend([[self.wp, self.gp], [self.wp, 1e-9]])
+            limits.extend([[self.wp, self.gp], [1e9, self.gp]])
         if self.filter_type == BAND_PASS:
-            limits.extend([[1e-9, self.ga], [self.fa_min, self.ga]])
-            limits.extend([[self.fa_min, self.ga], [self.fa_min, 1e9]])
-            limits.extend([[self.fp_min, self.gp], [self.fp_min, 1e-9]])
-            limits.extend([[self.fp_min, self.gp], [self.fp_max, self.gp]])
+            limits.extend([[1e-9, self.ga], [self.wa[0], self.ga]])
+            limits.extend([[self.wa[0], self.ga], [self.wa[0], 1e9]])
+            limits.extend([[self.wp[0], self.gp], [self.wp[0], 1e-9]])
+            limits.extend([[self.wp[0], self.gp], [self.wp[1], self.gp]])
 
-            limits.extend([[self.fp_max, self.gp], [self.fp_max, 1e-9]])
-            limits.extend([[self.fa_max, self.ga], [self.fa_max, 1e9]])
-            limits.extend([[self.fa_max, self.ga], [1e9, self.ga]])
+            limits.extend([[self.wp[1], self.gp], [self.wp[1], 1e-9]])
+            limits.extend([[self.wa[1], self.ga], [self.wa[1], 1e9]])
+            limits.extend([[self.wa[1], self.ga], [1e9, self.ga]])
         if self.filter_type == BAND_REJECT:
-            limits.extend([[1e-9, self.gp], [self.fp_min, self.gp]])
-            limits.extend([[self.fp_min, self.gp], [self.fp_min, 1e-9]])
-            limits.extend([[self.fa_min, self.ga], [self.fa_min, 1e9]])
-            limits.extend([[self.fa_min, self.ga], [self.fa_max, self.ga]])
+            limits.extend([[1e-9, self.gp], [self.wp[0], self.gp]])
+            limits.extend([[self.wp[0], self.gp], [self.wp[0], 1e-9]])
+            limits.extend([[self.wa[0], self.ga], [self.wa[0], 1e9]])
+            limits.extend([[self.wa[0], self.ga], [self.wa[1], self.ga]])
 
-            limits.extend([[self.fa_max, self.ga], [self.fa_max, 1e9]])
-            limits.extend([[self.fp_max, self.gp], [self.fa_max, 1e-9]])
-            limits.extend([[self.fp_max, self.gp], [1e9, self.gp]])
+            limits.extend([[self.wa[1], self.ga], [self.wa[1], 1e9]])
+            limits.extend([[self.wp[1], self.gp], [self.wa[1], 1e-9]])
+            limits.extend([[self.wp[1], self.gp], [1e9, self.gp]])
         
         self.limits_x = [limit[0] for limit in limits]
         self.limits_y = [limit[1] for limit in limits]
     
-    def compute_normalized_gains(self):
-        self.ga = np.power(10, (self.ga_dB / 20))
-        self.gp = np.power(10, (self.gp_dB / 20))
-                   
+    def compute_normalized_parameters(self, init=False):
+        if self.filter_type < GROUP_DELAY:
+            self.ga = np.power(10, (self.ga_dB / 20))
+            self.gp = np.power(10, (self.gp_dB / 20))
+
+            if self.filter_type == LOW_PASS:
+                self.wan = self.wa / self.wp
+            elif self.filter_type == HIGH_PASS:
+                self.wan = self.wp / self.wa
+            elif self.filter_type == BAND_PASS:
+                self.wan = (self.wa[1] - self.wa[0]) / (self.wp[1] - self.wp[0])
+            elif self.filter_type == BAND_STOP:
+                self.wan = (self.wp[1] - self.wp[0]) / (self.wa[1] - self.wa[0])
+        elif self.filter_type == GROUP_DELAY and init:
+            self.wrg_n = self.wrg * self.tau0
+        else: #debería calcular las ganancias del group delay, pero cuáles si nunca definí la plantilla?
+            pass
+    
+    def compute_denormalized_parameters(self):
+        # no es necesario (por ahora) desnormalizar las ganancias
+        s = sym.symbols('s')
+        h_norm = sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s)
+
+        if self.filter_type == LOW_PASS or self.filter_type == GROUP_DELAY:
+            transformation = s / self.wp
+        elif self.filter_type == HIGH_PASS:
+            transformation = self.wp / s
+        elif self.filter_type == BAND_PASS:
+            transformation = (self.w0 / (self.wp[1] - self.wp[0])) * ((s / self.w0) + (self.w0 / s))
+        elif self.filter_type == BAND_STOP:
+            transformation = ((self.wa[1] - self.wa[0]) / self.w0) / ((s / self.w0) + (self.w0 / s))
+        
+        h_denorm = h_norm(transformation) 
+        h_denorm = sym.simplify(h_denorm)
+        h_denorm = sym.fraction(h_denorm)
+
+        N = sym.Poly(h_denorm[0]).all_coeffs() if (s in h_denorm[0].free_symbols) else [h_denorm[0].evalf()]
+        D = sym.Poly(h_denorm[1]).all_coeffs() if (s in h_denorm[1].free_symbols) else [h_denorm[1].evalf()]
+
+        self.tf = TFunction(N, D)
