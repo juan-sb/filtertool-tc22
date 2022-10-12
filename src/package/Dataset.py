@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import csv
 from src.package.transfer_function import TFunction
-from src.package.Filter import Filter
+from src.package.Filter import AnalogFilter
 from collections import defaultdict
 from PyQt5.QtCore import QFileInfo
 from src.package.Dataline import Dataline
@@ -42,7 +42,7 @@ class Dataset:
             self.type = 'txt'
             self.parse_from_txt(filepath)
         elif(filepath == ''):
-            if isinstance(self.origin, Filter):
+            if isinstance(self.origin, AnalogFilter):
                 self.tf = self.origin.tf
                 self.type = 'filter'
                 self.parse_from_filter()

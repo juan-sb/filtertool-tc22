@@ -28,24 +28,22 @@ class TFunction():
             expression = sym.simplify(expression)
             expression = sym.fraction(expression)
 
-            self.N = sym.Poly(expression[0]).all_coeffs() if (self.s in expression[0].free_symbols) else [expression[0].evalf()]
-            self.D = sym.Poly(expression[1]).all_coeffs() if (self.s in expression[1].free_symbols) else [expression[1].evalf()]
-            self.z, self.p, self.k = signal.tf2zpk(self.N, self.D)
-            self.tf_object = signal.TransferFunction(self.N, self.D)
+            N = sym.Poly(expression[0]).all_coeffs() if (self.s in expression[0].free_symbols) else [expression[0].evalf()]
+            D = sym.Poly(expression[1]).all_coeffs() if (self.s in expression[1].free_symbols) else [expression[1].evalf()]
+            self.setND(N, D)
             return True
         except:
             return False
 
     def setND(self, N, D):
-        self.N, self.D = N, D
+        self.N, self.D = np.array(N, dtype=np.complex128), np.array(D, dtype=np.complex128)
         self.z, self.p, self.k = signal.tf2zpk(self.N, self.D)
         self.tf_object = signal.TransferFunction(self.N, self.D)
 
     def setZPK(self, z, p, k):
-        self.z, self.p, self.k = z, p, k
-        self.N = np.poly1d(z, r=True).coef * self.k
-        self.D = np.poly1d(p, r=True).coef
-        self.tf_object = signal.ZerosPolesGain(self.z, self.p, self.k)
+        self.z, self.p, self.k = np.array(z, dtype=np.complex128), np.array(p, dtype=np.complex128), k
+        self.N, self.D = signal.zpk2tf(self.z, self.p, self.k)
+        self.tf_object = signal.TransferFunction(self.N, self.D)
     
     def at(self, s):
         return poly_at(self.N, s) / poly_at(self.D, s)
@@ -57,12 +55,13 @@ class TFunction():
         return (-np.diff(np.angle(h)) / np.diff(w))[index]
         
     def getZP(self):
-        return self.tf_object.zeros, self.tf_object.poles
+        return self.z, self.p
 
     def getBode(self, start=-2, stop=9, num=2222):
         ws = np.logspace(start, stop, num)
         w, g, ph = signal.bode(self.tf_object, w=ws)
         gd = - np.diff(ph) / np.diff(w)
+        gd = np.append(gd, gd[-1])
         f = w / (2 * np.pi)
         return f, np.power(10, g/20), ph, gd
 

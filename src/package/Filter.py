@@ -5,14 +5,14 @@ from src.package.transfer_function import TFunction
 import scipy.signal as signal
 import scipy.special as special
 import numpy as np
-import sympy as sp
+import sympy as sym
 
 pi = np.pi
 
+MAX_ORDER = 15
 LOW_PASS, HIGH_PASS, BAND_PASS, BAND_REJECT, GROUP_DELAY = range(5)
 BUTTERWORTH, CHEBYSHEV, CHEBYSHEV2, CAUER, LEGENDRE, BESSEL, GAUSS = range(7)
 TEMPLATE_FREQS, F0_BW = range(2)
-filter_types = ['lowpass', 'highpass', 'bandpass', 'bandstop']
 
 def get_Leps(n, eps):
     k = int(n / 2 - 1) if (n % 2 == 0) else int((n - 1) / 2)
@@ -62,7 +62,7 @@ def select_roots(p):
 
 
 
-class Filter():
+class AnalogFilter():
     def __init__(self, **kwargs):
         self.limits_x = []
         self.limits_y = []
@@ -74,6 +74,8 @@ class Filter():
         
     def validate(self):
         try:
+            assert self.N_max <= MAX_ORDER
+            assert self.N_min >= 1
             assert self.N_min <= self.N_max
 
             if self.filter_type == LOW_PASS:
@@ -121,60 +123,61 @@ class Filter():
                 assert self.tau0 > 0
                 assert self.wrg > 0
 
-            self.tf = None
             self.compute_normalized_parameters(init=True)
-            self.get_filter_tf()
-            assert self.tf
+            self.tf = None
+            self.tf_norm = None
+            self.get_tf_norm()
+            assert self.tf_norm
             self.compute_denormalized_parameters()
             self.get_template_limits()
             
         except:
-            _, _, tb = sys.exc_info()
+            a, err, tb = sys.exc_info()
             tb_info = traceback.extract_tb(tb)
-            filename, line, func, text = tb_info[-1]
-            return False, text
+            err_msg = ''
+            for tb_item in tb_info:
+                err_msg += tb_item.filename + ' - ' + tb_item.line + '\n'
+            err_msg += str(a) + ' ' + str(err) + '\n'
+            print(err_msg)
+            return False, err_msg
         return True, "OK"
 
-    def get_filter_tf(self):
+    def get_tf_norm(self):
             
             if self.approx_type == BUTTERWORTH:
                 self.N, self.wc = signal.buttord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
-                if self.N > self.N_max:
-                    return
-                elif self.N < self.N_min:
+                assert self.N <= self.N_max
+                if self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.butter(self.N, self.wc, analog=True, output='zpk')
                 self.tf_norm = TFunction(z, p, k)
 
-            if self.approx_type == CHEBYSHEV:
+            elif self.approx_type == CHEBYSHEV:
                 self.N, self.wc = signal.cheb1ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
-                if self.N > self.N_max:
-                    return
-                elif self.N < self.N_min:
+                assert self.N <= self.N_max
+                if self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='zpk')
                 self.tf_norm = TFunction(z, p, k)
 
-            if self.approx_type == CHEBYSHEV2:
+            elif self.approx_type == CHEBYSHEV2:
                 self.N, self.wc = signal.cheb2ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
-                if self.N > self.N_max:
-                    return
-                elif self.N < self.N_min:
+                assert self.N <= self.N_max
+                if self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.cheby2(self.N, -self.ga_dB, self.wc, analog=True, output='zpk')
                 self.tf_norm = TFunction(z, p, k)
             
-            if self.approx_type == CAUER:
+            elif self.approx_type == CAUER:
                 self.N, self.wc = signal.ellipord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
-                if self.N > self.N_max:
-                    return
-                elif self.N < self.N_min:
+                assert self.N <= self.N_max
+                if self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
                 self.tf_norm = TFunction(z, p, k)
             
             
-            if self.approx_type == LEGENDRE:
+            elif self.approx_type == LEGENDRE:
                 self.N = self.N_min
                 eps = np.sqrt(((10 ** (-0.1 * self.gp_dB)) - 1))
 
@@ -187,37 +190,34 @@ class Filter():
                         self.tf_norm = TFunction(z, p, 1)
                         break
                     self.N += 1
-                    if self.N > 25: #excedí el límite
-                        break
+                    assert self.N <= self.N_max 
             
-            if self.approx_type == BESSEL:
+            elif self.approx_type == BESSEL:
                 self.N = self.N_min
                 while True:
-                    z, p, k = signal.bessel(self.N, self.wrg_n, analog=True, output='zpk', norm='delay')
+                    z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
                     tf2 = TFunction(z, p, k)
-                    if abs(tf2.gd_at(self.wrg_n) - 1) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
+                    if 1 - tf2.gd_at(self.wrg_n) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
                         self.tf_norm = TFunction(z, p, k)
                         break
                     self.N += 1
-                    if self.N > 25: #excedí el límite
-                        break
+                    assert self.N <= self.N_max
 
             if self.approx_type == GAUSS:
                 self.N = 1
-                gauss_poly = [-1, 0, 1]
-                fact_prod = -1
+                gauss_poly = [1, 0, 1] # producirá un delay de 1 segundo
+                fact_prod = 1
                 while True:
                     if self.N >= self.N_min:
                         z = []
                         p = select_roots(np.poly1d(gauss_poly))
                         tf2 = TFunction(z, p, 1)
-                        if abs(tf2.gd_at(self.wrg_n) - 1) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
+                        if 1 - tf2.gd_at(self.wrg_n) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
                             self.tf_norm = TFunction(z, p, 1)
                             break
                     self.N += 1
-                    if self.N > 25: #excedí el límite
-                        break
-                    fact_prod *= -self.N
+                    assert self.N <= self.N_max
+                    fact_prod *= self.N
                     gauss_poly.insert(0, 0)
                     gauss_poly.insert(0, 1/fact_prod)
 
@@ -269,7 +269,7 @@ class Filter():
                 self.wan = self.wp / self.wa
             elif self.filter_type == BAND_PASS:
                 self.wan = (self.wa[1] - self.wa[0]) / (self.wp[1] - self.wp[0])
-            elif self.filter_type == BAND_STOP:
+            elif self.filter_type == BAND_REJECT:
                 self.wan = (self.wp[1] - self.wp[0]) / (self.wa[1] - self.wa[0])
         elif self.filter_type == GROUP_DELAY and init:
             self.wrg_n = self.wrg * self.tau0
@@ -281,20 +281,22 @@ class Filter():
         s = sym.symbols('s')
         h_norm = sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s)
 
-        if self.filter_type == LOW_PASS or self.filter_type == GROUP_DELAY:
+        if self.filter_type == LOW_PASS:
             transformation = s / self.wp
         elif self.filter_type == HIGH_PASS:
             transformation = self.wp / s
         elif self.filter_type == BAND_PASS:
             transformation = (self.w0 / (self.wp[1] - self.wp[0])) * ((s / self.w0) + (self.w0 / s))
-        elif self.filter_type == BAND_STOP:
+        elif self.filter_type == BAND_REJECT:
             transformation = ((self.wa[1] - self.wa[0]) / self.w0) / ((s / self.w0) + (self.w0 / s))
+        elif self.filter_type == GROUP_DELAY:
+            transformation = s * self.tau0
         
-        h_denorm = h_norm(transformation) 
+        h_denorm = h_norm.subs(s, transformation) 
         h_denorm = sym.simplify(h_denorm)
         h_denorm = sym.fraction(h_denorm)
 
         N = sym.Poly(h_denorm[0]).all_coeffs() if (s in h_denorm[0].free_symbols) else [h_denorm[0].evalf()]
         D = sym.Poly(h_denorm[1]).all_coeffs() if (s in h_denorm[1].free_symbols) else [h_denorm[1].evalf()]
 
-        self.tf = TFunction(N * self.gain, D)
+        self.tf = TFunction([a * self.gain for a in N], D)

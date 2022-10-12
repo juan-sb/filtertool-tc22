@@ -5,7 +5,8 @@ from PyQt5.QtCore import Qt
 # Project modules
 from src.ui.mainwindow import Ui_MainWindow
 from src.package.Dataset import Dataset
-from src.package.Filter import Filter
+import src.package.Filter as Filter
+from src.package.Filter import AnalogFilter
 from src.widgets.tf_dialog import TFDialog
 from src.widgets.case_window import CaseDialog
 from src.widgets.zp_window import ZPWindow
@@ -103,6 +104,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.chg_filter_btn.clicked.connect(self.updateSelectedFilter)
         self.tipo_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
         self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
+        self.updateFilterParametersAvailable()
 
     def dragEnterEvent(self, event):
         if(event.mimeData().hasUrls()):
@@ -198,7 +200,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
     
     def resolveFilterDialog(self):
-        if self.tipo_box.currentIndex() == BAND_PASS or self.tipo_box.currentIndex() == BAND_STOP:
+        if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
             wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
             wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
         else:
@@ -209,6 +211,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
             "approx_type": self.aprox_box.currentIndex(),
+            "define_with": self.define_with_box.currentIndex(),
             "N_min": self.N_min_box.value(),
             "N_max": self.N_max_box.value(),
             "Q_max": self.Q_max_box.value(),
@@ -225,7 +228,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "wrg": 2 * np.pi * self.frg_box.value(),
         }
         
-        newFilter = Filter(**params) #CREO EL OBJETO FILTRO
+        newFilter = AnalogFilter(**params) #CREO EL OBJETO FILTRO
         valid, msg = newFilter.validate()
         if not valid:
             # mostrar el error
@@ -241,7 +244,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
     
     def updateSelectedFilter(self):
-        if self.tipo_box.currentIndex() == BAND_PASS or self.tipo_box.currentIndex() == BAND_STOP:
+        if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
             wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
             wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
         else:
@@ -252,6 +255,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
             "approx_type": self.aprox_box.currentIndex(),
+            "define_with": self.define_with_box.currentIndex(),
             "N_min": self.N_min_box.value(),
             "N_max": self.N_max_box.value(),
             "Q_max": self.Q_max_box.value(),
@@ -268,7 +272,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "wrg": 2 * np.pi * self.frg_box.value(),
         }
         
-        newFilter = Filter(**params) #CREO EL OBJETO FILTRO
+        newFilter = AnalogFilter(**params) #CREO EL OBJETO FILTRO
         valid, msg = newFilter.validate()
         if not valid:
             # mostrar el error
@@ -281,66 +285,81 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
 
     def updateFilterParametersAvailable(self):
-        if self.tipo_box.currentIndex() == LOW_PASS or self.tipo_box.currentIndex() == HIGH_PASS:
-            self.define_with_box.setDisabled()
-            self.gp_box.setEnabled()
-            self.ga_box.setEnabled()
-            self.fp_box.setEnabled()
-            self.fa_box.setEnabled()
-            self.fa_min_box.setDisabled()
-            self.fa_max_box.setDisabled()
-            self.fp_min_box.setDisabled()
-            self.fp_max_box.setDisabled()
-            self.f0_box.setDisabled()
-            self.bw_min_box.setDisabled()
-            self.bw_max_box.setDisabled()
-            self.tau0_box.setDisabled()
-            self.frg_box.setDisabled()
-            self.tol_box.setDisabled()
+        if self.tipo_box.currentIndex() == Filter.LOW_PASS or self.tipo_box.currentIndex() == Filter.HIGH_PASS:
+            for i in range(Filter.LEGENDRE + 1):
+                self.aprox_box.model().item(i).setEnabled(True)
+            for i in range(Filter.BESSEL, Filter.GAUSS + 1):
+                self.aprox_box.model().item(i).setEnabled(False)
+            if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
+                self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
+            self.define_with_box.setEnabled(False)
+            self.gp_box.setEnabled(True)
+            self.ga_box.setEnabled(True)
+            self.fp_box.setEnabled(True)
+            self.fa_box.setEnabled(True)
+            self.fa_min_box.setEnabled(False)
+            self.fa_max_box.setEnabled(False)
+            self.fp_min_box.setEnabled(False)
+            self.fp_max_box.setEnabled(False)
+            self.f0_box.setEnabled(False)
+            self.bw_min_box.setEnabled(False)
+            self.bw_max_box.setEnabled(False)
+            self.tau0_box.setEnabled(False)
+            self.frg_box.setEnabled(False)
+            self.tol_box.setEnabled(False)
 
-        if self.tipo_box.currentIndex() == BAND_PASS or self.tipo_box.currentIndex() == BAND_STOP:
-            self.define_with_box.setEnabled()
-            self.gp_box.setDisabled()
-            self.ga_box.setDisabled()
-            self.fp_box.setDisabled()
-            self.fa_box.setDisabled()
-            self.tau0_box.setDisabled()
-            self.frg_box.setDisabled()
-            self.tol_box.setDisabled()
+        if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
+            for i in range(Filter.LEGENDRE + 1):
+                self.aprox_box.model().item(i).setEnabled(True)
+            for i in range(Filter.BESSEL, Filter.GAUSS + 1):
+                self.aprox_box.model().item(i).setEnabled(False)
+            if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
+                self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
+            self.define_with_box.setEnabled(True)
+            self.fp_box.setEnabled(False)
+            self.fa_box.setEnabled(False)
+            self.tau0_box.setEnabled(False)
+            self.frg_box.setEnabled(False)
+            self.tol_box.setEnabled(False)
 
-            if self.define_with_box.currentIndex() == TEMPLATE_FREQS:
-                self.fa_min_box.setEnabled()
-                self.fa_max_box.setEnabled()
-                self.fp_min_box.setEnabled()
-                self.fp_max_box.setEnabled()
-                self.f0_box.setDisabled()
-                self.bw_min_box.setDisabled()
-                self.bw_max_box.setDisabled()
-            if self.define_with_box.currentIndex() == F0_BW:
-                self.fa_min_box.setDisabled()
-                self.fa_max_box.setDisabled()
-                self.fp_min_box.setDisabled()
-                self.fp_max_box.setDisabled()
-                self.f0_box.setEnabled()
-                self.bw_min_box.setEnabled()
-                self.bw_max_box.setEnabled()
+            if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
+                self.fa_min_box.setEnabled(True)
+                self.fa_max_box.setEnabled(True)
+                self.fp_min_box.setEnabled(True)
+                self.fp_max_box.setEnabled(True)
+                self.f0_box.setEnabled(False)
+                self.bw_min_box.setEnabled(False)
+                self.bw_max_box.setEnabled(False)
+            if self.define_with_box.currentIndex() == Filter.F0_BW:
+                self.fa_min_box.setEnabled(False)
+                self.fa_max_box.setEnabled(False)
+                self.fp_min_box.setEnabled(False)
+                self.fp_max_box.setEnabled(False)
+                self.f0_box.setEnabled(True)
+                self.bw_min_box.setEnabled(True)
+                self.bw_max_box.setEnabled(True)
         
-        if self.tipo_box.currentIndex() == GROUP_DELAY:
-            self.define_with_box.setDisabled()
-            self.gp_box.setDisabled()
-            self.ga_box.setDisabled()
-            self.fp_box.setDisabled()
-            self.fa_box.setDisabled()
-            self.fa_min_box.setDisabled()
-            self.fa_max_box.setDisabled()
-            self.fp_min_box.setDisabled()
-            self.fp_max_box.setDisabled()
-            self.f0_box.setDisabled()
-            self.bw_min_box.setDisabled()
-            self.bw_max_box.setDisabled()
-            self.tau0_box.setEnabled()
-            self.frg_box.setEnabled()
-            self.tol_box.setEnabled()
+        if self.tipo_box.currentIndex() == Filter.GROUP_DELAY:
+            for i in range(Filter.LEGENDRE + 1):
+                self.aprox_box.model().item(i).setEnabled(False)
+            for i in range(Filter.BESSEL, Filter.GAUSS + 1):
+                self.aprox_box.model().item(i).setEnabled(True)
+            if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
+                self.aprox_box.setCurrentIndex(Filter.BESSEL)
+            self.gp_box.setEnabled(False)
+            self.ga_box.setEnabled(False)
+            self.fp_box.setEnabled(False)
+            self.fa_box.setEnabled(False)
+            self.fa_min_box.setEnabled(False)
+            self.fa_max_box.setEnabled(False)
+            self.fp_min_box.setEnabled(False)
+            self.fp_max_box.setEnabled(False)
+            self.f0_box.setEnabled(False)
+            self.bw_min_box.setEnabled(False)
+            self.bw_max_box.setEnabled(False)
+            self.tau0_box.setEnabled(True)
+            self.frg_box.setEnabled(True)
+            self.tol_box.setEnabled(True)
 
 
     def removeSelectedDataset(self, event):
@@ -465,22 +484,40 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.gain_box.setValue(self.selected_dataset_data.origin.gain)
             self.ga_box.setValue(self.selected_dataset_data.origin.ga_dB)
             self.gp_box.setValue(self.selected_dataset_data.origin.gp_dB)
-            self.fa_box.setValue(self.selected_dataset_data.origin.fa)
-            self.fp_box.setValue(self.selected_dataset_data.origin.fp)
-            self.ra_box.setValue(self.selected_dataset_data.origin.ra)
-            self.rp_box.setValue(self.selected_dataset_data.origin.rp)
-            self.f0_box.setValue(self.selected_dataset_data.origin.f0)
-            self.bw_box.setValue(self.selected_dataset_data.origin.bw)
-            self.Q_box.setValue(self.selected_dataset_data.origin.Q)
-            self.fa_min_box.setValue(self.selected_dataset_data.origin.fa_min)
-            self.fa_max_box.setValue(self.selected_dataset_data.origin.fa_max)
-            self.fp_min_box.setValue(self.selected_dataset_data.origin.fp_min)
-            self.fp_max_box.setValue(self.selected_dataset_data.origin.fp_max)
-            self.tol_box.setValue(self.selected_dataset_data.origin.tol)
-            self.g_delay_box.setValue(self.selected_dataset_data.origin.g_delay)
+            self.N_label.setText(str(self.selected_dataset_data.origin.N))
             self.N_min_box.setValue(self.selected_dataset_data.origin.N_min)
             self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)
             self.Q_max_box.setValue(self.selected_dataset_data.origin.Q_max)
+
+            if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
+                self.fp_box.setValue(0)
+                self.fa_box.setValue(0)
+                self.fa_min_box.setValue(self.selected_dataset_data.origin.wa[0] / (2 * np.pi))
+                self.fa_max_box.setValue(self.selected_dataset_data.origin.wa[1] / (2 * np.pi))
+                self.fp_min_box.setValue(self.selected_dataset_data.origin.wp[0] / (2 * np.pi))
+                self.fp_max_box.setValue(self.selected_dataset_data.origin.wp[1] / (2 * np.pi)) 
+            elif self.selected_dataset_data.origin.filter_type in [Filter.LOW_PASS, Filter.HIGH_PASS]:
+                self.fp_box.setValue(self.selected_dataset_data.origin.wp / (2 * np.pi))
+                self.fa_box.setValue(self.selected_dataset_data.origin.wa / (2 * np.pi))
+                self.fa_min_box.setValue(0)
+                self.fa_max_box.setValue(0)
+                self.fp_min_box.setValue(0)
+                self.fp_max_box.setValue(0)
+            else:
+                self.fp_box.setValue(0)
+                self.fa_box.setValue(0)
+                self.fa_min_box.setValue(0)
+                self.fa_max_box.setValue(0)
+                self.fp_min_box.setValue(0)
+                self.fp_max_box.setValue(0)
+                
+        
+            self.f0_box.setValue(self.selected_dataset_data.origin.w0 / (2 * np.pi))
+            self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0] / (2 * np.pi))
+            self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1] / (2 * np.pi))
+            self.tol_box.setValue(self.selected_dataset_data.origin.gamma)
+            self.tau0_box.setValue(self.selected_dataset_data.origin.tau0)
+            self.frg_box.setValue(self.selected_dataset_data.origin.wrg / (2* np.pi))
 
     def updateSelectedDataset(self):
         new_title = self.ds_title_edit.text()
