@@ -101,6 +101,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.myFilters = []
         self.new_filter_btn.clicked.connect(self.resolveFilterDialog)
         self.chg_filter_btn.clicked.connect(self.updateSelectedFilter)
+        self.tipo_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
+        self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
 
     def dragEnterEvent(self, event):
         if(event.mimeData().hasUrls()):
@@ -277,6 +279,69 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_widget.setText(self.filtername_box.text())
         self.selected_dataset_data = ds
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
+
+    def updateFilterParametersAvailable(self):
+        if self.tipo_box.currentIndex() == LOW_PASS or self.tipo_box.currentIndex() == HIGH_PASS:
+            self.define_with_box.setDisabled()
+            self.gp_box.setEnabled()
+            self.ga_box.setEnabled()
+            self.fp_box.setEnabled()
+            self.fa_box.setEnabled()
+            self.fa_min_box.setDisabled()
+            self.fa_max_box.setDisabled()
+            self.fp_min_box.setDisabled()
+            self.fp_max_box.setDisabled()
+            self.f0_box.setDisabled()
+            self.bw_min_box.setDisabled()
+            self.bw_max_box.setDisabled()
+            self.tau0_box.setDisabled()
+            self.frg_box.setDisabled()
+            self.tol_box.setDisabled()
+
+        if self.tipo_box.currentIndex() == BAND_PASS or self.tipo_box.currentIndex() == BAND_STOP:
+            self.define_with_box.setEnabled()
+            self.gp_box.setDisabled()
+            self.ga_box.setDisabled()
+            self.fp_box.setDisabled()
+            self.fa_box.setDisabled()
+            self.tau0_box.setDisabled()
+            self.frg_box.setDisabled()
+            self.tol_box.setDisabled()
+
+            if self.define_with_box.currentIndex() == TEMPLATE_FREQS:
+                self.fa_min_box.setEnabled()
+                self.fa_max_box.setEnabled()
+                self.fp_min_box.setEnabled()
+                self.fp_max_box.setEnabled()
+                self.f0_box.setDisabled()
+                self.bw_min_box.setDisabled()
+                self.bw_max_box.setDisabled()
+            if self.define_with_box.currentIndex() == F0_BW:
+                self.fa_min_box.setDisabled()
+                self.fa_max_box.setDisabled()
+                self.fp_min_box.setDisabled()
+                self.fp_max_box.setDisabled()
+                self.f0_box.setEnabled()
+                self.bw_min_box.setEnabled()
+                self.bw_max_box.setEnabled()
+        
+        if self.tipo_box.currentIndex() == GROUP_DELAY:
+            self.define_with_box.setDisabled()
+            self.gp_box.setDisabled()
+            self.ga_box.setDisabled()
+            self.fp_box.setDisabled()
+            self.fa_box.setDisabled()
+            self.fa_min_box.setDisabled()
+            self.fa_max_box.setDisabled()
+            self.fp_min_box.setDisabled()
+            self.fp_max_box.setDisabled()
+            self.f0_box.setDisabled()
+            self.bw_min_box.setDisabled()
+            self.bw_max_box.setDisabled()
+            self.tau0_box.setEnabled()
+            self.frg_box.setEnabled()
+            self.tol_box.setEnabled()
+
 
     def removeSelectedDataset(self, event):
         selected_row = self.dataset_list.currentRow()
