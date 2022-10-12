@@ -144,7 +144,7 @@ class Filter():
                 elif self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.butter(self.N, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, self.gain)
+                self.tf_norm = TFunction(z, p, k)
 
             if self.approx_type == CHEBYSHEV:
                 self.N, self.wc = signal.cheb1ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
@@ -153,7 +153,7 @@ class Filter():
                 elif self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, self.gain)
+                self.tf_norm = TFunction(z, p, k)
 
             if self.approx_type == CHEBYSHEV2:
                 self.N, self.wc = signal.cheb2ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
@@ -162,7 +162,7 @@ class Filter():
                 elif self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.cheby2(self.N, -self.ga_dB, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, self.gain)
+                self.tf_norm = TFunction(z, p, k)
             
             if self.approx_type == CAUER:
                 self.N, self.wc = signal.ellipord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
@@ -171,7 +171,7 @@ class Filter():
                 elif self.N < self.N_min:
                     self.N = self.N_min
                 z, p, k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, self.gain)
+                self.tf_norm = TFunction(z, p, k)
             
             
             if self.approx_type == LEGENDRE:
@@ -184,7 +184,7 @@ class Filter():
                     p = select_roots(L_eps)
                     tf2 = TFunction(z, p, 1)
                     if abs(tf2.at(1j*self.wan)) < self.ga:
-                        self.tf_norm = TFunction(z, p, self.gain)
+                        self.tf_norm = TFunction(z, p, 1)
                         break
                     self.N += 1
                     if self.N > 25: #excedí el límite
@@ -196,7 +196,7 @@ class Filter():
                     z, p, k = signal.bessel(self.N, self.wrg_n, analog=True, output='zpk', norm='delay')
                     tf2 = TFunction(z, p, k)
                     if abs(tf2.gd_at(self.wrg_n) - 1) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
-                        self.tf_norm = TFunction(z, p, self.gain)
+                        self.tf_norm = TFunction(z, p, k)
                         break
                     self.N += 1
                     if self.N > 25: #excedí el límite
@@ -204,20 +204,20 @@ class Filter():
 
             if self.approx_type == GAUSS:
                 self.N = 1
-                gauss_poly = [1, 0, 1]
-                fact_prod = 1
+                gauss_poly = [-1, 0, 1]
+                fact_prod = -1
                 while True:
                     if self.N >= self.N_min:
                         z = []
                         p = select_roots(np.poly1d(gauss_poly))
                         tf2 = TFunction(z, p, 1)
                         if abs(tf2.gd_at(self.wrg_n) - 1) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
-                            self.tf_norm = TFunction(z, p, self.gain)
+                            self.tf_norm = TFunction(z, p, 1)
                             break
                     self.N += 1
                     if self.N > 25: #excedí el límite
                         break
-                    fact_prod *= self.N
+                    fact_prod *= -self.N
                     gauss_poly.insert(0, 0)
                     gauss_poly.insert(0, 1/fact_prod)
 
@@ -297,4 +297,4 @@ class Filter():
         N = sym.Poly(h_denorm[0]).all_coeffs() if (s in h_denorm[0].free_symbols) else [h_denorm[0].evalf()]
         D = sym.Poly(h_denorm[1]).all_coeffs() if (s in h_denorm[1].free_symbols) else [h_denorm[1].evalf()]
 
-        self.tf = TFunction(N, D)
+        self.tf = TFunction(N * self.gain, D)
