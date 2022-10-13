@@ -60,6 +60,11 @@ def select_roots(p):
             valid_roots.append(root)
     return valid_roots
 
+def is_conjugate(z1, z2):
+    return np.isclose(np.imag(z1), -np.imag(z2), rtol=1e-5)
+
+def is_complex(z):
+    return not np.isclose(np.imag(z), 0, rtol=1e-5)
 
 
 class AnalogFilter():
@@ -70,7 +75,11 @@ class AnalogFilter():
         self.tf_norm = type('TFunction', (), {})()
         for k, v in kwargs.items():
             setattr(self, k, v) #Seteo todos los atributos de 1
-        
+        self.stages = []
+        self.stages_index = []
+        self.remainingZeros = 0
+        self.remainingPoles = 0
+        self.remainingGain = 0
         
     def validate(self):
         try:
@@ -307,3 +316,46 @@ class AnalogFilter():
         D = sym.Poly(h_denorm[1]).all_coeffs() if (s in h_denorm[1].free_symbols) else [h_denorm[1].evalf()]
 
         self.tf = TFunction([a * self.gain for a in N], D)
+
+    def resetStages(self):
+        self.remainingGain = self.gain
+        self.remainingPoles = len(self.tf.z)
+        self.remainingZeros = len(self.tf.p)
+        self.stages = []
+        self.stages_index = []
+
+    def addStage(self, z_arr, p_arr, gain):
+        if len(z_arr) > 2 or len(p_arr) > 2 or len(z_arr) > len(p_arr):
+            return False
+        
+        if is_complex(self.tf.p[p_arr[0]]) and (len(p_arr) < 2 or not is_conjugate(self.tf.p[p_arr[0]], self.tf.p[p_arr[1]])):
+            return False
+        if is_complex(self.tf.z[z_arr[0]]) and (len(z_arr) < 2 or not is_conjugate(self.tf.z[z_arr[0]], self.tf.z[z_arr[1]])):
+            return False
+
+        newRemainingZeros = self.remainingZeros - len(z_arr)
+        newRemainingPoles = self.remainingPoles - len(p_arr)
+
+        if newRemainingZeros > newRemainingPoles:
+            return False
+
+        append_gain = self.remainingGain if newRemainingPoles == 0 else gain
+        self.remainingGain /= append_gain
+        self.remainingZeros = newRemainingZeros
+        self.remainingPoles = newRemainingPoles
+        self.stages.append(TFunction([self.tf.z[i] for i in z_arr], [self.tf.p[i] for i in p_arr], append_gain))
+        self.stages_index.append([z_arr, p_arr, append_gain])
+        return True
+        
+
+    def removeStage(self, i):
+        self.stages.remove(i)
+        z_arr = self.stages_index[i][0]
+        p_arr = self.stages_index[i][1]
+        gain = self.stages_index[i][2]
+        self.stages_index.remove(i)
+        self.remainingGain *= gain
+        self.remainingZeros += len(z_arr)
+        self.remainingPoles += len(p_arr)
+        return z_arr, p_arr, gain
+
