@@ -1,5 +1,6 @@
 import sympy as sym
 import scipy.signal as signal
+from scipy.optimize import basinhopping
 import numpy as np
 
 # Evaluate a polynomial in reverse order using Horner's Rule,
@@ -8,6 +9,17 @@ def poly_at(p, x):
     total = 0
     for a in p:
         total = total*x+a
+    return total
+
+def poly_diff_at(p, x):
+    total = 0
+    j = len(p) - 1
+    for a in p:
+        prod = 1
+        for i in range(j-1):
+            prod *= x
+        total += a * j * prod
+        j -= 1
     return total
 
 class TFunction():
@@ -47,12 +59,23 @@ class TFunction():
     
     def at(self, s):
         return poly_at(self.N, s) / poly_at(self.D, s)
+
+    def deriv_at(self, s):
+        N = poly_at(self.N, s)
+        D = poly_at(self.D, s)
+        dN = poly_diff_at(self.N, s)
+        dD = poly_diff_at(self.D, s)
+        return (dN*D - N*dD)/(D*D)
     
+    def minFunctionMod(self, w):
+        return abs(self.at(1j*w))
+    
+    def maxFunctionMod(self, w):
+        return -abs(self.at(1j*w))
+    
+    #como ln(H) = ln(G) + j phi --> H'/H = G'/G + j phi'
     def gd_at(self, w0):
-        w = np.linspace(w0*0.9, w0*1.1, 1000)
-        w, h = signal.freqs(self.N, self.D, w)
-        index = np.where(w >= w0)[0][0]
-        return (-np.diff(np.angle(h)) / np.diff(w))[index]
+        return -np.imag(1j*self.deriv_at(1j*w0)/self.at(1j*w0)) #'1j*..' --> regla de la cadena
         
     def getZP(self):
         return self.z, self.p
@@ -60,10 +83,25 @@ class TFunction():
     def getBode(self, start=-2, stop=9, num=2222):
         ws = np.logspace(start, stop, num)
         w, g, ph = signal.bode(self.tf_object, w=ws)
-        gd = - np.diff(ph) / np.diff(w)
-        gd = np.append(gd, gd[-1])
+        gd = self.gd_at(w) # * 2 *np.p1 --> no hay que hacer regla de cadena porque se achica tmb la escala de w
         f = w / (2 * np.pi)
         return f, np.power(10, g/20), ph, gd
 
+    def optimize(self, start, stop, maximize = False):
+        # rewrite the bounds in the way required by L-BFGS-B
+        bounds = [(start, stop)]
+        w0 = 0.5*(start + stop)
+
+        if not maximize:
+            f = lambda w : self.minFunctionMod(w)
+        else:
+            f = lambda w : self.maxFunctionMod(w)
+
+        # use method L-BFGS-B because the problem is smooth and bounded
+        minimizer_kwargs = dict(method="L-BFGS-B", bounds=bounds)
+        res = basinhopping(f, w0, minimizer_kwargs=minimizer_kwargs)
+        return res.x, (res.fun if not maximize else -res.fun)
+
+    
     def getLatex(self, txt):
         return sym.latex(sym.parsing.sympy_parser.parse_expr(txt, transformations = 'all'))

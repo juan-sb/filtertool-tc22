@@ -33,8 +33,8 @@ class DesignConfig:
         return self.filter_types[self.aprox]
 
     def getNormalAttenuations(self):
-        Ap = self.ripple
-        Aa = self.Aa + self.ripple - self.Ap
+        Ap = self.Ap
+        Aa = self.Aa
         return Ap, Aa
 
     def setParameters(self, type, aprox, denorm, minord, maxord, qmax, Ap, ripple, Aa, wp, wa, wp2, wa2, tau, wrg, gamma):

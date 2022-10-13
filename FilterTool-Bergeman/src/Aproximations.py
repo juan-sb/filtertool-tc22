@@ -72,14 +72,14 @@ def Bessel(designconfig):
     tb, ta = signal.bessel(N=n, Wn=1, btype='low', analog=True, output='ba', norm='delay')
     w = np.linspace(wrgN - 0.5, wrgN + 0.5, 1000)
     w, th = signal.freqs(tb, ta, w)
-    gd = -np.diff(np.unwrap(np.angle(th))) / np.diff(w)
+    gd = -np.diff(np.angle(th)) / np.diff(w)
     index = np.where(w >= wrgN)[0][0]
-    while gd[index] < (1 - (designconfig.gamma / 100)):
+    while 1 - gd[index] > (designconfig.gamma / 100):
         n += 1
         tb, ta = signal.bessel(N=n, Wn=1, btype='low', analog=True, output='ba', norm='delay')
         w = np.linspace(wrgN - 0.5, wrgN + 0.5, 1000)
         w, th = signal.freqs(tb, ta, w)
-        gd = -np.diff(np.unwrap(np.angle(th))) / np.diff(w)
+        gd = -np.diff(np.angle(th)) / np.diff(w)
         index = np.where(w >= wrgN)[0][0]
 
     n = max(min(n, designconfig.maxord), designconfig.minord)
@@ -127,15 +127,15 @@ def Gauss(designconfig):
     b, a = signal.zpk2tf(z, p, k)
     w = np.linspace(wrgN - 0.5, wrgN + 0.5, 1000)
     w, th = signal.freqs(b, a, w)
-    gd = -np.diff(np.unwrap(np.angle(th))) / np.diff(w)
+    gd = -np.diff(np.angle(th)) / np.diff(w)
     index = np.where(w >= wrgN)[0][0]
-    while gd[index] < (1 - (designconfig.gamma / 100)):
+    while 1 - gd[index] > (designconfig.gamma / 100):
         n += 1
         z, p, k = gauss_poly(n, 1)
         b, a = signal.zpk2tf(z, p, k)
         w = np.linspace(wrgN - 0.5, wrgN + 0.5, 1000)
         w, th = signal.freqs(b, a, w)
-        gd = -np.diff(np.unwrap(np.angle(th))) / np.diff(w)
+        gd = -np.diff(np.angle(th)) / np.diff(w)
         index = np.where(w >= wrgN)[0][0]
 
     n = max(min(n, designconfig.maxord), designconfig.minord)
@@ -157,14 +157,14 @@ def Gauss(designconfig):
 
 def gauss_poly(n, tau):
     a = []
-    wtow2 = np.poly1d([1, 0, 0])
-    for i in range(n, 0, -1):
-        a.append(((-tau) ** i) / np.math.factorial(i))  # desarrollo del polinomio e**x
-
-    a.append(1)
-    poly = np.poly1d(a)(wtow2)  # cambio de variable x => w**2
     p = []
-    roots = np.roots(poly)  # saco las raices
+    wtow2 = np.poly1d([1, 0, 0])
+
+    for i in range(n, 0, -1):
+        a.append(((tau) ** i) / np.math.factorial(i))  # desarrollo del polinomio e**x
+    a.append(1)
+    poly = np.poly1d(a)(wtow2)
+    roots = np.roots(poly)*(-1j)  # saco las raices
     for i in range(len(roots)):
         c_root = complex(roots[i])
         if np.sign(c_root.real) == -1:  # me quedo con aquellas de parte real negativa
@@ -177,7 +177,7 @@ def gauss_poly(n, tau):
     w = np.logspace(-5, -4, 1000)
     b, a = signal.zpk2tf(z, p, k)
     w, th = signal.freqs(b, a, w)
-    gd = -np.diff(np.unwrap(np.angle(th))) / np.diff(w)
+    gd = -np.diff(np.angle(th)) / np.diff(w)
 
     for i in range(len(p)):
         p[i] = p[i] * gd[0]

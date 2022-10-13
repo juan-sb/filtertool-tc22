@@ -29,7 +29,7 @@ def get_Leps(n, eps):
                     a.append(0)
             else:
                 if i == 1:
-                    a.append(3 / (((k + 1) * (k + 2)) ** (1 / 2)))
+                    a.append(3 / (np.sqrt((k + 1) * (k + 2))))
                 elif i % 2 == 0:
                     a.append(0)
                 else:
@@ -53,7 +53,7 @@ def get_Leps(n, eps):
     return np.poly1d([1]) + sum_prod_pol*eps*eps
 
 def select_roots(p):
-    roots = np.roots(p)
+    roots = np.roots(p)*(-1j) #vuelvo desde w al dominio de s
     valid_roots = []
     for root in roots:
         if root.real <= 0:
@@ -185,9 +185,13 @@ class AnalogFilter():
                     L_eps = get_Leps(self.N, eps)
                     z = []
                     p = select_roots(L_eps)
-                    tf2 = TFunction(z, p, 1)
-                    if abs(tf2.at(1j*self.wan)) < self.ga:
-                        self.tf_norm = TFunction(z, p, 1)
+                    p0 = np.prod(p)
+                    tf2 = TFunction(z, p, p0)
+                    wmin, tf2_wmin = tf2.optimize(0.1, 1)
+                    wmax, tf2_wmax = tf2.optimize(0.1, 1, True)
+                    wmax2, tf2_wmax2 = tf2.optimize(self.wan, 10*self.wan, True)
+                    if tf2_wmin >= self.gp and tf2_wmax <= 1 and tf2_wmax2 <= self.ga:
+                        self.tf_norm = TFunction(z, p, p0)
                         break
                     self.N += 1
                     assert self.N <= self.N_max 
@@ -211,9 +215,12 @@ class AnalogFilter():
                     if self.N >= self.N_min:
                         z = []
                         p = select_roots(np.poly1d(gauss_poly))
-                        tf2 = TFunction(z, p, 1)
+                        p0 = np.prod(p)
+                        tf2 = TFunction(z, p, p0)
                         if 1 - tf2.gd_at(self.wrg_n) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
-                            self.tf_norm = TFunction(z, p, 1)
+                            g0 = tf2.gd_at(0)                       
+                            p = [r * g0 for r in p]
+                            self.tf_norm = TFunction(z, p, p0)
                             break
                     self.N += 1
                     assert self.N <= self.N_max
