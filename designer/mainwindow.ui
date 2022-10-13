@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1135</width>
-    <height>585</height>
+    <width>1358</width>
+    <height>887</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -142,7 +142,7 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>0</y>
+                <y>-3</y>
                 <width>183</width>
                 <height>498</height>
                </rect>
@@ -704,8 +704,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>200</width>
-                <height>492</height>
+                <width>217</width>
+                <height>524</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_15">
@@ -1321,8 +1321,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>193</width>
-                <height>629</height>
+                <width>210</width>
+                <height>720</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1910,13 +1910,23 @@
             </item>
            </layout>
           </widget>
-          <widget class="QWidget" name="tab_9">
+          <widget class="QWidget" name="tab_18">
            <attribute name="title">
             <string>Gain</string>
            </attribute>
-           <layout class="QGridLayout" name="gridLayout_21">
+           <layout class="QGridLayout" name="gridLayout_30">
             <item row="0" column="0">
              <widget class="MplWidget" name="fplot_gain" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_9">
+           <attribute name="title">
+            <string>Magnitude</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_21">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="fplot_mag" native="true"/>
             </item>
            </layout>
           </widget>
@@ -2172,7 +2182,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1135</width>
+     <width>1358</width>
      <height>21</height>
     </rect>
    </property>
@@ -2220,6 +2230,83 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>dataset_list</tabstop>
+  <tabstop>import_file_btn</tabstop>
+  <tabstop>function_btn</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>ds_title_edit</tabstop>
+  <tabstop>ds_addline_btn</tabstop>
+  <tabstop>ds_caseadd_btn</tabstop>
+  <tabstop>ds_poleszeros_btn</tabstop>
+  <tabstop>ds_remove_btn</tabstop>
+  <tabstop>plt_labelsize_sb</tabstop>
+  <tabstop>plt_titlesize_sb</tabstop>
+  <tabstop>plt_ticksize_sb</tabstop>
+  <tabstop>plt_legendsize_sb</tabstop>
+  <tabstop>plt_legendpos</tabstop>
+  <tabstop>plt_grid</tabstop>
+  <tabstop>plt_marginx</tabstop>
+  <tabstop>plt_marginy</tabstop>
+  <tabstop>plt_autoscale</tabstop>
+  <tabstop>tabbing_plots</tabstop>
+  <tabstop>dataline_list</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>dl_name_edit</tabstop>
+  <tabstop>dl_render_cb</tabstop>
+  <tabstop>dl_transform_cb</tabstop>
+  <tabstop>dl_xdata_cb</tabstop>
+  <tabstop>dl_xscale_sb</tabstop>
+  <tabstop>dl_xoffset_sb</tabstop>
+  <tabstop>dl_ydata_cb</tabstop>
+  <tabstop>dl_yscale_sb</tabstop>
+  <tabstop>dl_yoffset_sb</tabstop>
+  <tabstop>dl_color_edit</tabstop>
+  <tabstop>dl_color_pickerbtn</tabstop>
+  <tabstop>dl_style_cb</tabstop>
+  <tabstop>dl_linewidth_sb</tabstop>
+  <tabstop>dl_marker_cb</tabstop>
+  <tabstop>dl_markersize_sb</tabstop>
+  <tabstop>dl_savgol_wlen</tabstop>
+  <tabstop>dl_savgol_ord</tabstop>
+  <tabstop>dl_remove_btn</tabstop>
+  <tabstop>resp_btn</tabstop>
+  <tabstop>scrollArea_3</tabstop>
+  <tabstop>filtername_box</tabstop>
+  <tabstop>tipo_box</tabstop>
+  <tabstop>aprox_box</tabstop>
+  <tabstop>define_with_box</tabstop>
+  <tabstop>N_min_box</tabstop>
+  <tabstop>N_max_box</tabstop>
+  <tabstop>Q_max_box</tabstop>
+  <tabstop>gain_box</tabstop>
+  <tabstop>denorm_box</tabstop>
+  <tabstop>gp_box</tabstop>
+  <tabstop>ga_box</tabstop>
+  <tabstop>fp_box</tabstop>
+  <tabstop>fa_box</tabstop>
+  <tabstop>fa_min_box</tabstop>
+  <tabstop>fp_min_box</tabstop>
+  <tabstop>fp_max_box</tabstop>
+  <tabstop>fa_max_box</tabstop>
+  <tabstop>f0_box</tabstop>
+  <tabstop>bw_min_box</tabstop>
+  <tabstop>bw_max_box</tabstop>
+  <tabstop>tau0_box</tabstop>
+  <tabstop>frg_box</tabstop>
+  <tabstop>tol_box</tabstop>
+  <tabstop>new_filter_btn</tabstop>
+  <tabstop>chg_filter_btn</tabstop>
+  <tabstop>tabWidget_2</tabstop>
+  <tabstop>stages_list</tabstop>
+  <tabstop>remove_stage_btn</tabstop>
+  <tabstop>poles_list</tabstop>
+  <tabstop>zeros_list</tabstop>
+  <tabstop>new_stage_btn</tabstop>
+  <tabstop>stage_gain_box</tabstop>
+  <tabstop>tabWidget_3</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

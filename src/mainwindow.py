@@ -103,7 +103,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.new_filter_btn.clicked.connect(self.resolveFilterDialog)
         self.chg_filter_btn.clicked.connect(self.updateSelectedFilter)
         self.tipo_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
-        self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
+        # self.aprox_box.currentIndexChanged.connect(self.updateSelectedFilter)
+        # self.N_min_box.valueChanged.connect(self.updateSelectedFilter)
+        # self.N_max_box.valueChanged.connect(self.updateSelectedFilter)
+        # self.denorm_box.valueChanged.connect(self.updateSelectedFilter)
+        # self.gp_box.valueChanged.connect(self.updateSelectedFilter)
+        # self.ga_box.valueChanged.connect(self.updateSelectedFilter)
+        # self.fp_box.valueChanged.connect(self.updateSelectedFilter)
+        # self.fa_box.valueChanged.connect(self.updateSelectedFilter)
+        # self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
         self.updateFilterParametersAvailable()
 
     def dragEnterEvent(self, event):
@@ -400,6 +408,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def updateFilterPlots(self):
         attcanvas = self.fplot_att.canvas
         gaincanvas = self.fplot_gain.canvas
+        magcanvas = self.fplot_mag.canvas
         phasecanvas = self.fplot_phase.canvas
         groupdelaycanvas = self.fplot_gd.canvas
         pzcanvas = self.fplot_pz.canvas
@@ -408,10 +417,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         attcanvas.ax.clear()
         attcanvas.ax.grid(True, which="both", linestyle=':')
-        attcanvas.ax.set_xscale('log')
         gaincanvas.ax.clear()
         gaincanvas.ax.grid(True, which="both", linestyle=':')
-        gaincanvas.ax.set_xscale('log')
+        magcanvas.ax.clear()
+        magcanvas.ax.grid(True, which="both", linestyle=':')
+        magcanvas.ax.set_xscale('log')
         phasecanvas.ax.clear()
         phasecanvas.ax.grid(True, which="both", linestyle=':')
         phasecanvas.ax.set_xscale('log')
@@ -439,11 +449,100 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         attline, = attcanvas.ax.plot(f, -g)
         gainline, = gaincanvas.ax.plot(f, g)
+        magline, = magcanvas.ax.plot(f, g)
         phaseline, = phasecanvas.ax.plot(f, ph)
         gdline, = groupdelaycanvas.ax.plot(f, gd)
         stepline, = stepcanvas.ax.plot(tstep, stepres)
         impulseline, = impulsecanvas.ax.plot(timp, impres)
         
+
+
+        if self.filter.filter_type == Filter.LOW_PASS:
+            fp = self.filter.wp/(2*np.pi)
+            fa = self.filter.wa/(2*np.pi)
+            gp = self.filter.gp_dB
+            ga = self.filter.ga_dB
+            bw = fa - fp
+            x = [fp - bw/3, fp]
+            y = [-gp, -gp]
+            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            x = [fa, fa + bw/3]
+            y = [-ga, -ga]
+            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_xlim([fp - bw/3, fa + bw/3])
+            attcanvas.ax.set_ylim([0, -ga*1.5])
+
+        elif self.filter.filter_type == Filter.HIGH_PASS:
+            fp = self.filter.wp/(2*np.pi)
+            fa = self.filter.wa/(2*np.pi)
+            gp = self.filter.gp_dB
+            ga = self.filter.ga_dB
+            bw = fp - fa
+            x = [fp, fp + bw/3]
+            y = [-gp, -gp]
+            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            x = [fa - bw/3, fa]
+            y = [-ga, -ga]
+            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_xlim([fa - bw/3, fp + bw/3])
+            attcanvas.ax.set_ylim([0, -ga*1.5])
+        # elif type == 'Pasa Altos':
+        #     x = [wa / 10, wa, wa]
+        #     y = [Aa, Aa, Ap - 10]
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+        #     x = [wp, wp, wp * 10]
+        #     y = [Aa + 10, Ap, Ap]
+        #     if Ap <= 0:
+        #         yR = [Ap - ripple, Ap - ripple]
+        #     else:
+        #         yR = [ripple, ripple]
+        #     plt.semilogx(x[1:], yR, 'b--', color='#28658a', linewidth=2)
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+        # elif type == 'Pasa Banda':
+        #     x = [wa2 / 10, wa2, wa2]
+        #     y = [Aa, Aa, Ap - 10]
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+        #     x = [wp2, wp2, wp, wp]
+        #     y = [Aa + 10, Ap, Ap, Aa + 10]
+        #     if Ap <= 0:
+        #         yR = [Ap - ripple, Ap - ripple]
+        #     else:
+        #         yR = [ripple, ripple]
+        #     plt.semilogx(x[1:-1], yR, 'b--', color='#28658a', linewidth=2)
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+        #     x = [wa, wa, wa * 10]
+        #     y = [Ap - 10, Aa, Aa]
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+        # elif type == 'Rechaza Banda':
+        #     x = [wp2 / 10, wp2, wp2]
+        #     y = [Ap, Ap, Aa + 10]
+        #     if Ap <= 0:
+        #         yR = [Ap - ripple, Ap - ripple]
+        #     else:
+        #         yR = [ripple, ripple]
+        #     plt.semilogx(x[:-1], yR, 'b--', color='#28658a', linewidth=2)
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+        #     x = [wa2, wa2, wa, wa]
+        #     y = [Ap - 10, Aa, Aa, Ap - 10]
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+        #     x = [wp, wp, wp * 10]
+        #     y = [Aa + 10, Ap, Ap]
+        #     if Ap <= 0:
+        #         yR = [Ap - ripple, Ap - ripple]
+        #     else:
+        #         yR = [ripple, ripple]
+        #     plt.semilogx(x[1:], yR, 'b--', color='#28658a', linewidth=2)
+        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
+        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+
+
         pzcanvas.ax.axis('equal')
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
@@ -458,6 +557,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         attcanvas.draw()
         gaincanvas.draw()
+        magcanvas.draw()
         phasecanvas.draw()
         groupdelaycanvas.draw()
         pzcanvas.draw()
