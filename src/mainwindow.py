@@ -99,7 +99,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             [ self.plot_5 ],
         ]
 
-        self.myFilters = []
+        self.filter = AnalogFilter()
         self.new_filter_btn.clicked.connect(self.resolveFilterDialog)
         self.chg_filter_btn.clicked.connect(self.updateSelectedFilter)
         self.tipo_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
@@ -151,10 +151,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def resolveResponseDialog(self):
         if not(self.respd.validateResponse()):
             return
-            
         if(self.respd.getResponseExpression() == 'step'):
-            
-            t, ss = signal.step(self.selected_dataset_data.tf)
+            t, ss = signal.step(self.selected_dataset_data.tf.getND())
             title = self.respd.getResponseTitle()
             time_title = title + "_timebase"
             ans_title = title + "_ans"
@@ -233,6 +231,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not valid:
             # mostrar el error
             return
+        self.filter = newFilter
 
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
         qlwt = QListWidgetItem()
@@ -242,6 +241,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.datasets.append(ds)
         self.datalines.append([])
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
+        self.updateFilterPlots()
     
     def updateSelectedFilter(self):
         if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
@@ -277,12 +277,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not valid:
             # mostrar el error
             return
+        self.filter = newFilter
 
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
         
         self.selected_dataset_widget.setText(self.filtername_box.text())
         self.selected_dataset_data = ds
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
+        self.updateFilterPlots()
 
     def updateFilterParametersAvailable(self):
         if self.tipo_box.currentIndex() == Filter.LOW_PASS or self.tipo_box.currentIndex() == Filter.HIGH_PASS:
@@ -361,6 +363,106 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.frg_box.setEnabled(True)
             self.tol_box.setEnabled(True)
 
+    
+    def getRelevantFrequencies(self, zeros, poles):
+        singularitiesNorm = np.append(np.abs(zeros), np.abs(poles))
+        singularitiesNormWithoutZeros = singularitiesNorm[singularitiesNorm!=0]
+        if(len(singularitiesNormWithoutZeros) == 0):
+            return (1,1)
+        return (np.min(singularitiesNormWithoutZeros), np.max(singularitiesNormWithoutZeros))
+    
+    def getMultiplierAndPrefix(self, val):
+        multiplier = 1
+        prefix = ''
+        if(val < 1e-7):
+            multiplier = 1e9
+            prefix = 'n'
+        elif(val < 1e-4):
+            multiplier = 1e-6
+            prefix = 'μ'
+        elif(val < 1e-1):
+            multiplier = 1e-3
+            prefix = 'm'
+        elif(val < 1e2):
+            multiplier = 1
+            prefix = ''
+        elif(val < 1e5):
+            multiplier = 1e3
+            prefix = 'k'
+        elif(val < 1e8):
+            multiplier = 1e6
+            prefix = 'M'
+        elif(val > 1e11):
+            multiplier = 1e9
+            prefix = 'G'
+        return (multiplier, prefix)
+
+    def updateFilterPlots(self):
+        attcanvas = self.fplot_att.canvas
+        gaincanvas = self.fplot_gain.canvas
+        phasecanvas = self.fplot_phase.canvas
+        groupdelaycanvas = self.fplot_gd.canvas
+        pzcanvas = self.fplot_pz.canvas
+        stepcanvas = self.fplot_step.canvas
+        impulsecanvas = self.fplot_impulse.canvas
+
+        attcanvas.ax.clear()
+        attcanvas.ax.grid(True, which="both", linestyle=':')
+        attcanvas.ax.set_xscale('log')
+        gaincanvas.ax.clear()
+        gaincanvas.ax.grid(True, which="both", linestyle=':')
+        gaincanvas.ax.set_xscale('log')
+        phasecanvas.ax.clear()
+        phasecanvas.ax.grid(True, which="both", linestyle=':')
+        phasecanvas.ax.set_xscale('log')
+        phasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[1.8,2.25,4.5,9]))
+        groupdelaycanvas.ax.clear()
+        groupdelaycanvas.ax.grid(True, which="both", linestyle=':')
+        groupdelaycanvas.ax.set_xscale('log')
+        pzcanvas.ax.clear()
+        pzcanvas.ax.grid(True, which="both", linestyle=':')
+        stepcanvas.ax.clear()
+        stepcanvas.ax.grid(True, which="both", linestyle=':')
+        impulsecanvas.ax.clear()
+        impulsecanvas.ax.grid(True, which="both", linestyle=':')
+
+        filtds = Dataset(filepath='', origin=self.filter, title=self.filtername_box.text())
+        
+        tstep, stepres = signal.step(filtds.tf.getND())
+        timp, impres = signal.impulse(filtds.tf.getND())
+        
+        f = np.array(filtds.data[0]['f'])
+        g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
+        ph = np.array(filtds.data[0]['ph'])
+        gd = np.array(filtds.data[0]['gd'])
+        z, p = self.filter.tf.getZP()
+
+        attline, = attcanvas.ax.plot(f, -g)
+        gainline, = gaincanvas.ax.plot(f, g)
+        phaseline, = phasecanvas.ax.plot(f, ph)
+        gdline, = groupdelaycanvas.ax.plot(f, gd)
+        stepline, = stepcanvas.ax.plot(tstep, stepres)
+        impulseline, = impulsecanvas.ax.plot(timp, impres)
+        
+        pzcanvas.ax.axis('equal')
+        pzcanvas.ax.axhline(0, color="black", alpha=0.1)
+        pzcanvas.ax.axvline(0, color="black", alpha=0.1)
+        (min, max) = self.getRelevantFrequencies(z, p)
+        (multiplier, prefix) = self.getMultiplierAndPrefix(max)
+        pzcanvas.ax.scatter(z.real/multiplier, z.imag/multiplier, marker='o')
+        pzcanvas.ax.scatter(p.real/multiplier, p.imag/multiplier, marker='x')
+        pzcanvas.ax.set_xlabel(f'$\sigma$ (${prefix}rad/s$)')
+        pzcanvas.ax.set_ylabel(f'$j\omega$ (${prefix}rad/s$)')
+        pzcanvas.ax.set_xlim(left=-max*1.2/multiplier, right=max*1.2/multiplier)
+        pzcanvas.ax.set_ylim(bottom=-max*1.2/multiplier, top=max*1.2/multiplier)
+
+        attcanvas.draw()
+        gaincanvas.draw()
+        phasecanvas.draw()
+        groupdelaycanvas.draw()
+        pzcanvas.draw()
+        stepcanvas.draw()
+        impulsecanvas.draw()
 
     def removeSelectedDataset(self, event):
         selected_row = self.dataset_list.currentRow()

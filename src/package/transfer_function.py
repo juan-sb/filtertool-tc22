@@ -51,12 +51,18 @@ class TFunction():
         self.N, self.D = np.array(N, dtype=np.complex128), np.array(D, dtype=np.complex128)
         self.z, self.p, self.k = signal.tf2zpk(self.N, self.D)
         self.tf_object = signal.TransferFunction(self.N, self.D)
+    
+    def getND(self):
+        return self.N, self.D
 
     def setZPK(self, z, p, k):
         self.z, self.p, self.k = np.array(z, dtype=np.complex128), np.array(p, dtype=np.complex128), k
         self.N, self.D = signal.zpk2tf(self.z, self.p, self.k)
         self.tf_object = signal.TransferFunction(self.N, self.D)
     
+    def getZPK(self):
+        return self.z, self.p, self.k
+
     def at(self, s):
         return poly_at(self.N, s) / poly_at(self.D, s)
 
