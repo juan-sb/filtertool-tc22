@@ -206,7 +206,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
     
     def resolveFilterDialog(self):
-        if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
+        if self.tipo_box.currentIndex() in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
             wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
         else:
@@ -486,21 +486,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_xlim([fa - bw/3, fp + bw/3])
             attcanvas.ax.set_ylim([0, -ga*1.5])
-        # elif type == 'Pasa Altos':
-        #     x = [wa / 10, wa, wa]
-        #     y = [Aa, Aa, Ap - 10]
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
-        #     x = [wp, wp, wp * 10]
-        #     y = [Aa + 10, Ap, Ap]
-        #     if Ap <= 0:
-        #         yR = [Ap - ripple, Ap - ripple]
-        #     else:
-        #         yR = [ripple, ripple]
-        #     plt.semilogx(x[1:], yR, 'b--', color='#28658a', linewidth=2)
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
-        # elif type == 'Pasa Banda':
+        elif self.filter.filter_type == Filter.BAND_PASS:
+            fp = [w/(2*np.pi) for w in self.filter.wp]
+            fa = [w/(2*np.pi) for w in self.filter.wa]
+            gp = self.filter.gp_dB
+            ga = self.filter.ga_dB
+            print(fp, fa)
+            bw = fa[0] - fa[1]
+            # x = [fp, fp + bw/3]
+            # y = [-gp, -gp]
+            # attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            # x = [fa - bw/3, fa]
+            # y = [-ga, -ga]
+            # attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_xlim([fa[0] - bw/3, fa[1] + bw/3])
+            attcanvas.ax.set_ylim([0, -ga*1.5])        # elif type == 'Pasa Banda':
         #     x = [wa2 / 10, wa2, wa2]
         #     y = [Aa, Aa, Ap - 10]
         #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)

@@ -142,9 +142,9 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>-3</y>
-                <width>183</width>
-                <height>498</height>
+                <y>0</y>
+                <width>163</width>
+                <height>594</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -704,8 +704,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>217</width>
-                <height>524</height>
+                <width>180</width>
+                <height>575</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_15">
@@ -1321,8 +1321,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>210</width>
-                <height>720</height>
+                <width>185</width>
+                <height>745</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1414,6 +1414,9 @@
                  </property>
                  <property name="maximum">
                   <double>9999999.000000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>1.000000000000000</double>
                  </property>
                 </widget>
                </item>
@@ -1582,6 +1585,9 @@
                  </property>
                  <property name="singleStep">
                   <double>1.000000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>4.000000000000000</double>
                  </property>
                 </widget>
                </item>
@@ -1766,6 +1772,9 @@
                  <property name="maximum">
                   <double>9999999.000000000000000</double>
                  </property>
+                 <property name="value">
+                  <double>2.000000000000000</double>
+                 </property>
                 </widget>
                </item>
                <item row="1" column="0">
@@ -1805,6 +1814,9 @@
                  </property>
                  <property name="maximum">
                   <double>9999999.000000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>3.000000000000000</double>
                  </property>
                 </widget>
                </item>
@@ -2183,7 +2195,7 @@
      <x>0</x>
      <y>0</y>
      <width>1358</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">
