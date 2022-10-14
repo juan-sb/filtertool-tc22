@@ -24,6 +24,19 @@ from pyparsing.exceptions import ParseSyntaxException
 MARKER_STYLES = { 'None': '', 'Point': '.',  'Pixel': ',',  'Circle': 'o',  'Triangle down': 'v',  'Triangle up': '^',  'Triangle left': '<',  'Triangle right': '>',  'Tri down': '1',  'Tri up': '2',  'Tri left': '3',  'Tri right': '4',  'Octagon': '8',  'Square': 's',  'Pentagon': 'p',  'Plus (filled)': 'P',  'Star': '*',  'Hexagon': 'h',  'Hexagon alt.': 'H',  'Plus': '+',  'x': 'x',  'x (filled)': 'X',  'Diamond': 'D',  'Diamond (thin)': 'd',  'Vline': '|',  'Hline': '_' }
 LINE_STYLES = { 'None': '', 'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':' }
 
+def stage_to_str(i, stage):
+    stage_str = str(i) + ': Z={'
+    for z in stage.z:
+        stage.append(str(z))
+        stage.append(', ')
+    stage.append('} , P={')
+    for p in stage.p:
+        stage.append(str(p))
+        stage.append(', ')
+    stage.append('} , K=')
+    stage.append(str(stage.k))
+    return stage_str
+
 class MainWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self):
@@ -613,6 +626,59 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas.draw()
         stepcanvas.draw()
         impulsecanvas.draw()
+
+    def updateFilterStages(self):
+        self.stages_list.clear()
+        self.zeros_list.clear()
+        self.poles_list.clear()
+        self.remaining_gain_text.clear()
+        if self.selected_dataset_data.type == 'filter':
+            for p in self.selected_dataset_data.tf.p:
+                qlwt = QListWidgetItem()
+                qlwt.setText(str(p))
+                self.poles_list.addItem(qlwt)
+            for z in self.selected_dataset_data.tf.z:
+                qlwt = QListWidgetItem()
+                qlwt.setText(str(z))
+                self.poles_list.addItem(qlwt)
+            i = 1
+            for implemented_stage in self.selected_dataset_data.stages:
+                qlwt = QListWidgetItem()
+                qlwt.setText(stage_to_str(i, implemented_stage))
+                self.stages_list.addItem(qlwt)
+            for stage_indexes in self.selected_dataline_data.stage_indexes:
+                for z in stage_indexes[0]:
+                    self.zeros_list.item(z).setEnabled(False)
+                for p in stage_indexes[1]:
+                    self.poles_list.item(p).setEnabled(False)
+            self.remaining_gain_text.setText(str(self.selected_dataline_data.remainingGain))                
+
+    def addFilterStage():
+        selected_poles = [item.currentIndex() for item in self.poles_list.selectedItems()]
+        selected_zeros = [item.currentIndex() for item in self.zeros_list.selectedItems()]
+        selected_gain = self.stage_gain_box.value()
+
+        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain):
+            for z in selected_zeros:
+                self.zeros_list.item(z).setEnabled(False)
+            for p in selected_poles:
+                self.poles_list.item(p).setEnabled(False)
+            qlwt = QListWidgetItem()
+            qlwt.setText(stage_to_str(self.stages_list.size(), self.selected_dataset_data.origin.stages[-1]))
+            self.stages_list.addItem(qlwt)
+            self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
+
+    def removeFilterStage():
+        selected_stage = self.stages_list.selectedItems().currentIndex()
+        self.selected_dataset_data.origin.removeStage(selected_stage)
+        self.stages_list.takeItem(selected_stage)
+        zplist = self.selected_dataset_data.origin.stage_indexes[selected_stage]
+        for z in zplist[0]:
+            self.zeros_list.item(z).setEnabled(True)
+        for p in zplist[1]:
+            self.poles_list.item(p).setEnabled(True)
+        self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain)) 
+
 
     def removeSelectedDataset(self, event):
         selected_row = self.dataset_list.currentRow()
