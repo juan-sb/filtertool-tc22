@@ -111,7 +111,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.ga_box.valueChanged.connect(self.updateSelectedFilter)
         # self.fp_box.valueChanged.connect(self.updateSelectedFilter)
         # self.fa_box.valueChanged.connect(self.updateSelectedFilter)
-        # self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
+        self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
         self.updateFilterParametersAvailable()
 
     def dragEnterEvent(self, event):
@@ -287,12 +287,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         self.filter = newFilter
 
-        ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
-        
+        temp_datalines = self.selected_dataset_data.datalines
+        ds = Dataset('', self.filtername_box.text(), newFilter)
+        ds.datalines = temp_datalines
         self.selected_dataset_widget.setText(self.filtername_box.text())
-        self.selected_dataset_data = ds
+        self.selected_dataset_widget.setData(Qt.UserRole, ds)
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
         self.updateFilterPlots()
+        self.updatePlots()
 
     def updateFilterParametersAvailable(self):
         if self.tipo_box.currentIndex() == Filter.LOW_PASS or self.tipo_box.currentIndex() == Filter.HIGH_PASS:
@@ -302,74 +304,126 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.aprox_box.model().item(i).setEnabled(False)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
-            self.define_with_box.setEnabled(False)
-            self.gp_box.setEnabled(True)
-            self.ga_box.setEnabled(True)
-            self.fp_box.setEnabled(True)
-            self.fa_box.setEnabled(True)
-            self.fa_min_box.setEnabled(False)
-            self.fa_max_box.setEnabled(False)
-            self.fp_min_box.setEnabled(False)
-            self.fp_max_box.setEnabled(False)
-            self.f0_box.setEnabled(False)
-            self.bw_min_box.setEnabled(False)
-            self.bw_max_box.setEnabled(False)
-            self.tau0_box.setEnabled(False)
-            self.frg_box.setEnabled(False)
-            self.tol_box.setEnabled(False)
+            self.define_with_box.setVisible(False)
+            self.label_definewith.setVisible(False)
+            self.gp_box.setVisible(True)
+            self.label_gp.setVisible(True)
+            self.ga_box.setVisible(True)
+            self.label_ga.setVisible(True)
+            self.fp_box.setVisible(True)
+            self.label_fp.setVisible(True)
+            self.fa_box.setVisible(True)
+            self.label_fa.setVisible(True)
+            self.fa_min_box.setVisible(False)
+            self.label_famin.setVisible(False)
+            self.fa_max_box.setVisible(False)
+            self.label_famax.setVisible(False)
+            self.fp_min_box.setVisible(False)
+            self.label_fpmin.setVisible(False)
+            self.fp_max_box.setVisible(False)
+            self.label_fpmax.setVisible(False)
+            self.f0_box.setVisible(False)
+            self.label_f0.setVisible(False)
+            self.bw_min_box.setVisible(False)
+            self.label_bwmin.setVisible(False)
+            self.bw_max_box.setVisible(False)
+            self.label_bwmax.setVisible(False)
+            self.tau0_box.setVisible(False)
+            self.label_tau0.setVisible(False)
+            self.frg_box.setVisible(False)
+            self.label_fRG.setVisible(False)
+            self.tol_box.setVisible(False)
+            self.label_tolerance.setVisible(False)
 
-        if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
+        elif self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
             for i in range(Filter.LEGENDRE + 1):
                 self.aprox_box.model().item(i).setEnabled(True)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
                 self.aprox_box.model().item(i).setEnabled(False)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
-            self.define_with_box.setEnabled(True)
-            self.fp_box.setEnabled(False)
-            self.fa_box.setEnabled(False)
-            self.tau0_box.setEnabled(False)
-            self.frg_box.setEnabled(False)
-            self.tol_box.setEnabled(False)
+            self.define_with_box.setVisible(True)
+            self.label_definewith.setVisible(True)
+            self.fp_box.setVisible(False)
+            self.label_fp.setVisible(False)
+            self.fa_box.setVisible(False)
+            self.label_fa.setVisible(False)
+            self.tau0_box.setVisible(False)
+            self.label_tau0.setVisible(False)
+            self.frg_box.setVisible(False)
+            self.label_fRG.setVisible(False)
+            self.tol_box.setVisible(False)
+            self.label_tolerance.setVisible(False)
 
             if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
-                self.fa_min_box.setEnabled(True)
-                self.fa_max_box.setEnabled(True)
-                self.fp_min_box.setEnabled(True)
-                self.fp_max_box.setEnabled(True)
-                self.f0_box.setEnabled(False)
-                self.bw_min_box.setEnabled(False)
-                self.bw_max_box.setEnabled(False)
+                self.fa_min_box.setVisible(True)
+                self.label_famin.setVisible(True)
+                self.fa_max_box.setVisible(True)
+                self.label_famax.setVisible(True)
+                self.fp_min_box.setVisible(True)
+                self.label_fpmin.setVisible(True)
+                self.fp_max_box.setVisible(True)
+                self.label_fpmax.setVisible(True)
+                self.f0_box.setVisible(False)
+                self.label_f0.setVisible(False)
+                self.bw_min_box.setVisible(False)
+                self.label_bwmin.setVisible(False)
+                self.bw_max_box.setVisible(False)
+                self.label_bwmax.setVisible(False)
             if self.define_with_box.currentIndex() == Filter.F0_BW:
-                self.fa_min_box.setEnabled(False)
-                self.fa_max_box.setEnabled(False)
-                self.fp_min_box.setEnabled(False)
-                self.fp_max_box.setEnabled(False)
-                self.f0_box.setEnabled(True)
-                self.bw_min_box.setEnabled(True)
-                self.bw_max_box.setEnabled(True)
+                self.fa_min_box.setVisible(False)
+                self.label_famin.setVisible(False)
+                self.fa_max_box.setVisible(False)
+                self.label_famax.setVisible(False)
+                self.fp_min_box.setVisible(False)
+                self.label_fpmin.setVisible(False)
+                self.fp_max_box.setVisible(False)
+                self.label_fpmax.setVisible(False)
+                self.f0_box.setVisible(True)
+                self.label_f0.setVisible(True)
+                self.bw_min_box.setVisible(True)
+                self.label_bwmin.setVisible(True)
+                self.bw_max_box.setVisible(True)
+                self.label_bwmax.setVisible(True)
         
-        if self.tipo_box.currentIndex() == Filter.GROUP_DELAY:
+        elif self.tipo_box.currentIndex() == Filter.GROUP_DELAY:
             for i in range(Filter.LEGENDRE + 1):
                 self.aprox_box.model().item(i).setEnabled(False)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
                 self.aprox_box.model().item(i).setEnabled(True)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BESSEL)
-            self.gp_box.setEnabled(False)
-            self.ga_box.setEnabled(False)
-            self.fp_box.setEnabled(False)
-            self.fa_box.setEnabled(False)
-            self.fa_min_box.setEnabled(False)
-            self.fa_max_box.setEnabled(False)
-            self.fp_min_box.setEnabled(False)
-            self.fp_max_box.setEnabled(False)
-            self.f0_box.setEnabled(False)
-            self.bw_min_box.setEnabled(False)
-            self.bw_max_box.setEnabled(False)
-            self.tau0_box.setEnabled(True)
-            self.frg_box.setEnabled(True)
-            self.tol_box.setEnabled(True)
+            
+            self.define_with_box.setVisible(False)
+            self.label_definewith.setVisible(False)
+            self.gp_box.setVisible(False)
+            self.label_gp.setVisible(False)
+            self.ga_box.setVisible(False)
+            self.label_ga.setVisible(False)
+            self.fp_box.setVisible(False)
+            self.label_fp.setVisible(False)
+            self.fa_box.setVisible(False)
+            self.label_fa.setVisible(False)
+            self.fa_min_box.setVisible(False)
+            self.label_famin.setVisible(False)
+            self.fa_max_box.setVisible(False)
+            self.label_famax.setVisible(False)
+            self.fp_min_box.setVisible(False)
+            self.label_fpmin.setVisible(False)
+            self.fp_max_box.setVisible(False)
+            self.label_fpmax.setVisible(False)
+            self.f0_box.setVisible(False)
+            self.label_f0.setVisible(False)
+            self.bw_min_box.setVisible(False)
+            self.label_bwmin.setVisible(False)
+            self.bw_max_box.setVisible(False)
+            self.label_bwmax.setVisible(False)
+            self.tau0_box.setVisible(True)
+            self.label_tau0.setVisible(True)
+            self.frg_box.setVisible(True)
+            self.label_fRG.setVisible(True)
+            self.tol_box.setVisible(True)
+            self.label_tolerance.setVisible(True)
 
     
     def getRelevantFrequencies(self, zeros, poles):
@@ -436,7 +490,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         impulsecanvas.ax.clear()
         impulsecanvas.ax.grid(True, which="both", linestyle=':')
 
-        filtds = Dataset(filepath='', origin=self.filter, title=self.filtername_box.text())
+        filtds = self.selected_dataset_data
         
         tstep, stepres = signal.step(filtds.tf.getND())
         timp, impres = signal.impulse(filtds.tf.getND())
@@ -445,7 +499,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
         ph = np.array(filtds.data[0]['ph'])
         gd = np.array(filtds.data[0]['gd'])
-        z, p = self.filter.tf.getZP()
+        z, p = filtds.origin.tf.getZP()
 
         attline, = attcanvas.ax.plot(f, -g)
         gainline, = gaincanvas.ax.plot(f, g)
@@ -456,12 +510,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         impulseline, = impulsecanvas.ax.plot(timp, impres)
         
 
+        gp = filtds.origin.gp_dB
+        ga = filtds.origin.ga_dB
 
-        if self.filter.filter_type == Filter.LOW_PASS:
-            fp = self.filter.wp/(2*np.pi)
+        if filtds.origin.filter_type == Filter.LOW_PASS:
+            fp = filtds.origin.wp/(2*np.pi)
             fa = self.filter.wa/(2*np.pi)
-            gp = self.filter.gp_dB
-            ga = self.filter.ga_dB
             bw = fa - fp
             x = [fp - bw/3, fp]
             y = [-gp, -gp]
@@ -472,11 +526,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.set_xlim([fp - bw/3, fa + bw/3])
             attcanvas.ax.set_ylim([0, -ga*1.5])
 
-        elif self.filter.filter_type == Filter.HIGH_PASS:
-            fp = self.filter.wp/(2*np.pi)
-            fa = self.filter.wa/(2*np.pi)
-            gp = self.filter.gp_dB
-            ga = self.filter.ga_dB
+        elif filtds.origin.filter_type == Filter.HIGH_PASS:
+            fp = filtds.origin.wp/(2*np.pi)
+            fa = filtds.origin.wa/(2*np.pi)
             bw = fp - fa
             x = [fp, fp + bw/3]
             y = [-gp, -gp]
@@ -486,11 +538,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_xlim([fa - bw/3, fp + bw/3])
             attcanvas.ax.set_ylim([0, -ga*1.5])
-        elif self.filter.filter_type == Filter.BAND_PASS:
-            fp = [w/(2*np.pi) for w in self.filter.wp]
-            fa = [w/(2*np.pi) for w in self.filter.wa]
-            gp = self.filter.gp_dB
-            ga = self.filter.ga_dB
+        elif filtds.origin.filter_type == Filter.BAND_PASS:
+            fp = [w/(2*np.pi) for w in filtds.origin.wp]
+            fa = [w/(2*np.pi) for w in filtds.origin.wa]
             print(fp, fa)
             bw = fa[0] - fa[1]
             # x = [fp, fp + bw/3]
@@ -672,14 +722,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_widget = listitemwidget
         self.selected_dataset_data = listitemwidget.data(Qt.UserRole)
         isTF = self.selected_dataset_data.type in ['TF', 'filter']
-        self.ds_poleszeros_btn.setEnabled(isTF)
-        self.resp_btn.setEnabled(isTF)
+        self.ds_poleszeros_btn.setVisible(isTF)
+        self.resp_btn.setVisible(isTF)
         self.ds_casenum_lb.setText(str(len(self.selected_dataset_data.data)))
-        self.ds_caseadd_btn.setEnabled(len(self.selected_dataset_data.data) > 1)
+        self.ds_caseadd_btn.setVisible(len(self.selected_dataset_data.data) > 1)
         self.ds_info_lb.setText(self.selected_dataset_data.miscinfo)
 
         #relleno las cajas del filtro
         if(self.selected_dataset_data.type == 'filter'):
+            self.filter = self.selected_dataset_data.origin
             self.filtername_box.setText(self.selected_dataset_data.title)
             self.tipo_box.setCurrentIndex(self.selected_dataset_data.origin.filter_type)
             self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
@@ -713,13 +764,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.fp_min_box.setValue(0)
                 self.fp_max_box.setValue(0)
                 
-        
             self.f0_box.setValue(self.selected_dataset_data.origin.w0 / (2 * np.pi))
             self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0] / (2 * np.pi))
             self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1] / (2 * np.pi))
             self.tol_box.setValue(self.selected_dataset_data.origin.gamma)
             self.tau0_box.setValue(self.selected_dataset_data.origin.tau0)
             self.frg_box.setValue(self.selected_dataset_data.origin.wrg / (2* np.pi))
+
+            self.updateFilterPlots()
 
     def updateSelectedDataset(self):
         new_title = self.ds_title_edit.text()

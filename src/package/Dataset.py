@@ -59,6 +59,7 @@ class Dataset:
     def parse_from_spice(self, filepath):
         l = ltspice.Ltspice(filepath)
         l.parse()
+        self.data = []
         self.miscinfo += f'Spice simulation, MODE: {l._mode}'
         for i in range(l.case_count):
             self.data.append(defaultdict(list))
@@ -92,7 +93,7 @@ class Dataset:
     def parse_from_csv(self, filepath):
         with open(filepath, mode='r') as csv_file:
             csv_reader = csv.DictReader(csv_file)
-            self.data.append(defaultdict(list))
+            self.data = [{}]
             for row in csv_reader:
                 for (field, val) in row.items():
                     try:
@@ -127,9 +128,9 @@ class Dataset:
     def parse_from_expression(self):
         f, g, ph, gd = self.tf.getBode()
         z, p = self.tf.getZP()
-        self.data.append({})
-        self.zeros.append({})
-        self.poles.append({})
+        self.data = [{}]
+        self.zeros = [{}]
+        self.poles = [{}]
         self.data[0]['f'] = f
         self.data[0]['g'] = g
         self.data[0]['ph'] = ph
@@ -142,9 +143,9 @@ class Dataset:
     def parse_from_filter(self):
         f, g, ph, gd = self.tf.getBode()
         z, p = self.tf.getZP()
-        self.data.append({})
-        self.zeros.append({})
-        self.poles.append({})
+        self.data = [{}]
+        self.zeros = [{}]
+        self.poles = [{}]
         self.data[0]['f'] = f
         self.data[0]['g'] = g
         self.data[0]['ph'] = ph
