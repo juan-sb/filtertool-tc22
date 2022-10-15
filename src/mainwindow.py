@@ -23,6 +23,8 @@ import numpy as np
 import random
 from pyparsing.exceptions import ParseSyntaxException
 
+import pickle
+
 MARKER_STYLES = { 'None': '', 'Point': '.',  'Pixel': ',',  'Circle': 'o',  'Triangle down': 'v',  'Triangle up': '^',  'Triangle left': '<',  'Triangle right': '>',  'Tri down': '1',  'Tri up': '2',  'Tri left': '3',  'Tri right': '4',  'Octagon': '8',  'Square': 's',  'Pentagon': 'p',  'Plus (filled)': 'P',  'Star': '*',  'Hexagon': 'h',  'Hexagon alt.': 'H',  'Plus': '+',  'x': 'x',  'x (filled)': 'X',  'Diamond': 'D',  'Diamond (thin)': 'd',  'Vline': '|',  'Hline': '_' }
 LINE_STYLES = { 'None': '', 'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':' }
 
@@ -56,11 +58,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.import_file_btn.clicked.connect(self.importFiles)
 
-        self.populateSelectedDatasetDetails({}, {})
-        self.populateSelectedDatalineDetails({}, {})
+        #self.populateSelectedDatasetDetails({}, {}) ?
+        #self.populateSelectedDatalineDetails({}, {}) ?
         
         self.dataset_list.currentItemChanged.connect(self.populateSelectedDatasetDetails)
-        self.ds_title_edit.textEdited.connect(self.updateSelectedDataset)
+        self.ds_title_edit.textEdited.connect(self.updateSelectedDatasetName)
         self.ds_addline_btn.clicked.connect(self.createDataline)
         self.ds_remove_btn.clicked.connect(self.removeSelectedDataset)
         self.ds_poleszeros_btn.clicked.connect(self.showZPWindow)
@@ -115,20 +117,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             [ self.plot_5 ],
         ]
 
-        self.filter = AnalogFilter()
         self.new_filter_btn.clicked.connect(self.resolveFilterDialog)
-        self.chg_filter_btn.clicked.connect(self.updateSelectedFilter)
+        self.chg_filter_btn.clicked.connect(self.changeSelectedFilter)
         self.tipo_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
-        # self.aprox_box.currentIndexChanged.connect(self.updateSelectedFilter)
-        # self.N_min_box.valueChanged.connect(self.updateSelectedFilter)
-        # self.N_max_box.valueChanged.connect(self.updateSelectedFilter)
-        # self.denorm_box.valueChanged.connect(self.updateSelectedFilter)
-        # self.gp_box.valueChanged.connect(self.updateSelectedFilter)
-        # self.ga_box.valueChanged.connect(self.updateSelectedFilter)
-        # self.fp_box.valueChanged.connect(self.updateSelectedFilter)
-        # self.fa_box.valueChanged.connect(self.updateSelectedFilter)
         self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
         self.updateFilterParametersAvailable()
+
+        self.actionLoad_2.triggered.connect(self.loadFile)
+        self.actionSave_2.triggered.connect(self.saveFile)
 
     def dragEnterEvent(self, event):
         if(event.mimeData().hasUrls()):
@@ -143,7 +139,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def importFiles(self):
         options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        #options |= QFileDialog.DontUseNativeDialog
         files, _ = QFileDialog.getOpenFileNames(self,"Select files", "","All Files (*);;CSV files (*.csv);;SPICE output files (*.raw)", options=options)
         self.processFiles(files)
 
@@ -255,7 +251,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not valid:
             # mostrar el error
             return
-        self.filter = newFilter
 
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
         qlwt = QListWidgetItem()
@@ -265,9 +260,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.datasets.append(ds)
         self.datalines.append([])
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
-        self.updateFilterPlots()
     
-    def updateSelectedFilter(self):
+    def changeSelectedFilter(self):
         if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
             wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
             wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
@@ -301,7 +295,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not valid:
             # mostrar el error
             return
-        self.filter = newFilter
 
         temp_datalines = self.selected_dataset_data.datalines
         ds = Dataset('', self.filtername_box.text(), newFilter)
@@ -309,8 +302,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_widget.setText(self.filtername_box.text())
         self.selected_dataset_widget.setData(Qt.UserRole, ds)
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
-        self.updateFilterPlots()
-        self.updatePlots()
 
     def updateFilterParametersAvailable(self):
         if self.tipo_box.currentIndex() == Filter.LOW_PASS or self.tipo_box.currentIndex() == Filter.HIGH_PASS:
@@ -531,7 +522,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if filtds.origin.filter_type == Filter.LOW_PASS:
             fp = filtds.origin.wp/(2*np.pi)
-            fa = self.filter.wa/(2*np.pi)
+            fa = filtds.origin.wa/(2*np.pi)
             bw = fa - fp
             x = [fp - bw/3, fp]
             y = [-gp, -gp]
@@ -776,7 +767,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         #relleno las cajas del filtro
         if(self.selected_dataset_data.type == 'filter'):
-            self.filter = self.selected_dataset_data.origin
             self.filtername_box.setText(self.selected_dataset_data.title)
             self.tipo_box.setCurrentIndex(self.selected_dataset_data.origin.filter_type)
             self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
@@ -818,12 +808,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.frg_box.setValue(self.selected_dataset_data.origin.wrg / (2* np.pi))
 
             self.updateFilterPlots()
+            self.updateFilterStages()
+            self.updateFilterParametersAvailable()
 
-    def updateSelectedDataset(self):
+    def updateSelectedDatasetName(self):
         new_title = self.ds_title_edit.text()
         self.selected_dataset_widget.setText(new_title)
         self.selected_dataset_data.title = new_title
-        self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
 
     def createDataline(self):
         if(not self.selected_dataset_data):
@@ -1062,3 +1053,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         poles = self.selected_dataset_data.poles[0]
         self.zpWindow = ZPWindow(zeros, poles, self.selected_dataset_data.title)
         self.zpWindow.show()
+
+    def newFile(self):
+        self.droppedFiles = []
+        self.datasets = []
+        self.datalines = []
+        self.selected_dataset_widget = {}
+        self.selected_dataline_widget = {}
+        self.selected_dataset_data = {}
+        self.selected_dataline_data = {}
+        self.zpWindow = type('ZPWindow', (), {})()
+        self.updateAll()
+    
+    
+    def saveFile(self):
+        filename, _ = QFileDialog.getSaveFileName(self,"Save File", "","Filter tool file .fto")
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL) # Error: no se puede volcar todo mainwindow, parece que no es tan trivial
+
+    def loadFile(self):
+        file, _ = QFileDialog.getOpenFileName(self,"Select files", "","Filter tool file .fto")
+        with open(filename, 'r') as f:
+            f.seek(0) #pro trick
+            self = pickle.load(f)
+        self.updateAll()
+    
+    def updateAll(self):
+        self.updatePlots()
+        self.populateSelectedDatasetDetails()
+        self.updateSelectedDataline()
+        self.updateDatalineColor()
+        self.updateFilterParametersAvailable()
