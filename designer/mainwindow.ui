@@ -142,7 +142,7 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>-243</y>
+                <y>0</y>
                 <width>183</width>
                 <height>498</height>
                </rect>
@@ -588,7 +588,7 @@
         <item row="0" column="1">
          <widget class="QTabWidget" name="tabbing_plots">
           <property name="currentIndex">
-           <number>4</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_1">
            <attribute name="title">
@@ -1977,7 +1977,7 @@
         <item row="0" column="1">
          <widget class="QTabWidget" name="tabWidget_2">
           <property name="currentIndex">
-           <number>7</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_8">
            <attribute name="title">
@@ -2133,9 +2133,6 @@
             </property>
            </widget>
           </item>
-          <item row="12" column="1">
-           <widget class="QSpinBox" name="stage_gain_box"/>
-          </item>
           <item row="8" column="0" colspan="2">
            <spacer name="verticalSpacer_8">
             <property name="orientation">
@@ -2177,7 +2174,11 @@
            </widget>
           </item>
           <item row="10" column="0" colspan="2">
-           <widget class="QListWidget" name="poles_list"/>
+           <widget class="QListWidget" name="poles_list">
+            <property name="selectionMode">
+             <enum>QAbstractItemView::MultiSelection</enum>
+            </property>
+           </widget>
           </item>
           <item row="13" column="1">
            <widget class="QLabel" name="remaining_gain_text">
@@ -2204,7 +2205,11 @@
            </widget>
           </item>
           <item row="7" column="0" colspan="2">
-           <widget class="QListWidget" name="zeros_list"/>
+           <widget class="QListWidget" name="zeros_list">
+            <property name="selectionMode">
+             <enum>QAbstractItemView::MultiSelection</enum>
+            </property>
+           </widget>
           </item>
           <item row="4" column="0" rowspan="2" colspan="2">
            <spacer name="verticalSpacer_7">
@@ -2228,6 +2233,13 @@
           </item>
           <item row="1" column="0" colspan="2">
            <widget class="QListWidget" name="stages_list"/>
+          </item>
+          <item row="12" column="1">
+           <widget class="QDoubleSpinBox" name="stage_gain_box">
+            <property name="decimals">
+             <number>8</number>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -2372,7 +2384,6 @@
   <tabstop>new_stage_btn</tabstop>
   <tabstop>remove_stage_btn</tabstop>
   <tabstop>stages_list</tabstop>
-  <tabstop>stage_gain_box</tabstop>
  </tabstops>
  <resources/>
  <connections/>

@@ -123,6 +123,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
         self.updateFilterParametersAvailable()
 
+        self.new_stage_btn.clicked.connect(self.addFilterStage)
+        self.remove_stage_btn.clicked.connect(self.removeFilterStage)
+
         self.actionLoad_2.triggered.connect(self.loadFile)
         self.actionSave_2.triggered.connect(self.saveFile)
 
@@ -604,6 +607,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.poles_list.clear()
         self.remaining_gain_text.clear()
         if self.selected_dataset_data.type == 'filter':
+            self.new_stage_btn.setEnabled(True)
+            self.remove_stage_btn.setEnabled(True)
             for p in self.selected_dataset_data.tf.p:
                 qlwt = QListWidgetItem()
                 qlwt.setText(str(p))
@@ -613,33 +618,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 qlwt.setText(str(z))
                 self.poles_list.addItem(qlwt)
             i = 1
-            for implemented_stage in self.selected_dataset_data.stages:
+            for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
                 qlwt.setText(stage_to_str(i, implemented_stage))
                 self.stages_list.addItem(qlwt)
-            for stage_indexes in self.selected_dataline_data.stage_indexes:
+            for stage_indexes in self.selected_dataset_data.origin.stage_indexes:
                 for z in stage_indexes[0]:
                     self.zeros_list.item(z).setEnabled(False)
                 for p in stage_indexes[1]:
                     self.poles_list.item(p).setEnabled(False)
-            self.remaining_gain_text.setText(str(self.selected_dataline_data.remainingGain))                
+            self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
+            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)                
 
-    def addFilterStage():
-        selected_poles = [item.currentIndex() for item in self.poles_list.selectedItems()]
-        selected_zeros = [item.currentIndex() for item in self.zeros_list.selectedItems()]
+    def addFilterStage(self):
+        selected_poles = [x.row() for x in self.poles_list.selectedIndexes()]
+        selected_zeros = [x.row() for x in self.zeros_list.selectedIndexes()]
         selected_gain = self.stage_gain_box.value()
 
         if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain):
             for z in selected_zeros:
-                self.zeros_list.item(z).setEnabled(False)
+                self.zeros_list.item(z).setFlags(Qt.ItemIsEnabled & ~Qt.ItemIsSelectable)
             for p in selected_poles:
-                self.poles_list.item(p).setEnabled(False)
+                self.poles_list.item(p).setFlags(Qt.ItemIsEnabled & ~Qt.ItemIsSelectable)
             qlwt = QListWidgetItem()
             qlwt.setText(stage_to_str(self.stages_list.size(), self.selected_dataset_data.origin.stages[-1]))
             self.stages_list.addItem(qlwt)
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
+            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain) 
 
-    def removeFilterStage():
+    def removeFilterStage(self):
         selected_stage = self.stages_list.selectedItems().currentIndex()
         self.selected_dataset_data.origin.removeStage(selected_stage)
         self.stages_list.takeItem(selected_stage)
