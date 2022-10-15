@@ -12,6 +12,7 @@ from src.widgets.tf_dialog import TFDialog
 from src.widgets.case_window import CaseDialog
 from src.widgets.zp_window import ZPWindow
 from src.widgets.response_dialog import ResponseDialog
+from src.widgets.prompt_dialog import PromptDialog
 
 from scipy.signal import savgol_filter
 import scipy.signal as signal
@@ -64,7 +65,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.dataset_list.currentItemChanged.connect(self.populateSelectedDatasetDetails)
         self.ds_title_edit.textEdited.connect(self.updateSelectedDatasetName)
-        self.ds_addline_btn.clicked.connect(self.createDataline)
+        self.ds_addline_btn.clicked.connect(self.addDataline)
         self.ds_remove_btn.clicked.connect(self.removeSelectedDataset)
         self.ds_poleszeros_btn.clicked.connect(self.showZPWindow)
 
@@ -100,6 +101,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.csd = CaseDialog()
         self.ds_caseadd_btn.clicked.connect(self.openCaseDialog)
         self.csd.accepted.connect(self.resolveCSDialog)
+
+        self.pmptd = PromptDialog()
         
         self.plt_labelsize_sb.valueChanged.connect(self.updatePlots)
         self.plt_legendsize_sb.valueChanged.connect(self.updatePlots)
@@ -130,6 +133,57 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionLoad_2.triggered.connect(self.loadFile)
         self.actionSave_2.triggered.connect(self.saveFile)
 
+    def addDataset(self, ds):
+        qlwt = QListWidgetItem()
+        qlwt.setData(Qt.UserRole, ds)
+        qlwt.setText(ds.title)
+        self.dataset_list.addItem(qlwt)
+        self.datasets.append(ds)
+        self.datalines.append([])
+        self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
+
+    def removeDataset(self, i):
+        #Saco los datalines
+        first_dataline_index = 0
+        last_dataline_index = len(self.datalines[0])
+        for x in range(self.dataset_list.count()):
+            if(x == 0):
+                first_dataline_index = 0
+            else:    
+                first_dataline_index += len(self.datalines[x - 1])
+            if(x == i):
+                break
+        last_dataline_index = first_dataline_index + len(self.datalines[i])
+
+        for x in range(first_dataline_index, last_dataline_index):
+            self.dataline_list.takeItem(first_dataline_index)
+        self.datalines.pop(i)
+        
+        self.dataset_list.takeItem(i)
+        self.updatePlots()
+
+    def addDataline(self):
+        if(not self.selected_dataset_data):
+            return
+        dl = self.selected_dataset_data.create_dataline()
+        qlwt = QListWidgetItem()
+        qlwt.setData(Qt.UserRole, dl)
+        qlwt.setText(dl.name)
+        dli = 0
+        for x in range(self.dataset_list.count()):
+            ds = self.dataset_list.item(x).data(Qt.UserRole)
+            dli += len(self.datalines[x])
+            if(ds.origin == self.selected_dataset_data.origin):
+                break
+        self.dataline_list.insertItem(dli, qlwt)
+        self.dataline_list.setCurrentRow(dli)
+        self.datalines[self.dataset_list.currentRow()].append(dl)
+        self.updateSelectedDataline()
+        self.updatePlots()
+
+    def removeDataline(self, i):
+        pass
+
     def dragEnterEvent(self, event):
         if(event.mimeData().hasUrls()):
             event.accept()
@@ -157,15 +211,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 ]
                 if(ds.origin not in dataset_items_origin):
                     self.droppedFiles.append(ds.origin)
-                    qlwt = QListWidgetItem()
-                    qlwt.setData(Qt.UserRole, ds)
-                    qlwt.setText(ds.title)
-                    self.dataset_list.addItem(qlwt)
-                    self.datasets.append(ds)
-                    self.datalines.append([])
+                    self.addDataset(ds)
             except(ValueError):
                 print('Wrong file config')
-        self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
         self.statusbar.clearMessage()
 
     def openResponseDialog(self):
@@ -181,7 +229,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         title = self.respd.getResponseTitle()
         time_title = title + "_timebase"
         ans_title = title + "_ans"
-
         
         if expression == 'step':
             _, response = signal.step(self.selected_dataset_data.tf.tf_object, T=t)
@@ -189,11 +236,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             _, response = signal.delta(self.selected_dataset_data.tf.tf_object, T=t)
         else:
             x = eval(expression)
-            response = signal.lsim(self.selected_dataset_data.tf.tf_object , U = x , T = t)
+            response = signal.lsim(self.selected_dataset_data.tf.tf_object , U = x , T = t)[1]
         
         self.selected_dataset_data.data[0][time_title] = t
         self.selected_dataset_data.data[0][title] = x
-        self.selected_dataset_data.data[0][ans_title] = response[1]
+        self.selected_dataset_data.data[0][ans_title] = response
 
         self.selected_dataset_data.fields.append(time_title)
         self.selected_dataset_data.fields.append(title)
@@ -211,15 +258,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.tfd.validateTF():
             return
         ds = Dataset(filepath='', origin=self.tfd.tf, title=self.tfd.getTFTitle())
-        qlwt = QListWidgetItem()
-        qlwt.setData(Qt.UserRole, ds)
-        qlwt.setText(ds.title)
-        self.dataset_list.addItem(qlwt)
-        self.datasets.append(ds)
-        self.datalines.append([])
-        self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
-    
-    def resolveFilterDialog(self):
+        self.addDataset(ds)
+
+    def buildFilterFromParams(self):
         if self.tipo_box.currentIndex() in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
             wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
@@ -248,54 +289,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "wrg": 2 * np.pi * self.frg_box.value(),
         }
         
-        newFilter = AnalogFilter(**params) #CREO EL OBJETO FILTRO
+        return AnalogFilter(**params)
+    
+    def resolveFilterDialog(self):
+        newFilter = self.buildFilterFromParams()
         valid, msg = newFilter.validate()
         if not valid:
-            # mostrar el error
+            self.pmptd.setErrorMsg(msg)
+            self.pmptd.open()
             return
 
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
-        qlwt = QListWidgetItem()
-        qlwt.setData(Qt.UserRole, ds)
-        qlwt.setText(ds.title)
-        self.dataset_list.addItem(qlwt)
-        self.datasets.append(ds)
-        self.datalines.append([])
-        self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
+        self.addDataset(ds)
     
     def changeSelectedFilter(self):
-        if self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
-            wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
-            wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
-        else:
-            wa = 2 * np.pi * self.fa_box.value()
-            wp = 2 * np.pi * self.fp_box.value()
-
-        params =         {
-            "name": self.filtername_box.text(),
-            "filter_type": self.tipo_box.currentIndex(),
-            "approx_type": self.aprox_box.currentIndex(),
-            "define_with": self.define_with_box.currentIndex(),
-            "N_min": self.N_min_box.value(),
-            "N_max": self.N_max_box.value(),
-            "Q_max": self.Q_max_box.value(),
-            "gain": self.gain_box.value(),
-            "denorm": self.denorm_box.value(),
-            "ga_dB": self.ga_box.value(),
-            "gp_dB": self.gp_box.value(),
-            "wa": wa,
-            "wp": wp,
-            "w0": 2 * np.pi * self.f0_box.value(),
-            "bw": [2 * np.pi * self.bw_min_box.value(), 2 * np.pi * self.bw_max_box.value()],
-            "gamma": self.tol_box.value(),
-            "tau0": self.tau0_box.value(),
-            "wrg": 2 * np.pi * self.frg_box.value(),
-        }
-        
-        newFilter = AnalogFilter(**params) #CREO EL OBJETO FILTRO
+        newFilter = self.buildFilterFromParams()
         valid, msg = newFilter.validate()
         if not valid:
-            # mostrar el error
+            self.pmptd.setErrorMsg(msg)
+            self.pmptd.open()
             return
 
         temp_datalines = self.selected_dataset_data.datalines
@@ -380,6 +392,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.label_bwmin.setVisible(False)
                 self.bw_max_box.setVisible(False)
                 self.label_bwmax.setVisible(False)
+
             if self.define_with_box.currentIndex() == Filter.F0_BW:
                 self.fa_min_box.setVisible(False)
                 self.label_famin.setVisible(False)
@@ -549,6 +562,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_xlim([fa - bw/3, fp + bw/3])
             attcanvas.ax.set_ylim([0, -ga*1.5])
+
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
@@ -649,14 +663,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, z)
                 qlwt.setText(str(z))
-                self.poles_list.addItem(qlwt)
-            i = 1
+                self.zeros_list.addItem(qlwt)
             for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, implemented_stage)
                 qlwt.setText(stage_to_str(implemented_stage))
                 self.stages_list.addItem(qlwt)
-                i += 1
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
         else:  
@@ -706,22 +718,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def removeSelectedDataset(self, event):
         selected_row = self.dataset_list.currentRow()
-        first_dataline_index = 0
-        last_dataline_index = len(self.datalines[0])
-        for x in range(self.dataset_list.count()):
-            if(x == 0):
-                first_dataline_index = 0
-            else:    
-                first_dataline_index += len(self.datalines[x - 1])
-            if(x == selected_row):
-                break
-        last_dataline_index = first_dataline_index + len(self.datalines[selected_row])
-
-        for x in range(first_dataline_index, last_dataline_index):
-            self.dataline_list.takeItem(first_dataline_index)
-        self.dataset_list.takeItem(selected_row)
-        self.datalines.pop(selected_row)
-        self.updatePlots()
+        self.removeDataset(selected_row)
 
     def getInternalDataIndexes(self, datalineRow):
         i = self.dataline_list.currentRow()
@@ -869,24 +866,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_widget.setText(new_title)
         self.selected_dataset_data.title = new_title
 
-    def createDataline(self):
-        if(not self.selected_dataset_data):
-            return
-        dl = self.selected_dataset_data.create_dataline()
-        qlwt = QListWidgetItem()
-        qlwt.setData(Qt.UserRole, dl)
-        qlwt.setText(dl.name)
-        dli = 0
-        for x in range(self.dataset_list.count()):
-            ds = self.dataset_list.item(x).data(Qt.UserRole)
-            dli += len(self.datalines[x])
-            if(ds.origin == self.selected_dataset_data.origin):
-                break
-        self.dataline_list.insertItem(dli, qlwt)
-        self.dataline_list.setCurrentRow(dli)
-        self.datalines[self.dataset_list.currentRow()].append(dl)
-        self.updateSelectedDataline()
-        self.updatePlots()
+
 
     def populateSelectedDatalineDetails(self, listitemwidget, qlistwidget):
         if(not listitemwidget):
