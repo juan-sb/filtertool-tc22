@@ -7,6 +7,7 @@ from src.ui.mainwindow import Ui_MainWindow
 from src.package.Dataset import Dataset
 import src.package.Filter as Filter
 from src.package.Filter import AnalogFilter
+from src.widgets.exprwidget import MplCanvas
 from src.widgets.tf_dialog import TFDialog
 from src.widgets.case_window import CaseDialog
 from src.widgets.zp_window import ZPWindow
@@ -302,6 +303,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         temp_datalines = self.selected_dataset_data.datalines
         ds = Dataset('', self.filtername_box.text(), newFilter)
         ds.datalines = temp_datalines
+        ds.title = self.filtername_box.text()
         self.selected_dataset_widget.setText(self.filtername_box.text())
         self.selected_dataset_widget.setData(Qt.UserRole, ds)
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
@@ -622,7 +624,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
         )
 
-
         attcanvas.draw()
         gaincanvas.draw()
         magcanvas.draw()
@@ -925,6 +926,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.dl_savgol_ord.blockSignals(False)
 
     def updateSelectedDataline(self):
+        self.saveFile(True)
         if(not self.selected_dataline_widget):
             return
         new_name = self.dl_name_edit.text()
@@ -1011,6 +1013,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.updatePlots()
 
     def updatePlots(self):
+        self.saveFile(True)
         processedCanvas = [x.canvas for x in self.plots_canvases[self.tabbing_plots.currentIndex()]]
         for canvas in processedCanvas:
             plotlist = []
@@ -1104,22 +1107,65 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.zpWindow = type('ZPWindow', (), {})()
         self.updateAll()
     
-    
-    def saveFile(self):
-        filename, _ = QFileDialog.getSaveFileName(self,"Save File", "","Filter tool file .fto")
+    def saveFile(self, noprompt=False):
+        if(noprompt):
+            filename = 'temp.fto'
+        else:
+            filename, _ = QFileDialog.getSaveFileName(self,"Save File", "","Filter tool file (*.fto)")
+        if(not filename): return
         with open(filename, 'wb') as f:
-            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL) # Error: no se puede volcar todo mainwindow, parece que no es tan trivial
+            flat_plots_canvas = [item.canvas for sublist in self.plots_canvases for item in sublist]
+            plots_data = []
+            for canv in flat_plots_canvas:
+                plots_data.append(canv.get_properties())
+            general_config = {
+                'labelsize_sb': self.plt_labelsize_sb.value(),
+                'legendsize_sb': self.plt_legendsize_sb.value(),
+                'ticksize_sb': self.plt_ticksize_sb.value(),
+                'titlesize_sb': self.plt_titlesize_sb.value(),
+                'legendpos': self.plt_legendpos.currentIndex(),
+                'grid': self.plt_grid.isChecked(),
+                'marginx': self.plt_marginx.value(),
+                'marginy': self.plt_marginy.value()      
+            }
+            d = [self.datasets, self.datalines, plots_data, general_config]
+            pickle.dump(d, f, pickle.HIGHEST_PROTOCOL) # Error: no se puede volcar todo mainwindow, parece que no es tan trivial
 
     def loadFile(self):
-        file, _ = QFileDialog.getOpenFileName(self,"Select files", "","Filter tool file .fto")
-        with open(filename, 'r') as f:
-            f.seek(0) #pro trick
-            self = pickle.load(f)
-        self.updateAll()
+        filename, _ = QFileDialog.getOpenFileName(self,"Select files", "","Filter tool file (*.fto)")
+        if(not filename): return
+        with open(filename, 'rb') as f:
+            f.seek(0)
+            self.datasets, self.datalines, plotdata, general_config = pickle.load(f)            
+            self.plt_labelsize_sb.setValue(general_config['labelsize_sb'])
+            self.plt_legendsize_sb.setValue(general_config['legendsize_sb'])
+            self.plt_ticksize_sb.setValue(general_config['ticksize_sb'])
+            self.plt_titlesize_sb.setValue(general_config['titlesize_sb'])
+            self.plt_legendpos.setCurrentIndex(general_config['legendpos'])
+            self.plt_grid.setChecked(general_config['grid'])
+            self.plt_marginx.setValue(general_config['marginx'])
+            self.plt_marginy.setValue(general_config['marginy'])  
+            acc = 0   
+            for s in self.plots_canvases:
+                for p in s:
+                    p.canvas.restore_properties(plotdata[acc])
+                    acc += 1
+            for ds in self.datasets:
+                qlwt = QListWidgetItem()
+                qlwt.setData(Qt.UserRole, ds)
+                qlwt.setText(ds.title)
+                self.dataset_list.addItem(qlwt)
+                for dl in ds.datalines:
+                    qlwt = QListWidgetItem()
+                    qlwt.setData(Qt.UserRole, dl)
+                    qlwt.setText(dl.name)
+                    self.dataline_list.addItem(qlwt)
+            self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
+            self.updateAll()
     
     def updateAll(self):
         self.updatePlots()
-        self.populateSelectedDatasetDetails()
+        # self.populateSelectedDatasetDetails()
         self.updateSelectedDataline()
-        self.updateDatalineColor()
+        # self.updateDatalineColor()
         self.updateFilterParametersAvailable()

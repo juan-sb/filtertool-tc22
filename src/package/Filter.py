@@ -298,8 +298,6 @@ class AnalogFilter():
         s = sym.symbols('s')
         h_norm = sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s)
         
-        print(h_norm)
-
         if self.filter_type == LOW_PASS:
             transformation = s / self.wp
         elif self.filter_type == HIGH_PASS:
@@ -312,11 +310,8 @@ class AnalogFilter():
             transformation = s * self.tau0
         
         h_denorm = h_norm.subs(s, transformation) 
-        print(h_denorm)
         h_denorm = sym.simplify(h_denorm)
-        print(h_denorm)
         h_denorm = sym.fraction(h_denorm)
-        print(h_denorm)
 
         N = sym.Poly(h_denorm[0]).all_coeffs() if (s in h_denorm[0].free_symbols) else [h_denorm[0].evalf()]
         D = sym.Poly(h_denorm[1]).all_coeffs() if (s in h_denorm[1].free_symbols) else [h_denorm[1].evalf()]

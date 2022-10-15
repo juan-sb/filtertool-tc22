@@ -2,8 +2,8 @@
 from PyQt5 import QtWidgets
 from matplotlib.figure import Figure
 from matplotlib.widgets import Cursor
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as Canvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Canvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
 
 # Ensure using PyQt5 backend
@@ -33,7 +33,27 @@ class MplCanvas(Canvas):
         Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         Canvas.updateGeometry(self)
         # self.cursor = Cursor(self.ax, useblit=True, color='red', linewidth=0.3, linestyle='--')
+    
+    def get_properties(self):
+        return {
+            "xlabel": self.ax.get_xlabel(),
+            "ylabel": self.ax.get_ylabel(),
+            "title": self.ax.get_title(),
+            "xlim": self.ax.get_xlim(),
+            "ylim": self.ax.get_ylim(),
+            "xscale": self.ax.get_xscale(),
+            "yscale": self.ax.get_yscale()
+        }
 
+    def restore_properties(self, props):
+        self.ax.set_xlabel(props['xlabel'])
+        self.ax.set_ylabel(props['ylabel'])
+        self.ax.set_title(props['title'])
+        self.ax.set_xlim(props['xlim'])
+        self.ax.set_ylim(props['ylim'])
+        self.ax.set_xscale(props['xscale'])
+        self.ax.set_yscale(props['yscale'])
+        
 # Matplotlib widget
 class MplWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
