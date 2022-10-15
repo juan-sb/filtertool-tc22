@@ -30,17 +30,17 @@ MARKER_STYLES = { 'None': '', 'Point': '.',  'Pixel': ',',  'Circle': 'o',  'Tri
 LINE_STYLES = { 'None': '', 'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':' }
 
 
-def stage_to_str(i, stage):
-    stage_str = str(i) + ': Z={'
+def stage_to_str(stage):
+    stage_str = 'Z={'
     for z in stage.z:
-        stage.append(str(z))
-        stage.append(', ')
-    stage.append('} , P={')
+        stage_str += str(z)
+        stage_str += ', '
+    stage_str += '} , P={'
     for p in stage.p:
-        stage.append(str(p))
-        stage.append(', ')
-    stage.append('} , K=')
-    stage.append(str(stage.k))
+        stage_str += str(p)
+        stage_str += ', '
+    stage_str += '} , K='
+    stage_str+= str(stage.k)
     return stage_str
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -175,35 +175,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def resolveResponseDialog(self):
         if not(self.respd.validateResponse()):
             return
-        if(self.respd.getResponseExpression() == 'step'):
-            t, ss = signal.step(self.selected_dataset_data.tf.getND())
-            title = self.respd.getResponseTitle()
-            time_title = title + "_timebase"
-            ans_title = title + "_ans"
-            self.selected_dataset_data.data[0][time_title] = t
-            self.selected_dataset_data.data[0][ans_title] = ss
-            self.selected_dataset_data.fields.append(time_title)
-            self.selected_dataset_data.fields.append(ans_title)
 
-            self.updateSelectedDataset()
-            self.updateSelectedDataline()
-            return
-        t = np.linspace(0, 30e-6, 100)
-        x = eval(self.respd.getResponseExpression())
-        response = signal.lsim(self.selected_dataset_data.tf , U = x , T = t)
+        t = self.respd.getTimeDomain()
+        expression = self.respd.getResponseExpression()
         title = self.respd.getResponseTitle()
         time_title = title + "_timebase"
         ans_title = title + "_ans"
 
+        
+        if expression == 'step':
+            _, response = signal.step(self.selected_dataset_data.tf.tf_object, T=t)
+        elif expression == 'delta':
+            _, response = signal.delta(self.selected_dataset_data.tf.tf_object, T=t)
+        else:
+            x = eval(expression)
+            response = signal.lsim(self.selected_dataset_data.tf.tf_object , U = x , T = t)
+        
         self.selected_dataset_data.data[0][time_title] = t
         self.selected_dataset_data.data[0][title] = x
         self.selected_dataset_data.data[0][ans_title] = response[1]
+
         self.selected_dataset_data.fields.append(time_title)
         self.selected_dataset_data.fields.append(title)
         self.selected_dataset_data.fields.append(ans_title)
-
+        
         self.updateSelectedDataset()
         self.updateSelectedDataline()
+
 
     def openTFDialog(self):
         self.tfd.open()
@@ -642,52 +640,67 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
-            for p in self.selected_dataset_data.tf.p:
+            for p in self.selected_dataset_data.origin.remainingPoles:
                 qlwt = QListWidgetItem()
+                qlwt.setData(Qt.UserRole, p)
                 qlwt.setText(str(p))
                 self.poles_list.addItem(qlwt)
-            for z in self.selected_dataset_data.tf.z:
+            for z in self.selected_dataset_data.origin.remainingZeros:
                 qlwt = QListWidgetItem()
+                qlwt.setData(Qt.UserRole, z)
                 qlwt.setText(str(z))
                 self.poles_list.addItem(qlwt)
             i = 1
             for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
-                qlwt.setText(stage_to_str(i, implemented_stage))
+                qlwt.setData(Qt.UserRole, implemented_stage)
+                qlwt.setText(stage_to_str(implemented_stage))
                 self.stages_list.addItem(qlwt)
-            for stage_indexes in self.selected_dataset_data.origin.stage_indexes:
-                for z in stage_indexes[0]:
-                    self.zeros_list.item(z).setEnabled(False)
-                for p in stage_indexes[1]:
-                    self.poles_list.item(p).setEnabled(False)
+                i += 1
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
-            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)                
+            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
+        else:  
+            self.new_stage_btn.setEnabled(False)
+            self.remove_stage_btn.setEnabled(False)           
 
     def addFilterStage(self):
-        selected_poles = [x.row() for x in self.poles_list.selectedIndexes()]
-        selected_zeros = [x.row() for x in self.zeros_list.selectedIndexes()]
+        selected_poles = [x.data(Qt.UserRole) for x in self.poles_list.selectedIndexes()]
+        selected_zeros = [x.data(Qt.UserRole) for x in self.zeros_list.selectedIndexes()]
         selected_gain = self.stage_gain_box.value()
 
+        selected_poles_idx = [x.row() for x in self.poles_list.selectedIndexes()]
+        selected_zeros_idx = [x.row() for x in self.zeros_list.selectedIndexes()]
+        selected_poles_idx.sort(reverse=True)
+        selected_zeros_idx.sort(reverse=True)
+
         if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain):
-            for z in selected_zeros:
-                self.zeros_list.item(z).setFlags(Qt.ItemIsEnabled & ~Qt.ItemIsSelectable)
-            for p in selected_poles:
-                self.poles_list.item(p).setFlags(Qt.ItemIsEnabled & ~Qt.ItemIsSelectable)
+            for z in selected_zeros_idx:
+                self.zeros_list.takeItem(z)
+            for p in selected_poles_idx:
+                self.poles_list.takeItem(p)
             qlwt = QListWidgetItem()
-            qlwt.setText(stage_to_str(self.stages_list.size(), self.selected_dataset_data.origin.stages[-1]))
+            qlwt.setData(Qt.UserRole, self.selected_dataset_data.origin.stages[-1])
+            qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1]))
             self.stages_list.addItem(qlwt)
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain) 
 
     def removeFilterStage(self):
-        selected_stage = self.stages_list.selectedItems().currentIndex()
-        self.selected_dataset_data.origin.removeStage(selected_stage)
-        self.stages_list.takeItem(selected_stage)
-        zplist = self.selected_dataset_data.origin.stage_indexes[selected_stage]
-        for z in zplist[0]:
-            self.zeros_list.item(z).setEnabled(True)
-        for p in zplist[1]:
-            self.poles_list.item(p).setEnabled(True)
+        i = self.stages_list.selectedIndexes()[0].row()
+
+        for z in self.selected_dataset_data.origin.stages[i].z:
+            qlwt = QListWidgetItem()
+            qlwt.setData(Qt.UserRole, z)
+            qlwt.setText(str(z))
+            self.zeros_list.addItem(qlwt)
+        for p in self.selected_dataset_data.origin.stages[i].p:
+            qlwt = QListWidgetItem()
+            qlwt.setData(Qt.UserRole, p)
+            qlwt.setText(str(p))
+            self.poles_list.addItem(qlwt)
+        
+        self.selected_dataset_data.origin.removeStage(i)
+        self.stages_list.takeItem(i)
         self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain)) 
 
 

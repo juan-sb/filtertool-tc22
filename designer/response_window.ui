@@ -64,7 +64,7 @@
        <bool>true</bool>
       </property>
       <property name="text">
-       <string>Check Expression</string>
+       <string>Validar</string>
       </property>
      </widget>
     </item>
@@ -88,7 +88,20 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QDoubleSpinBox" name="minbox"/>
+       <widget class="QDoubleSpinBox" name="minbox">
+        <property name="decimals">
+         <number>5</number>
+        </property>
+        <property name="minimum">
+         <double>0.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>999999999.999989986419678</double>
+        </property>
+        <property name="value">
+         <double>0.000000000000000</double>
+        </property>
+       </widget>
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label_2">
@@ -98,7 +111,17 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QDoubleSpinBox" name="maxbox"/>
+       <widget class="QDoubleSpinBox" name="maxbox">
+        <property name="decimals">
+         <number>5</number>
+        </property>
+        <property name="maximum">
+         <double>999999999.999989986419678</double>
+        </property>
+        <property name="value">
+         <double>1.000000000000000</double>
+        </property>
+       </widget>
       </item>
       <item row="2" column="0">
        <widget class="QLabel" name="label_3">
@@ -108,7 +131,14 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QDoubleSpinBox" name="stepbox"/>
+       <widget class="QDoubleSpinBox" name="stepbox">
+        <property name="decimals">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <double>0.000100000000000</double>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>

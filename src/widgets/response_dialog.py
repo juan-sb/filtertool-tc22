@@ -33,6 +33,9 @@ class ResponseDialog(QtWidgets.QDialog, Ui_tf_window):
 
     def getResponseExpression(self):
         return self.tf_raw.text()
+    
+    def getTimeDomain(self):
+        return np.arange(self.minbox.value(), self.maxbox.value(), self.stepbox.value())
 
     def enableResponseFunction(self, txt):
         if txt != '':
@@ -41,12 +44,14 @@ class ResponseDialog(QtWidgets.QDialog, Ui_tf_window):
     def validateResponse(self):
         try:
             ast.parse(self.tf_raw.text())
+            if (self.minbox >= self.maxbox):
+                return False
         except SyntaxError:
             return False
         return True
 
     def processResponseValues(self):
-        if  self.validateResponse():
+        if self.validateResponse():
             self.error_label.clear()
         else:
-            self.error_label.setText("Revise function expression")
+            self.error_label.setText("La expresión y/o los límites no son válidos")
