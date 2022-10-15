@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -54,55 +54,13 @@
           <property name="title">
            <string>Dataset handling</string>
           </property>
-          <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,1">
+          <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,1,0">
            <property name="topMargin">
             <number>9</number>
            </property>
            <property name="rightMargin">
             <number>9</number>
            </property>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="function_btn">
-             <property name="text">
-              <string>Add transfer function</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QListWidget" name="dataset_list">
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="alternatingRowColors">
-              <bool>true</bool>
-             </property>
-             <property name="selectionBehavior">
-              <enum>QAbstractItemView::SelectItems</enum>
-             </property>
-             <property name="modelColumn">
-              <number>0</number>
-             </property>
-             <property name="uniformItemSizes">
-              <bool>true</bool>
-             </property>
-             <property name="selectionRectVisible">
-              <bool>true</bool>
-             </property>
-             <property name="sortingEnabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QPushButton" name="import_file_btn">
-             <property name="text">
-              <string>Import files</string>
-             </property>
-            </widget>
-           </item>
            <item row="3" column="0">
             <widget class="QScrollArea" name="scrollArea">
              <property name="sizePolicy">
@@ -144,7 +102,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>183</width>
-                <height>498</height>
+                <height>469</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -478,13 +436,6 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="9" column="0" colspan="2">
-                   <widget class="QPushButton" name="plt_autoscale">
-                    <property name="text">
-                     <string>Autoscale plot</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="7" column="1">
                    <widget class="QDoubleSpinBox" name="plt_marginy">
                     <property name="maximum">
@@ -580,6 +531,55 @@
                </item>
               </layout>
              </widget>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="import_file_btn">
+             <property name="text">
+              <string>Import files</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QListWidget" name="dataset_list">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="alternatingRowColors">
+              <bool>true</bool>
+             </property>
+             <property name="selectionBehavior">
+              <enum>QAbstractItemView::SelectItems</enum>
+             </property>
+             <property name="modelColumn">
+              <number>0</number>
+             </property>
+             <property name="uniformItemSizes">
+              <bool>true</bool>
+             </property>
+             <property name="selectionRectVisible">
+              <bool>true</bool>
+             </property>
+             <property name="sortingEnabled">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QPushButton" name="function_btn">
+             <property name="text">
+              <string>Add transfer function</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QPushButton" name="plt_autoscale">
+             <property name="text">
+              <string>Autoscale plot</string>
+             </property>
             </widget>
            </item>
           </layout>
@@ -2391,7 +2391,6 @@
   <tabstop>plt_grid</tabstop>
   <tabstop>plt_marginx</tabstop>
   <tabstop>plt_marginy</tabstop>
-  <tabstop>plt_autoscale</tabstop>
   <tabstop>tabbing_plots</tabstop>
   <tabstop>dataline_list</tabstop>
   <tabstop>scrollArea_2</tabstop>
