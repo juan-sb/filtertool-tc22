@@ -17,12 +17,15 @@ import scipy.signal as signal
 from scipy.interpolate import splrep, splev, splprep
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from mplcursors import HoverMode, cursor
+
 import numpy as np
 import random
 from pyparsing.exceptions import ParseSyntaxException
 
 MARKER_STYLES = { 'None': '', 'Point': '.',  'Pixel': ',',  'Circle': 'o',  'Triangle down': 'v',  'Triangle up': '^',  'Triangle left': '<',  'Triangle right': '>',  'Tri down': '1',  'Tri up': '2',  'Tri left': '3',  'Tri right': '4',  'Octagon': '8',  'Square': 's',  'Pentagon': 'p',  'Plus (filled)': 'P',  'Star': '*',  'Hexagon': 'h',  'Hexagon alt.': 'H',  'Plus': '+',  'x': 'x',  'x (filled)': 'X',  'Diamond': 'D',  'Diamond (thin)': 'd',  'Vline': '|',  'Hline': '_' }
 LINE_STYLES = { 'None': '', 'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':' }
+
 
 def stage_to_str(i, stage):
     stage_str = str(i) + ': Z={'
@@ -554,56 +557,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
-            print(fp, fa)
-            bw = fa[0] - fa[1]
-            # x = [fp, fp + bw/3]
-            # y = [-gp, -gp]
-            # attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            # x = [fa - bw/3, fa]
-            # y = [-ga, -ga]
-            # attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            bw = fa[1] - fa[0]
+            x = [fa[0]-bw/3, fa[0]]
+            y = [-ga, -ga]
+            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            x = [fa[1], fa[1]+bw/3]
+            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            x = [fp[0], fp[1]]
+            y = [-gp, -gp]
+            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            
             attcanvas.ax.set_xlim([fa[0] - bw/3, fa[1] + bw/3])
-            attcanvas.ax.set_ylim([0, -ga*1.5])        # elif type == 'Pasa Banda':
-        #     x = [wa2 / 10, wa2, wa2]
-        #     y = [Aa, Aa, Ap - 10]
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
-        #     x = [wp2, wp2, wp, wp]
-        #     y = [Aa + 10, Ap, Ap, Aa + 10]
-        #     if Ap <= 0:
-        #         yR = [Ap - ripple, Ap - ripple]
-        #     else:
-        #         yR = [ripple, ripple]
-        #     plt.semilogx(x[1:-1], yR, 'b--', color='#28658a', linewidth=2)
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
-        #     x = [wa, wa, wa * 10]
-        #     y = [Ap - 10, Aa, Aa]
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
-        # elif type == 'Rechaza Banda':
-        #     x = [wp2 / 10, wp2, wp2]
-        #     y = [Ap, Ap, Aa + 10]
-        #     if Ap <= 0:
-        #         yR = [Ap - ripple, Ap - ripple]
-        #     else:
-        #         yR = [ripple, ripple]
-        #     plt.semilogx(x[:-1], yR, 'b--', color='#28658a', linewidth=2)
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
-        #     x = [wa2, wa2, wa, wa]
-        #     y = [Ap - 10, Aa, Aa, Ap - 10]
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.min(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
-        #     x = [wp, wp, wp * 10]
-        #     y = [Aa + 10, Ap, Ap]
-        #     if Ap <= 0:
-        #         yR = [Ap - ripple, Ap - ripple]
-        #     else:
-        #         yR = [ripple, ripple]
-        #     plt.semilogx(x[1:], yR, 'b--', color='#28658a', linewidth=2)
-        #     plt.semilogx(x, y, 'b--', color='#28658a', linewidth=2)
-        #     plt.fill_between(x, y, np.max(y), facecolor="none", edgecolor='#539ecd', hatch='X', linewidth=0)
+            attcanvas.ax.set_ylim([0, -ga*1.5])
+        elif filtds.origin.filter_type == Filter.BAND_REJECT:
+            fp = [w/(2*np.pi) for w in filtds.origin.wp]
+            fa = [w/(2*np.pi) for w in filtds.origin.wa]
+            bw = fp[1] - fp[0]
+            x = [fp[0]-bw/3, fp[0]]
+            y = [-gp, -gp]
+            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            x = [fp[1], fp[1]+bw/3]
+            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            x = [fa[0], fa[1]]
+            y = [-gp, -gp]
+            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            
+            attcanvas.ax.set_xlim([fp[0] - bw/3, fp[1] + bw/3])
+            attcanvas.ax.set_ylim([0, -ga*1.5])
 
 
         pzcanvas.ax.axis('equal')
@@ -611,13 +591,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
         (min, max) = self.getRelevantFrequencies(z, p)
         (multiplier, prefix) = self.getMultiplierAndPrefix(max)
-        pzcanvas.ax.scatter(z.real/multiplier, z.imag/multiplier, marker='o')
-        pzcanvas.ax.scatter(p.real/multiplier, p.imag/multiplier, marker='x')
+        zeroes = pzcanvas.ax.scatter(z.real/multiplier, z.imag/multiplier, marker='o')
+        poles = pzcanvas.ax.scatter(p.real/multiplier, p.imag/multiplier, marker='x')
         pzcanvas.ax.set_xlabel(f'$\sigma$ (${prefix}rad/s$)')
         pzcanvas.ax.set_ylabel(f'$j\omega$ (${prefix}rad/s$)')
         pzcanvas.ax.set_xlim(left=-max*1.2/multiplier, right=max*1.2/multiplier)
         pzcanvas.ax.set_ylim(bottom=-max*1.2/multiplier, top=max*1.2/multiplier)
-
+        cursor([zeroes, poles], hover=HoverMode.Transient)
         attcanvas.draw()
         gaincanvas.draw()
         magcanvas.draw()
