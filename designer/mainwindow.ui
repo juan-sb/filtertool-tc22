@@ -1662,12 +1662,15 @@
                    </widget>
                   </item>
                   <item row="13" column="1">
-                   <widget class="QDoubleSpinBox" name="frg_box">
+                   <widget class="ScienDSpinBox" name="frg_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
                     <property name="maximum">
-                     <double>9999999.000000000000000</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                     <property name="singleStep">
                      <double>1.000000000000000</double>
@@ -1689,12 +1692,15 @@
                    </widget>
                   </item>
                   <item row="7" column="1">
-                   <widget class="QDoubleSpinBox" name="fp_max_box">
+                   <widget class="ScienDSpinBox" name="fp_max_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
                     <property name="maximum">
-                     <double>9999999.000000000000000</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -1720,12 +1726,15 @@
                    </widget>
                   </item>
                   <item row="3" column="1">
-                   <widget class="QDoubleSpinBox" name="fp_box">
+                   <widget class="ScienDSpinBox" name="fp_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
                     <property name="maximum">
-                     <double>9999.989999999999782</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                     <property name="value">
                      <double>1.000000000000000</double>
@@ -1752,15 +1761,18 @@
                    </widget>
                   </item>
                   <item row="9" column="1">
-                   <widget class="QDoubleSpinBox" name="f0_box">
+                   <widget class="ScienDSpinBox" name="f0_box">
                     <property name="enabled">
                      <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
                     </property>
                     <property name="minimum">
                      <double>0.000000000000000</double>
                     </property>
                     <property name="maximum">
-                     <double>9999999.000000000000000</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                     <property name="singleStep">
                      <double>1.000000000000000</double>
@@ -1768,9 +1780,12 @@
                    </widget>
                   </item>
                   <item row="11" column="1">
-                   <widget class="QDoubleSpinBox" name="bw_min_box">
+                   <widget class="ScienDSpinBox" name="bw_min_box">
                     <property name="enabled">
                      <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
                     </property>
                     <property name="maximum">
                      <double>9999999.000000000000000</double>
@@ -1788,12 +1803,15 @@
                    </widget>
                   </item>
                   <item row="4" column="1">
-                   <widget class="QDoubleSpinBox" name="fa_box">
+                   <widget class="ScienDSpinBox" name="fa_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
                     <property name="maximum">
-                     <double>9999999.000000000000000</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                     <property name="value">
                      <double>10.000000000000000</double>
@@ -1801,9 +1819,12 @@
                    </widget>
                   </item>
                   <item row="12" column="1">
-                   <widget class="QDoubleSpinBox" name="bw_max_box">
+                   <widget class="ScienDSpinBox" name="bw_max_box">
                     <property name="enabled">
                      <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
                     </property>
                    </widget>
                   </item>
@@ -1819,24 +1840,36 @@
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>%</string>
+                    </property>
+                    <property name="decimals">
+                     <number>0</number>
+                    </property>
                     <property name="minimum">
                      <double>0.000000000000000</double>
                     </property>
                     <property name="maximum">
-                     <double>1.000000000000000</double>
+                     <double>100.000000000000000</double>
                     </property>
                     <property name="singleStep">
-                     <double>0.001000000000000</double>
+                     <double>0.500000000000000</double>
                     </property>
                    </widget>
                   </item>
                   <item row="10" column="1">
-                   <widget class="QDoubleSpinBox" name="tau0_box">
+                   <widget class="ScienDSpinBox" name="tau0_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>s</string>
+                    </property>
                     <property name="singleStep">
                      <double>1.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -1869,32 +1902,41 @@
                    </widget>
                   </item>
                   <item row="6" column="1">
-                   <widget class="QDoubleSpinBox" name="fp_min_box">
+                   <widget class="ScienDSpinBox" name="fp_min_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
                     <property name="maximum">
-                     <double>9999999.000000000000000</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
                   <item row="5" column="1">
-                   <widget class="QDoubleSpinBox" name="fa_min_box">
+                   <widget class="ScienDSpinBox" name="fa_min_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
                     <property name="maximum">
-                     <double>9999999.000000000000000</double>
+                     <double>999999999.000000000000000</double>
                     </property>
                    </widget>
                   </item>
                   <item row="8" column="1">
-                   <widget class="QDoubleSpinBox" name="fa_max_box">
+                   <widget class="ScienDSpinBox" name="fa_max_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
                     <property name="maximum">
-                     <double>9999999.000000000000000</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                     <property name="singleStep">
                      <double>1.000000000000000</double>
@@ -2073,6 +2115,16 @@
           <property name="currentIndex">
            <number>0</number>
           </property>
+          <widget class="QWidget" name="tab_19">
+           <attribute name="title">
+            <string>Filter PZ map</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_33">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_pz_filt" native="true"/>
+            </item>
+           </layout>
+          </widget>
           <widget class="QWidget" name="tab_15">
            <attribute name="title">
             <string>Stage PZ map</string>
@@ -2366,6 +2418,7 @@
   <tabstop>gain_box</tabstop>
   <tabstop>denorm_box</tabstop>
   <tabstop>scrollArea_4</tabstop>
+  <tabstop>define_with_box</tabstop>
   <tabstop>gp_box</tabstop>
   <tabstop>ga_box</tabstop>
   <tabstop>fp_box</tabstop>
@@ -2375,15 +2428,21 @@
   <tabstop>fp_max_box</tabstop>
   <tabstop>fa_max_box</tabstop>
   <tabstop>f0_box</tabstop>
+  <tabstop>tau0_box</tabstop>
+  <tabstop>bw_min_box</tabstop>
+  <tabstop>bw_max_box</tabstop>
   <tabstop>frg_box</tabstop>
+  <tabstop>tol_box</tabstop>
   <tabstop>new_filter_btn</tabstop>
   <tabstop>chg_filter_btn</tabstop>
   <tabstop>tabWidget_2</tabstop>
-  <tabstop>poles_list</tabstop>
-  <tabstop>zeros_list</tabstop>
   <tabstop>new_stage_btn</tabstop>
   <tabstop>remove_stage_btn</tabstop>
+  <tabstop>poles_list</tabstop>
   <tabstop>stages_list</tabstop>
+  <tabstop>zeros_list</tabstop>
+  <tabstop>tabWidget_3</tabstop>
+  <tabstop>stage_gain_box</tabstop>
  </tabstops>
  <resources/>
  <connections/>

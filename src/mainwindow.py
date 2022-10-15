@@ -478,6 +478,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas = self.fplot_pz.canvas
         stepcanvas = self.fplot_step.canvas
         impulsecanvas = self.fplot_impulse.canvas
+        pzcanvas_stages = self.splot_pz_filt.canvas
 
         attcanvas.ax.clear()
         attcanvas.ax.grid(True, which="both", linestyle=':')
@@ -584,20 +585,51 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
         (min, max) = self.getRelevantFrequencies(z, p)
-        (multiplier, prefix) = self.getMultiplierAndPrefix(max)
-        zeroes = pzcanvas.ax.scatter(z.real/multiplier, z.imag/multiplier, marker='o')
-        poles = pzcanvas.ax.scatter(p.real/multiplier, p.imag/multiplier, marker='x')
-        pzcanvas.ax.set_xlabel(f'$\sigma$ (${prefix}rad/s$)')
-        pzcanvas.ax.set_ylabel(f'$j\omega$ (${prefix}rad/s$)')
-        pzcanvas.ax.set_xlim(left=-max*1.2/multiplier, right=max*1.2/multiplier)
-        pzcanvas.ax.set_ylim(bottom=-max*1.2/multiplier, top=max*1.2/multiplier)
-        cursor([zeroes, poles], hover=HoverMode.Transient)
+        zx = z.real
+        zy = z.imag
+        px = p.real
+        py = p.imag
+        zeroes = pzcanvas.ax.scatter(zx, zy, marker='o')
+        poles = pzcanvas.ax.scatter(px, py, marker='x')
+        pzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
+        pzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
+        pzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
+        pzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+        cursor(zeroes, multiple=True, highlight=True).connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+        cursor(poles, multiple=True, highlight=True).connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+        
+        pzcanvas_stages.ax.axis('equal')
+        pzcanvas_stages.ax.axhline(0, color="black", alpha=0.1)
+        pzcanvas_stages.ax.axvline(0, color="black", alpha=0.1)
+        zeroes_f = pzcanvas_stages.ax.scatter(zx, zy, marker='o')
+        poles_f = pzcanvas_stages.ax.scatter(px, py, marker='x')
+        pzcanvas_stages.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
+        pzcanvas_stages.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
+        pzcanvas_stages.ax.set_xlim(left=-max*1.2, right=max*1.2)
+        pzcanvas_stages.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+        cursor(zeroes_f).connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+        cursor(poles_f).connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+
+
         attcanvas.draw()
         gaincanvas.draw()
         magcanvas.draw()
         phasecanvas.draw()
         groupdelaycanvas.draw()
         pzcanvas.draw()
+        pzcanvas_stages.draw()
         stepcanvas.draw()
         impulsecanvas.draw()
 

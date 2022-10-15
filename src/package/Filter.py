@@ -128,7 +128,7 @@ class AnalogFilter():
                 self.wp[1] = self.wp[0] + self.bw[1]
 
             if self.filter_type == GROUP_DELAY:
-                assert self.gamma > 0 and self.gamma < 1
+                assert self.gamma > 0 and self.gamma < 100
                 assert self.tau0 > 0
                 assert self.wrg > 0
 
@@ -211,7 +211,7 @@ class AnalogFilter():
                 while True:
                     z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
                     tf2 = TFunction(z, p, k)
-                    if 1 - tf2.gd_at(self.wrg_n) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
+                    if 1 - tf2.gd_at(self.wrg_n) <= self.gamma/100: #si el gd es menor-igual que el esperado, estamos
                         self.tf_norm = TFunction(z, p, k)
                         break
                     self.N += 1
@@ -227,7 +227,7 @@ class AnalogFilter():
                         p = select_roots(np.poly1d(gauss_poly))
                         p0 = np.prod(p)
                         tf2 = TFunction(z, p, p0)
-                        if 1 - tf2.gd_at(self.wrg_n) <= self.gamma: #si el gd es menor-igual que el esperado, estamos
+                        if 1 - tf2.gd_at(self.wrg_n) <= self.gamma/100: #si el gd es menor-igual que el esperado, estamos
                             g0 = tf2.gd_at(0)                       
                             p = [r * g0 for r in p]
                             self.tf_norm = TFunction(z, p, p0)
@@ -297,6 +297,8 @@ class AnalogFilter():
         # no es necesario (por ahora) desnormalizar las ganancias
         s = sym.symbols('s')
         h_norm = sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s)
+        
+        print(h_norm)
 
         if self.filter_type == LOW_PASS:
             transformation = s / self.wp
@@ -310,8 +312,11 @@ class AnalogFilter():
             transformation = s * self.tau0
         
         h_denorm = h_norm.subs(s, transformation) 
+        print(h_denorm)
         h_denorm = sym.simplify(h_denorm)
+        print(h_denorm)
         h_denorm = sym.fraction(h_denorm)
+        print(h_denorm)
 
         N = sym.Poly(h_denorm[0]).all_coeffs() if (s in h_denorm[0].free_symbols) else [h_denorm[0].evalf()]
         D = sym.Poly(h_denorm[1]).all_coeffs() if (s in h_denorm[1].free_symbols) else [h_denorm[1].evalf()]
