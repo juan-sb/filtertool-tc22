@@ -307,9 +307,9 @@ class AnalogFilter():
 
         append_gain = self.remainingGain if newRemainingPoles == 0 else gain
         a = 1 #lo voy a usar para normalizar, los zpk que da numpy no vienen normalizados
-        for zero in z:
+        for zero in z_arr:
             a *= -zero
-        for pole in p:
+        for pole in p_arr:
             a /= -pole
         self.stages.append(TFunction(z_arr, p_arr, append_gain/a))
         self.remainingGain /= append_gain

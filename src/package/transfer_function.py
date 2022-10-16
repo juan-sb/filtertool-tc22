@@ -88,7 +88,7 @@ class TFunction():
     def getZP(self):
         return self.z, self.p
 
-    def getBode(self, start=-2, stop=9, num=2222):
+    def getBode(self, start=-2, stop=7, num=3312):
         ws = np.logspace(start, stop, num)
         w, g, ph = signal.bode(self.tf_object, w=ws)
         gd = self.gd_at(w) # * 2 *np.p1 --> no hay que hacer regla de cadena porque se achica tmb la escala de w

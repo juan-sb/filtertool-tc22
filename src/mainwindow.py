@@ -139,6 +139,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.poles_list.itemSelectionChanged.connect(self.stage_sel_changed)
         self.zeros_list.itemSelectionChanged.connect(self.stage_sel_changed)
+        self.stages_list.itemSelectionChanged.connect(self.updateStagePlots)
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -495,7 +496,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas = self.fplot_pz.canvas
         stepcanvas = self.fplot_step.canvas
         impulsecanvas = self.fplot_impulse.canvas
-        pzcanvas_stages = self.splot_pz_filt.canvas
 
         attcanvas.ax.clear()
         attcanvas.ax.grid(True, which="both", linestyle=':')
@@ -513,8 +513,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         groupdelaycanvas.ax.set_xscale('log')
         pzcanvas.ax.clear()
         pzcanvas.ax.grid(True, which="both", linestyle=':')
-        pzcanvas_stages.ax.clear()
-        pzcanvas_stages.ax.grid(True, which="both", linestyle=':')
         stepcanvas.ax.clear()
         stepcanvas.ax.grid(True, which="both", linestyle=':')
         impulsecanvas.ax.clear()
@@ -624,29 +622,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
         )
         
-        pzcanvas_stages.ax.axis('equal')
-        pzcanvas_stages.ax.axhline(0, color="black", alpha=0.1)
-        pzcanvas_stages.ax.axvline(0, color="black", alpha=0.1)
-        zeroes_f = pzcanvas_stages.ax.scatter(zx, zy, marker='o')
-        poles_f = pzcanvas_stages.ax.scatter(px, py, marker='x')
-        pzcanvas_stages.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
-        pzcanvas_stages.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
-        pzcanvas_stages.ax.set_xlim(left=-max*1.2, right=max*1.2)
-        pzcanvas_stages.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
-        self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
-        self.stageCursorZer.connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
-        self.stageCursorZer.connect("add", self.updateSelectedZerosFromPlot)
-        self.stageCursorZer.connect("remove", self.updateSelectedZerosFromPlot)
-        self.stageCursorPol = cursor(poles_f, multiple=True, highlight=True)
-        self.stageCursorPol.connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
-        self.stageCursorPol.connect("add", self.updateSelectedPolesFromPlot)
-        self.stageCursorPol.connect("remove", self.updateSelectedPolesFromPlot)
 
         attcanvas.draw()
         gaincanvas.draw()
@@ -654,9 +629,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         phasecanvas.draw()
         groupdelaycanvas.draw()
         pzcanvas.draw()
-        pzcanvas_stages.draw()
         stepcanvas.draw()
         impulsecanvas.draw()
+
+        self.updateStagePlots()
 
     def updateFilterStages(self):
         self.stages_list.clear()
@@ -666,15 +642,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
-            for p in self.selected_dataset_data.origin.remainingPoles:
+            zeros, poles = self.selected_dataset_data.origin.tf.getZP()
+            for p in poles:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, p)
                 qlwt.setText(str(p))
+                if(p not in self.selected_dataset_data.origin.remainingPoles):
+                    qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.poles_list.addItem(qlwt)
-            for z in self.selected_dataset_data.origin.remainingZeros:
+            for z in zeros:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, z)
                 qlwt.setText(str(z))
+                if(z not in self.selected_dataset_data.origin.remainingZeros):
+                    qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.zeros_list.addItem(qlwt)
             for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
@@ -761,10 +742,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain):
             for z in selected_zeros_idx:
-                self.zeros_list.takeItem(z)
+                self.zeros_list.item(z).setFlags(Qt.ItemFlag.NoItemFlags)
             for p in selected_poles_idx:
-                self.poles_list.takeItem(p)
-
+                self.poles_list.item(p).setFlags(Qt.ItemFlag.NoItemFlags)
+        
+            [self.stageCursorPol.remove_selection(sel) for sel in self.stageCursorPol.selections]
+            [self.stageCursorZer.remove_selection(sel) for sel in self.stageCursorZer.selections]
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=self.selected_dataset_data.origin.stages[-1]))
             qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1]))
@@ -772,25 +755,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
         
-        self.stages_list.setCurrentRow(self.stages_list.count() - 1)
+            self.stages_list.setCurrentRow(self.stages_list.count() - 1)
 
-        self.updateStagePlots()
+            self.updateStagePlots()
+        else:
+            print('Error al crear STAGE')
 
     def removeFilterStage(self):
-        i = self.stages_list.selectedIndexes()[0].row()
+        i = self.stages_list.currentRow()
 
-        for z in self.selected_dataset_data.origin.stages[i].z:
-            qlwt = QListWidgetItem()
-            qlwt.setData(Qt.UserRole, z)
-            qlwt.setText(str(z))
-            self.zeros_list.addItem(qlwt)
-        for p in self.selected_dataset_data.origin.stages[i].p:
+        self.zeros_list.clear()
+        self.poles_list.clear()
+
+        self.selected_dataset_data.origin.removeStage(i)
+        
+        zeros, poles = self.selected_dataset_data.origin.tf.getZP()
+        for p in poles:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, p)
             qlwt.setText(str(p))
+            if(p not in self.selected_dataset_data.origin.remainingPoles):
+                qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
             self.poles_list.addItem(qlwt)
-        
-        self.selected_dataset_data.origin.removeStage(i)
+        for z in zeros:
+            qlwt = QListWidgetItem()
+            qlwt.setData(Qt.UserRole, z)
+            qlwt.setText(str(z))
+            if(z not in self.selected_dataset_data.origin.remainingZeros):
+                qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.zeros_list.addItem(qlwt)
         self.stages_list.takeItem(i)
         self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
         self.stages_list.setCurrentRow(self.stages_list.count() - 1)
@@ -801,14 +794,50 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         sphasecanvas = self.splot_sphase.canvas
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
+        pzcanvas_stages = self.splot_pz_filt.canvas
 
         self.clearCanvas(spzcanvas)
+        self.clearCanvas(pzcanvas_stages)
         self.clearCanvas(sgaincanvas)
         self.clearCanvas(sphasecanvas)
         sgaincanvas.ax.set_xscale('log')
         sphasecanvas.ax.set_xscale('log')
 
-        stageds = self.stages_list.selectedIndexes()[0].data(Qt.UserRole)
+        z, p = self.selected_dataset_data.origin.tf.getZP()
+        (min, max) = self.getRelevantFrequencies(z, p)
+
+        pzcanvas_stages.ax.axis('equal')
+        pzcanvas_stages.ax.axhline(0, color="black", alpha=0.1)
+        pzcanvas_stages.ax.axvline(0, color="black", alpha=0.1)
+
+        polcol = ['#FF0000' if pole in self.selected_dataset_data.origin.remainingPoles else '#00FF00' for pole in p]
+        zercol = ['#FF0000' if zero in self.selected_dataset_data.origin.remainingZeros else '#00FF00' for zero in z]
+        zeroes_f = pzcanvas_stages.ax.scatter(z.real, z.imag, c=zercol, marker='o')
+        poles_f = pzcanvas_stages.ax.scatter(p.real, p.imag, c=polcol, marker='x')
+        pzcanvas_stages.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
+        pzcanvas_stages.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
+        pzcanvas_stages.ax.set_xlim(left=-max*1.2, right=max*1.2)
+        pzcanvas_stages.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+        self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
+        self.stageCursorZer.connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+        self.stageCursorZer.connect("add", self.updateSelectedZerosFromPlot)
+        self.stageCursorZer.connect("remove", self.updateSelectedZerosFromPlot)
+        self.stageCursorPol = cursor(poles_f, multiple=True, highlight=True)
+        self.stageCursorPol.connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+        self.stageCursorPol.connect("add", self.updateSelectedPolesFromPlot)
+        self.stageCursorPol.connect("remove", self.updateSelectedPolesFromPlot)
+        pzcanvas_stages.draw()
+
+
+        if(not self.stages_list.currentItem()):
+            return
+        stageds = self.stages_list.currentItem().data(Qt.UserRole)
 
         f = stageds.data[0]['f']
         g = stageds.data[0]['g']
@@ -817,8 +846,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         gline, = sgaincanvas.ax.plot(f, g)
         phline, = sphasecanvas.ax.plot(f, ph)
-
-        z, p = stageds.origin.z, stageds.origin.p
 
         (min, max) = self.getRelevantFrequencies(z, p)
         spzcanvas.ax.axis('equal')
@@ -839,7 +866,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "add", lambda sel: 
                 sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
         )
-
         spzcanvas.draw()
         sgaincanvas.draw()
         sphasecanvas.draw()
