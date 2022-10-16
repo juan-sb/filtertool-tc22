@@ -49,20 +49,16 @@ class TFunction():
 
     def setND(self, N, D):
         self.N, self.D = np.array(N, dtype=np.complex128), np.array(D, dtype=np.complex128)
-        self.z, self.p, self.k = signal.tf2zpk(self.N, self.D) #aún tengo que chequear si signal devuelve la ganancia bien (normalizada)
+        self.z, self.p, self.k = signal.tf2zpk(self.N, self.D)
         self.tf_object = signal.TransferFunction(self.N, self.D)
     
     def getND(self):
         return self.N, self.D
 
+    #Nota: signal NO normaliza la transferencia, por lo que k multiplica pero no es la ganancia en s=0
     def setZPK(self, z, p, k):
         self.z, self.p = np.array(z, dtype=np.complex128), np.array(p, dtype=np.complex128)
-        a = 1
-        for zero in z:
-            a *= zero
-        for pole in p:
-            a /= pole
-        self.k = k/a
+        self.k = k
         self.N, self.D = signal.zpk2tf(self.z, self.p, self.k)
         self.tf_object = signal.TransferFunction(self.N, self.D)
     

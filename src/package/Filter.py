@@ -194,7 +194,7 @@ class AnalogFilter():
                     L_eps = get_Leps(self.N, eps)
                     z = []
                     p = select_roots(L_eps)
-                    p0 = np.prod(p)
+                    p0 = np.prod(p) * (1 if self.N % 2 == 0 else -1) #en N tengo N polos y yo quiero obtener el producto de los polos negados para normalizar
                     tf2 = TFunction(z, p, p0)
                     wmin, tf2_wmin = tf2.optimize(0.1, 1)
                     wmax, tf2_wmax = tf2.optimize(0.1, 1, True)
@@ -303,7 +303,12 @@ class AnalogFilter():
             return False
 
         append_gain = self.remainingGain if newRemainingPoles == 0 else gain
-        self.stages.append(TFunction(z_arr, p_arr, append_gain))
+        a = 1 #lo voy a usar para normalizar, los zpk que da numpy no vienen normalizados
+        for zero in z:
+            a *= -zero
+        for pole in p:
+            a /= -pole
+        self.stages.append(TFunction(z_arr, p_arr, append_gain/a))
         self.remainingGain /= append_gain
         for z in z_arr:
             self.remainingZeros.remove(z)
