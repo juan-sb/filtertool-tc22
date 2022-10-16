@@ -196,10 +196,13 @@ class AnalogFilter():
                     p = select_roots(L_eps)
                     p0 = np.prod(p) * (1 if self.N % 2 == 0 else -1) #en N tengo N polos y yo quiero obtener el producto de los polos negados para normalizar
                     tf2 = TFunction(z, p, p0)
-                    wmin, tf2_wmin = tf2.optimize(0.1, 1)
-                    wmax, tf2_wmax = tf2.optimize(0.1, 1, True)
-                    wmax2, tf2_wmax2 = tf2.optimize(self.wan, 10*self.wan, True)
-                    if tf2_wmin >= self.gp and tf2_wmax <= 1 and tf2_wmax2 <= self.ga:
+                    #wmin, tf2_wmin = tf2.optimize(0.1, 1)
+                    #wmax, tf2_wmax = tf2.optimize(0.1, 1, True)
+                    #wmax2, tf2_wmax2 = tf2.optimize(self.wan, 10*self.wan, True)
+                    #no anda la optimización, evalúo sólo en 1 y wan
+                    tf2_wmin = tf2.at(1)
+                    tf2_wmax = tf2.at(wan)
+                    if tf2_wmin >= self.gp and tf2_wmax <= self.ga:
                         self.tf_norm = TFunction(z, p, p0)
                         break
                     self.N += 1
