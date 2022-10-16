@@ -19,7 +19,7 @@ class Dataset:
         self.poles = []
         self.type = ''
         self.origin = filepath if origin == '' else origin
-        self.tf = type('TFunction', (), {})()
+        self.tf = TFunction()
         self.title = qfi.fileName() if title == '' else title
         self.text = self.title
         self.datalines = []
@@ -92,18 +92,34 @@ class Dataset:
 
     def parse_from_csv(self, filepath):
         with open(filepath, mode='r') as csv_file:
+            i = 0
+            for line in csv_file:
+                if line[0] == '#' or len(line) < 3:
+                    i += len(line)
+                else:
+                    break
+            csv_file.seek(i) #Salteo los comentario y me paro donde esta lo que importa
             csv_reader = csv.DictReader(csv_file)
             self.data = [{}]
+            first_row = next(csv_reader)
+            for (field, val) in first_row.items():
+                self.data[0][field] = []
+
+            csv_file.seek(i)
+            csv_reader = csv.DictReader(csv_file)
+
             for row in csv_reader:
                 for (field, val) in row.items():
                     try:
-                        if('i' in val):
+                        if('i' in val or 'j' in val):
                             self.data[0][field].append(np.complex128(val))
                         else:
                             self.data[0][field].append(float(val))
                     except(ValueError):
                         pass
                     except(TypeError):
+                        pass
+                    except(KeyError):
                         pass
                     
             if('rigol' in filepath.lower()):
@@ -150,8 +166,6 @@ class Dataset:
         self.data[0]['g'] = g
         self.data[0]['ph'] = ph
         self.data[0]['gd'] = gd
-        self.data[0]['limits_x'] = self.origin.limits_x
-        self.data[0]['limits_y'] = self.origin.limits_y
         self.zeros[0] = z
         self.poles[0] = p
         self.suggestedXsource = 'f'

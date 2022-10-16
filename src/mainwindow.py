@@ -52,6 +52,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.droppedFiles = []
         self.datasets = []
         self.datalines = []
+        # self.stage_datasets = [] capaz mas adelante lo ponga para serializar también las etapas, pero creo que para ahora es mucho
         self.selected_dataset_widget = {}
         self.selected_dataline_widget = {}
         self.selected_dataset_data = {}
@@ -139,6 +140,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         qlwt.setText(ds.title)
         self.dataset_list.addItem(qlwt)
         self.datasets.append(ds)
+        #self.stage_datasets.append([])
         self.datalines.append([])
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
 
@@ -158,6 +160,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for x in range(first_dataline_index, last_dataline_index):
             self.dataline_list.takeItem(first_dataline_index)
         self.datalines.pop(i)
+        #self.stage_datasets.pop(i)
         
         self.dataset_list.takeItem(i)
         self.updatePlots()
@@ -181,8 +184,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.updateSelectedDataline()
         self.updatePlots()
 
-    def removeDataline(self, i):
-        pass
+    def removeDataline(self, i):        
+        try:
+            dsi, dli = self.getInternalDataIndexes(i)
+            del self.datalines[dsi][dli]
+            self.dataline_list.takeItem(i).data(Qt.UserRole)
+            del self.dataset_list.item(dsi).data(Qt.UserRole).datalines[dli]
+            if(self.dataline_list.currentRow() == -1):
+                self.dataline_list.setCurrentRow(self.dataline_list.count() - 1)
+        except AttributeError:
+            pass
+        self.updatePlots()
+    
+    def removeSelectedDataline(self, event):
+        selected_row = self.dataline_list.currentRow()
+        self.removeDataline(selected_row)
+
+    def removeSelectedDataset(self, event):
+        selected_row = self.dataset_list.currentRow()
+        self.removeDataset(selected_row)
+
+    def getInternalDataIndexes(self, datalineRow):
+        i = self.dataline_list.currentRow()
+        for x in range(self.dataset_list.count()):
+            ds = self.dataset_list.item(x).data(Qt.UserRole)
+            if(i >= len(self.datalines[x])):
+                i = i - len(self.datalines[x])
+            else:
+                return (x, i)
+        return (x, i)
 
     def dragEnterEvent(self, event):
         if(event.mimeData().hasUrls()):
@@ -216,6 +246,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 print('Wrong file config')
         self.statusbar.clearMessage()
 
+    def openTFDialog(self):
+        self.tfd.open()
+        self.tfd.tf_title.setFocus()
+
+    def resolveTFDialog(self):
+        if not self.tfd.validateTF():
+            return
+        ds = Dataset(filepath='', origin=self.tfd.tf, title=self.tfd.getTFTitle())
+        self.addDataset(ds)
+
     def openResponseDialog(self):
         self.respd.open()
         self.respd.tf_title.setFocus()
@@ -231,8 +271,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ans_title = title + "_ans"
         
         if expression == 'step':
+            x = np.heaviside(t, 0.5)
             _, response = signal.step(self.selected_dataset_data.tf.tf_object, T=t)
         elif expression == 'delta':
+            delta = lambda t, eps: (1 / (np.sqrt(pi) *eps)) * np.exp(-(t/eps)**2) #para plotear la delta
+            x = delta(t, (t[1] - t[0]))
             _, response = signal.delta(self.selected_dataset_data.tf.tf_object, T=t)
         else:
             x = eval(expression)
@@ -248,17 +291,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.updateSelectedDataset()
         self.updateSelectedDataline()
-
-
-    def openTFDialog(self):
-        self.tfd.open()
-        self.tfd.tf_title.setFocus()
-
-    def resolveTFDialog(self):
-        if not self.tfd.validateTF():
-            return
-        ds = Dataset(filepath='', origin=self.tfd.tf, title=self.tfd.getTFTitle())
-        self.addDataset(ds)
 
     def buildFilterFromParams(self):
         if self.tipo_box.currentIndex() in [Filter.BAND_PASS, Filter.BAND_REJECT]:
@@ -447,40 +479,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.label_fRG.setVisible(True)
             self.tol_box.setVisible(True)
             self.label_tolerance.setVisible(True)
-
-    
-    def getRelevantFrequencies(self, zeros, poles):
-        singularitiesNorm = np.append(np.abs(zeros), np.abs(poles))
-        singularitiesNormWithoutZeros = singularitiesNorm[singularitiesNorm!=0]
-        if(len(singularitiesNormWithoutZeros) == 0):
-            return (1,1)
-        return (np.min(singularitiesNormWithoutZeros), np.max(singularitiesNormWithoutZeros))
-    
-    def getMultiplierAndPrefix(self, val):
-        multiplier = 1
-        prefix = ''
-        if(val < 1e-7):
-            multiplier = 1e9
-            prefix = 'n'
-        elif(val < 1e-4):
-            multiplier = 1e-6
-            prefix = 'μ'
-        elif(val < 1e-1):
-            multiplier = 1e-3
-            prefix = 'm'
-        elif(val < 1e2):
-            multiplier = 1
-            prefix = ''
-        elif(val < 1e5):
-            multiplier = 1e3
-            prefix = 'k'
-        elif(val < 1e8):
-            multiplier = 1e6
-            prefix = 'M'
-        elif(val > 1e11):
-            multiplier = 1e9
-            prefix = 'G'
-        return (multiplier, prefix)
 
     def updateFilterPlots(self):
         attcanvas = self.fplot_att.canvas
@@ -673,7 +671,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
         else:  
             self.new_stage_btn.setEnabled(False)
-            self.remove_stage_btn.setEnabled(False)           
+            self.remove_stage_btn.setEnabled(False)
+        
+        self.stages_list.setCurrentRow(self.stages_list.count() - 1)
 
     def addFilterStage(self):
         selected_poles = [x.data(Qt.UserRole) for x in self.poles_list.selectedIndexes()]
@@ -690,12 +690,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.zeros_list.takeItem(z)
             for p in selected_poles_idx:
                 self.poles_list.takeItem(p)
+
             qlwt = QListWidgetItem()
-            qlwt.setData(Qt.UserRole, self.selected_dataset_data.origin.stages[-1])
+            qlwt.setData(Qt.UserRole, Dataset(origin=self.selected_dataset_data.origin.stages[-1]))
             qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1]))
             self.stages_list.addItem(qlwt)
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
-            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain) 
+            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
+        
+        self.stages_list.setCurrentRow(self.stages_list.count() - 1)
+
+        self.updateStagePlots()
 
     def removeFilterStage(self):
         i = self.stages_list.selectedIndexes()[0].row()
@@ -713,35 +718,63 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.selected_dataset_data.origin.removeStage(i)
         self.stages_list.takeItem(i)
-        self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain)) 
+        self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
+        self.stages_list.setCurrentRow(self.stages_list.count() - 1)
+
+    def updateStagePlots(self):
+        spzcanvas = self.splot_pz.canvas
+        sgaincanvas = self.splot_sgain.canvas
+        sphasecanvas = self.splot_sphase.canvas
+        tgaincanvas = self.splot_tgain.canvas
+        tphasecanvas = self.splot_tphase.canvas
+
+        self.clearCanvas(spzcanvas)
+        self.clearCanvas(sgaincanvas)
+        self.clearCanvas(sphasecanvas)
+        sgaincanvas.ax.set_xscale('log')
+        sphasecanvas.ax.set_xscale('log')
+
+        stageds = self.stages_list.selectedIndexes()[0].data(Qt.UserRole)
+
+        f = stageds.data[0]['f']
+        g = stageds.data[0]['g']
+        ph = stageds.data[0]['ph']
+        z, p = stageds.origin.getZP()
+
+        gline, = sgaincanvas.ax.plot(f, g)
+        phline, = sphasecanvas.ax.plot(f, ph)
+
+        z, p = stageds.origin.z, stageds.origin.p
+
+        (min, max) = self.getRelevantFrequencies(z, p)
+        spzcanvas.ax.axis('equal')
+        spzcanvas.ax.axhline(0, color="black", alpha=0.1)
+        spzcanvas.ax.axvline(0, color="black", alpha=0.1)
+        zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
+        poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
+        spzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
+        spzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
+        spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
+        spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+
+        cursor(zeroes_f).connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+        cursor(poles_f).connect(
+            "add", lambda sel: 
+                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        )
+
+        spzcanvas.draw()
+        sgaincanvas.draw()
+        sphasecanvas.draw()
 
 
-    def removeSelectedDataset(self, event):
-        selected_row = self.dataset_list.currentRow()
-        self.removeDataset(selected_row)
 
-    def getInternalDataIndexes(self, datalineRow):
-        i = self.dataline_list.currentRow()
-        for x in range(self.dataset_list.count()):
-            ds = self.dataset_list.item(x).data(Qt.UserRole)
-            if(i >= len(self.datalines[x])):
-                i = i - len(self.datalines[x])
-            else:
-                return (x, i)
-        return (x, i)
-
-    def removeSelectedDataline(self, event):
-        selected_row = self.dataline_list.currentRow()
-        try:
-            dsi, dli = self.getInternalDataIndexes(selected_row)
-            del self.datalines[dsi][dli]
-            self.dataline_list.takeItem(selected_row).data(Qt.UserRole)
-            del self.dataset_list.item(dsi).data(Qt.UserRole).datalines[dli]
-            if(self.dataline_list.currentRow() == -1):
-                self.dataline_list.setCurrentRow(self.dataline_list.count() - 1)
-        except AttributeError:
-            pass
-        self.updatePlots()
+    def clearCanvas(self, canvas):
+        canvas.ax.clear()
+        canvas.ax.grid(True, which="both", linestyle=':')
 
     def openCaseDialog(self):
         self.csd.open()
@@ -865,8 +898,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         new_title = self.ds_title_edit.text()
         self.selected_dataset_widget.setText(new_title)
         self.selected_dataset_data.title = new_title
-
-
 
     def populateSelectedDatalineDetails(self, listitemwidget, qlistwidget):
         if(not listitemwidget):
@@ -1097,7 +1128,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataline_widget = {}
         self.selected_dataset_data = {}
         self.selected_dataline_data = {}
-        self.zpWindow = type('ZPWindow', (), {})()
+        self.zpWindow = type(ZPWindow, (), {})()
         self.updateAll()
     
     def saveFile(self, noprompt=False):
@@ -1122,7 +1153,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 'marginy': self.plt_marginy.value()      
             }
             d = [self.datasets, self.datalines, plots_data, general_config]
-            pickle.dump(d, f, pickle.HIGHEST_PROTOCOL) # Error: no se puede volcar todo mainwindow, parece que no es tan trivial
+            pickle.dump(d, f, pickle.HIGHEST_PROTOCOL)
 
     def loadFile(self):
         filename, _ = QFileDialog.getOpenFileName(self,"Select files", "","Filter tool file (*.fto)")
@@ -1158,7 +1189,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     def updateAll(self):
         self.updatePlots()
-        # self.populateSelectedDatasetDetails()
         self.updateSelectedDataline()
-        # self.updateDatalineColor()
         self.updateFilterParametersAvailable()
+    
+    def getRelevantFrequencies(self, zeros, poles):
+        singularitiesNorm = np.append(np.abs(zeros), np.abs(poles))
+        singularitiesNormWithoutZeros = singularitiesNorm[singularitiesNorm!=0]
+        if(len(singularitiesNormWithoutZeros) == 0):
+            return (1,1)
+        return (np.min(singularitiesNormWithoutZeros), np.max(singularitiesNormWithoutZeros))
+    
+    def getMultiplierAndPrefix(self, val):
+        multiplier = 1
+        prefix = ''
+        if(val < 1e-7):
+            multiplier = 1e9
+            prefix = 'n'
+        elif(val < 1e-4):
+            multiplier = 1e-6
+            prefix = 'μ'
+        elif(val < 1e-1):
+            multiplier = 1e-3
+            prefix = 'm'
+        elif(val < 1e2):
+            multiplier = 1
+            prefix = ''
+        elif(val < 1e5):
+            multiplier = 1e3
+            prefix = 'k'
+        elif(val < 1e8):
+            multiplier = 1e6
+            prefix = 'M'
+        elif(val > 1e11):
+            multiplier = 1e9
+            prefix = 'G'
+        return (multiplier, prefix)

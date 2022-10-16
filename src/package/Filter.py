@@ -72,10 +72,8 @@ def is_equal(z1, z2):
 
 class AnalogFilter():
     def __init__(self, **kwargs):
-        self.limits_x = []
-        self.limits_y = []
-        self.tf = type('TFunction', (), {})()
-        self.tf_norm = type('TFunction', (), {})()
+        self.tf = TFunction()
+        self.tf_norm = TFunction()
         for k, v in kwargs.items():
             setattr(self, k, v) #Seteo todos los atributos de 1
         self.stages = []
@@ -140,7 +138,6 @@ class AnalogFilter():
             self.get_tf_norm()
             assert self.tf_norm
             self.compute_denormalized_parameters()
-            self.get_template_limits()
             self.resetStages()
             
         except:
@@ -239,43 +236,6 @@ class AnalogFilter():
                     fact_prod *= self.N
                     gauss_poly.insert(0, 0)
                     gauss_poly.insert(0, 1/fact_prod)
-
-        
-    def get_template_limits(self):
-        #### FALTA MULTIPLICAR TODO POR self.gain (es la ganancia 'extra' que se le pone al filtro)
-        limits = []
-        self.compute_normalized_parameters()
-        if self.filter_type == LOW_PASS:
-            limits.extend([[1e-9, self.gp], [self.wp, self.gp]]) # Extiende tus límites!
-            limits.extend([[self.wp, self.gp], [self.wp, 1e-9]])
-            limits.extend([[self.wa, self.ga], [self.wa, 1e9]])
-            limits.extend([[self.wa, self.ga], [1e9, self.ga]])
-        if self.filter_type == HIGH_PASS:
-            limits.extend([[1e-9, self.ga], [self.wa, self.ga]])
-            limits.extend([[self.wa, self.ga], [self.wa, 1e9]])
-            limits.extend([[self.wp, self.gp], [self.wp, 1e-9]])
-            limits.extend([[self.wp, self.gp], [1e9, self.gp]])
-        if self.filter_type == BAND_PASS:
-            limits.extend([[1e-9, self.ga], [self.wa[0], self.ga]])
-            limits.extend([[self.wa[0], self.ga], [self.wa[0], 1e9]])
-            limits.extend([[self.wp[0], self.gp], [self.wp[0], 1e-9]])
-            limits.extend([[self.wp[0], self.gp], [self.wp[1], self.gp]])
-
-            limits.extend([[self.wp[1], self.gp], [self.wp[1], 1e-9]])
-            limits.extend([[self.wa[1], self.ga], [self.wa[1], 1e9]])
-            limits.extend([[self.wa[1], self.ga], [1e9, self.ga]])
-        if self.filter_type == BAND_REJECT:
-            limits.extend([[1e-9, self.gp], [self.wp[0], self.gp]])
-            limits.extend([[self.wp[0], self.gp], [self.wp[0], 1e-9]])
-            limits.extend([[self.wa[0], self.ga], [self.wa[0], 1e9]])
-            limits.extend([[self.wa[0], self.ga], [self.wa[1], self.ga]])
-
-            limits.extend([[self.wa[1], self.ga], [self.wa[1], 1e9]])
-            limits.extend([[self.wp[1], self.gp], [self.wa[1], 1e-9]])
-            limits.extend([[self.wp[1], self.gp], [1e9, self.gp]])
-        
-        self.limits_x = [limit[0] for limit in limits]
-        self.limits_y = [limit[1] for limit in limits]
     
     def compute_normalized_parameters(self, init=False):
         if self.filter_type < GROUP_DELAY:
