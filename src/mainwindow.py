@@ -19,7 +19,7 @@ import scipy.signal as signal
 from scipy.interpolate import splrep, splev, splprep
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from mplcursors import HoverMode, cursor
+from mplcursors import HoverMode, cursor, Selection
 
 import numpy as np
 import random
@@ -132,6 +132,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.actionLoad_2.triggered.connect(self.loadFile)
         self.actionSave_2.triggered.connect(self.saveFile)
+
+        self.stageCursorZer = {}
+        self.stageCursorPol = {}
+
+        self.poles_list.itemSelectionChanged.connect(self.stage_sel_changed)
+        self.zeros_list.itemSelectionChanged.connect(self.stage_sel_changed)
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -509,6 +515,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         groupdelaycanvas.ax.set_xscale('log')
         pzcanvas.ax.clear()
         pzcanvas.ax.grid(True, which="both", linestyle=':')
+        pzcanvas_stages.ax.clear()
+        pzcanvas_stages.ax.grid(True, which="both", linestyle=':')
         stepcanvas.ax.clear()
         stepcanvas.ax.grid(True, which="both", linestyle=':')
         impulsecanvas.ax.clear()
@@ -627,14 +635,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas_stages.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
         pzcanvas_stages.ax.set_xlim(left=-max*1.2, right=max*1.2)
         pzcanvas_stages.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
-        cursor(zeroes_f).connect(
+        self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
+        self.stageCursorZer.connect(
             "add", lambda sel: 
                 sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
         )
-        cursor(poles_f).connect(
+        self.stageCursorZer.connect("add", self.updateSelectedZerosFromPlot)
+        self.stageCursorZer.connect("remove", self.updateSelectedZerosFromPlot)
+        self.stageCursorPol = cursor(poles_f, multiple=True, highlight=True)
+        self.stageCursorPol.connect(
             "add", lambda sel: 
                 sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
         )
+        self.stageCursorPol.connect("add", self.updateSelectedPolesFromPlot)
+        self.stageCursorPol.connect("remove", self.updateSelectedPolesFromPlot)
 
         attcanvas.draw()
         gaincanvas.draw()
@@ -675,27 +689,88 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.new_stage_btn.setEnabled(False)
             self.remove_stage_btn.setEnabled(False)           
 
+    def stage_sel_changed(self):
+        selected_pol_indexes = [sel.index for sel in self.stageCursorPol.selections]
+        selected_zer_indexes = [sel.index for sel in self.stageCursorZer.selections]
+        
+        for x in range(self.poles_list.count()):
+            pole = self.poles_list.item(x)
+            poledata = pole.data(Qt.UserRole)
+            if(pole.isSelected()):
+                if(x not in selected_pol_indexes):
+                    sel = Selection(
+                        artist=self.splot_pz_filt.canvas.ax,
+                        target_=[poledata.real, poledata.imag],
+                        index=self.poles_list.row(pole),
+                        dist=0,
+                        annotation=None,
+                        extras=[]
+                    )
+                    self.stageCursorPol.add_selection(sel)
+            else:
+                if(x in selected_pol_indexes):
+                    for sel in self.stageCursorPol.selections:
+                        if(sel.index == x):
+                            self.stageCursorPol.remove_selection(sel)
+
+        for x in range(self.zeros_list.count()):
+            zero = self.zeros_list.item(x)
+            zerodata = zero.data(Qt.UserRole)
+            if(zero.isSelected()):
+                if(x not in selected_pol_indexes):
+                    sel = Selection(
+                        artist=self.splot_pz_filt.canvas.ax,
+                        target_=[zerodata.real, zerodata.imag],
+                        index=self.zeros_list.row(pole),
+                        dist=0,
+                        annotation=None,
+                        extras=[]
+                    )
+                    self.stageCursorZer.add_selection(sel)
+            else:
+                if(x in selected_zer_indexes):
+                    for sel in self.stageCursorZer.selections:
+                        if(sel.index == x):
+                            self.stageCursorZer.remove_selection(sel)
+
+                
+    def updateSelectedPolesFromPlot(self, s):
+        self.poles_list.blockSignals(True)
+        selected_pole_indexes = [sel.index for sel in self.stageCursorPol.selections]
+        for x in range(self.poles_list.count()):
+            self.poles_list.item(x).setSelected(x in selected_pole_indexes)
+        self.poles_list.blockSignals(False)
+
+    def updateSelectedZerosFromPlot(self, s):
+        self.zeros_list.blockSignals(True)
+        selected_zero_indexes = [sel.index for sel in self.stageCursorZer.selections]
+        for x in range(self.zeros_list.count()):
+            self.zeros_list.item(x).setSelected(x in selected_zero_indexes)
+        self.zeros_list.blockSignals(False)
+
+
     def addFilterStage(self):
-        selected_poles = [x.data(Qt.UserRole) for x in self.poles_list.selectedIndexes()]
-        selected_zeros = [x.data(Qt.UserRole) for x in self.zeros_list.selectedIndexes()]
-        selected_gain = self.stage_gain_box.value()
+        print(dir(self.stageCursorPol.selections[0]))
+        # selected_poles = [x.data(Qt.UserRole) for x in self.poles_list.selectedIndexes()]
+        # selected_zeros = [x.data(Qt.UserRole) for x in self.zeros_list.selectedIndexes()]
+        # selected_gain = self.stage_gain_box.value()
 
-        selected_poles_idx = [x.row() for x in self.poles_list.selectedIndexes()]
-        selected_zeros_idx = [x.row() for x in self.zeros_list.selectedIndexes()]
-        selected_poles_idx.sort(reverse=True)
-        selected_zeros_idx.sort(reverse=True)
+        # selected_poles_idx = [x.row() for x in self.poles_list.selectedIndexes()]
+        # selected_zeros_idx = [x.row() for x in self.zeros_list.selectedIndexes()]
+        # selected_poles_idx.sort(reverse=True)
+        # selected_zeros_idx.sort(reverse=True)
 
-        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain):
-            for z in selected_zeros_idx:
-                self.zeros_list.takeItem(z)
-            for p in selected_poles_idx:
-                self.poles_list.takeItem(p)
-            qlwt = QListWidgetItem()
-            qlwt.setData(Qt.UserRole, self.selected_dataset_data.origin.stages[-1])
-            qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1]))
-            self.stages_list.addItem(qlwt)
-            self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
-            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain) 
+        # if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain):
+        #     for z in selected_zeros_idx:
+        #         self.zeros_list.takeItem(z)
+        #     for p in selected_poles_idx:
+        #         self.poles_list.takeItem(p)
+        #     qlwt = QListWidgetItem()
+        #     qlwt.setData(Qt.UserRole, self.selected_dataset_data.origin.stages[-1])
+        #     qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1]))
+        #     self.stages_list.addItem(qlwt)
+        #     self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
+        #     self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain) 
 
     def removeFilterStage(self):
         i = self.stages_list.selectedIndexes()[0].row()
