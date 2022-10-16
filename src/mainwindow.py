@@ -717,11 +717,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             zero = self.zeros_list.item(x)
             zerodata = zero.data(Qt.UserRole)
             if(zero.isSelected()):
-                if(x not in selected_pol_indexes):
+                if(x not in selected_zer_indexes):
                     sel = Selection(
                         artist=self.splot_pz_filt.canvas.ax,
                         target_=[zerodata.real, zerodata.imag],
-                        index=self.zeros_list.row(pole),
+                        index=self.zeros_list.row(zero),
                         dist=0,
                         annotation=None,
                         extras=[]
