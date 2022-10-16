@@ -141,6 +141,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.zeros_list.itemSelectionChanged.connect(self.stage_sel_changed)
         self.stages_list.itemSelectionChanged.connect(self.updateStagePlots)
 
+        self.updateStagePlots()
+
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
         qlwt.setData(Qt.UserRole, ds)
@@ -491,6 +493,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.tol_box.setVisible(True)
             self.label_tolerance.setVisible(True)
 
+    def condition_canvas(self, canvas, xlabel, ylabel, xscale='linear', yscale='linear', grid=True):
+        canvas.ax.clear()
+        canvas.ax.grid(grid, which="both", linestyle=':')
+        canvas.ax.set_xlabel(xlabel)
+        canvas.ax.set_ylabel(ylabel)
+        canvas.ax.set_xscale(xscale)
+        canvas.ax.set_yscale(yscale)
+        canvas.ax.xaxis.label.set_size(self.plt_labelsize_sb.value())
+        canvas.ax.yaxis.label.set_size(self.plt_labelsize_sb.value())
+        for label in (canvas.ax.get_xticklabels() + canvas.ax.get_yticklabels()):
+            label.set_fontsize(self.plt_ticksize_sb.value())
+
     def updateFilterPlots(self):
         attcanvas = self.fplot_att.canvas
         gaincanvas = self.fplot_gain.canvas
@@ -501,27 +515,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         stepcanvas = self.fplot_step.canvas
         impulsecanvas = self.fplot_impulse.canvas
 
-        attcanvas.ax.clear()
-        attcanvas.ax.grid(True, which="both", linestyle=':')
-        gaincanvas.ax.clear()
-        gaincanvas.ax.grid(True, which="both", linestyle=':')
-        magcanvas.ax.clear()
-        magcanvas.ax.grid(True, which="both", linestyle=':')
-        magcanvas.ax.set_xscale('log')
-        phasecanvas.ax.clear()
-        phasecanvas.ax.grid(True, which="both", linestyle=':')
-        phasecanvas.ax.set_xscale('log')
+        self.condition_canvas(attcanvas, 'Frecuencia [Hz]', 'Atenuación [dB]')
+        self.condition_canvas(gaincanvas, 'Frecuencia [Hz]', 'Ganancia [dB]')
+        self.condition_canvas(magcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
+        self.condition_canvas(phasecanvas, 'Frecuencia [Hz]', 'Fase [$\deg$]', 'log')
         phasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[1.8,2.25,4.5,9]))
-        groupdelaycanvas.ax.clear()
-        groupdelaycanvas.ax.grid(True, which="both", linestyle=':')
-        groupdelaycanvas.ax.set_xscale('log')
-        pzcanvas.ax.clear()
-        pzcanvas.ax.grid(True, which="both", linestyle=':')
-        stepcanvas.ax.clear()
-        stepcanvas.ax.grid(True, which="both", linestyle=':')
-        impulsecanvas.ax.clear()
-        impulsecanvas.ax.grid(True, which="both", linestyle=':')
-
+        self.condition_canvas(groupdelaycanvas, 'Frecuencia [Hz]', 'Retardo de grupo [s]', 'log')
+        self.condition_canvas(pzcanvas, '', '')
+        self.condition_canvas(stepcanvas, 'Tiempo [s]', 'Respuesta [V]')
+        self.condition_canvas(impulsecanvas, 'Tiempo [s]', 'Respuesta [V]')
+        
         filtds = self.selected_dataset_data
         
         tstep, stepres = signal.step(filtds.tf.getND())
@@ -596,7 +599,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             x = [fp[1], fp[1]+bw/3]
             attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             x = [fa[0], fa[1]]
-            y = [-gp, -gp]
+            y = [-ga, -ga]
             attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             
             attcanvas.ax.set_xlim([fp[0] - bw/3, fp[1] + bw/3])
@@ -800,12 +803,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tphasecanvas = self.splot_tphase.canvas
         pzcanvas_stages = self.splot_pz_filt.canvas
 
-        self.clearCanvas(spzcanvas)
-        self.clearCanvas(pzcanvas_stages)
-        self.clearCanvas(sgaincanvas)
-        self.clearCanvas(sphasecanvas)
-        sgaincanvas.ax.set_xscale('log')
-        sphasecanvas.ax.set_xscale('log')
+
+        self.condition_canvas(spzcanvas, '', '')
+        self.condition_canvas(pzcanvas_stages, '', '')
+        self.condition_canvas(sgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
+        self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$\deg$]', 'log')
 
         z, p = self.selected_dataset_data.origin.tf.getZP()
         (min, max) = self.getRelevantFrequencies(z, p)

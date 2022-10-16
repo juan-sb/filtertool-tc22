@@ -201,7 +201,7 @@ class AnalogFilter():
                     #wmax2, tf2_wmax2 = tf2.optimize(self.wan, 10*self.wan, True)
                     #no anda la optimización, evalúo sólo en 1 y wan
                     tf2_wmin = tf2.at(1)
-                    tf2_wmax = tf2.at(wan)
+                    tf2_wmax = tf2.at(self.wan)
                     if tf2_wmin >= self.gp and tf2_wmax <= self.ga:
                         self.tf_norm = TFunction(z, p, p0)
                         break
