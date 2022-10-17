@@ -141,7 +141,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.zeros_list.itemSelectionChanged.connect(self.stage_sel_changed)
         self.stages_list.itemSelectionChanged.connect(self.updateStagePlots)
 
-        self.updateStagePlots()
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -518,7 +517,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(attcanvas, 'Frecuencia [Hz]', 'Atenuación [dB]')
         self.condition_canvas(gaincanvas, 'Frecuencia [Hz]', 'Ganancia [dB]')
         self.condition_canvas(magcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
-        self.condition_canvas(phasecanvas, 'Frecuencia [Hz]', 'Fase [$\deg$]', 'log')
+        self.condition_canvas(phasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
         phasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[1.8,2.25,4.5,9]))
         self.condition_canvas(groupdelaycanvas, 'Frecuencia [Hz]', 'Retardo de grupo [s]', 'log')
         self.condition_canvas(pzcanvas, '', '')
@@ -803,11 +802,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tphasecanvas = self.splot_tphase.canvas
         pzcanvas_stages = self.splot_pz_filt.canvas
 
-
         self.condition_canvas(spzcanvas, '', '')
         self.condition_canvas(pzcanvas_stages, '', '')
         self.condition_canvas(sgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
-        self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$\deg$]', 'log')
+        self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
 
         z, p = self.selected_dataset_data.origin.tf.getZP()
         (min, max) = self.getRelevantFrequencies(z, p)
