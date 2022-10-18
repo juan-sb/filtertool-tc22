@@ -3,7 +3,6 @@ import traceback
 import math
 from src.package.transfer_function import TFunction
 import scipy.signal as signal
-import scipy.special as special
 import numpy as np
 from numpy.polynomial import Polynomial
 from numpy.polynomial import Legendre
