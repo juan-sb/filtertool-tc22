@@ -5,6 +5,8 @@ from src.package.transfer_function import TFunction
 import scipy.signal as signal
 import scipy.special as special
 import numpy as np
+from numpy.polynomial import Polynomial
+from numpy.polynomial import Legendre
 import sympy as sym
 
 pi = np.pi
@@ -20,7 +22,7 @@ def get_Leps(n, eps):
     a = []
     for i in range(k + 1):
         if n % 2 == 0:
-            if k % 2 != 0:
+            if k % 2 == 0:
                 if i == 0:
                     a.append(1 / (np.sqrt(((k + 1) * (k + 2)))))
                 elif i % 2 == 0:
@@ -40,20 +42,17 @@ def get_Leps(n, eps):
             else:
                 a.append((2 * i + 1) * a[0])
     
-    sum_prod_pol = np.poly1d([0])
-    for i in range(len(a)):
-        sum_prod_pol += a[i] * special.legendre(i)
-    
+    sum_prod_pol = Legendre(a).convert(kind=Polynomial)
     sum_prod_pol **= 2
     if n % 2 == 0:
-        sum_prod_pol *= np.poly1d([1, 1]) #multiplico por x+1
+        sum_prod_pol *= Polynomial([1, 1]) #multiplico por 1+x
     
-    sum_prod_pol = np.polyint(sum_prod_pol) # primitiva
-    sum_prod_pol = sum_prod_pol(np.poly1d([2, 0, -1])) - sum_prod_pol(-1) # evalúo
-    return np.poly1d([1]) + sum_prod_pol*eps*eps
+    sum_prod_pol = sum_prod_pol.integ() # primitiva
+    sum_prod_pol = sum_prod_pol(Polynomial([-1, 0, 2])) - sum_prod_pol(-1) # evalúo
+    return Polynomial([1]) + sum_prod_pol*eps*eps
 
 def select_roots(p):
-    roots = np.roots(p)*(-1j) #vuelvo desde w al dominio de s
+    roots = p.roots()*(-1j) #vuelvo desde w al dominio de s
     valid_roots = []
     for root in roots:
         if root.real <= 0:
@@ -77,6 +76,7 @@ class AnalogFilter():
         for k, v in kwargs.items():
             setattr(self, k, v) #Seteo todos los atributos de 1
         self.stages = []
+        self.implemented_tf = TFunction(1, 1, normalize=False)
         self.remainingZeros = []
         self.remainingPoles = []
         self.remainingGain = np.nan
@@ -196,12 +196,8 @@ class AnalogFilter():
                     p = select_roots(L_eps)
                     p0 = np.prod(p) * (1 if self.N % 2 == 0 else -1) #en N tengo N polos y yo quiero obtener el producto de los polos negados para normalizar
                     tf2 = TFunction(z, p, p0)
-                    #wmin, tf2_wmin = tf2.optimize(0.1, 1)
-                    #wmax, tf2_wmax = tf2.optimize(0.1, 1, True)
-                    #wmax2, tf2_wmax2 = tf2.optimize(self.wan, 10*self.wan, True)
-                    #no anda la optimización, evalúo sólo en 1 y wan
-                    tf2_wmin = tf2.at(1)
-                    tf2_wmax = tf2.at(self.wan)
+                    tf2_wmin = abs(tf2.at(1j))
+                    tf2_wmax = abs(tf2.at(self.wan*1j))
                     if tf2_wmin >= self.gp and tf2_wmax <= self.ga:
                         self.tf_norm = TFunction(z, p, p0)
                         break
@@ -219,14 +215,14 @@ class AnalogFilter():
                     self.N += 1
                     assert self.N <= self.N_max
 
-            if self.approx_type == GAUSS:
+            elif self.approx_type == GAUSS:
                 self.N = 1
                 gauss_poly = [1, 0, 1] # producirá un delay de 1 segundo
                 fact_prod = 1
                 while True:
                     if self.N >= self.N_min:
                         z = []
-                        p = select_roots(np.poly1d(gauss_poly))
+                        p = select_roots(Polynomial(gauss_poly))
                         p0 = np.prod(p)
                         tf2 = TFunction(z, p, p0)
                         if 1 - tf2.gd_at(self.wrg_n) <= self.gamma/100: #si el gd es menor-igual que el esperado, estamos
@@ -237,8 +233,8 @@ class AnalogFilter():
                     self.N += 1
                     assert self.N <= self.N_max
                     fact_prod *= self.N
-                    gauss_poly.insert(0, 0)
-                    gauss_poly.insert(0, 1/fact_prod)
+                    gauss_poly.append(0)
+                    gauss_poly.append(1/fact_prod)
     
     def compute_normalized_parameters(self, init=False):
         if self.filter_type < GROUP_DELAY:
@@ -288,6 +284,7 @@ class AnalogFilter():
         self.remainingZeros = self.tf.z.tolist()
         self.remainingPoles = self.tf.p.tolist()
         self.stages = []
+        self.implemented_tf = TFunction(1, 1, normalize=False)
 
     def addStage(self, z_arr, p_arr, gain):
         if len(z_arr) > 2 or len(p_arr) > 2 or len(p_arr) == 0 or len(z_arr) > len(p_arr):
@@ -306,12 +303,11 @@ class AnalogFilter():
             return False
 
         append_gain = self.remainingGain if newRemainingPoles == 0 else gain
-        a = 1 #lo voy a usar para normalizar, los zpk que da numpy no vienen normalizados
-        for zero in z_arr:
-            a *= -zero
-        for pole in p_arr:
-            a /= -pole
-        self.stages.append(TFunction(z_arr, p_arr, append_gain/a))
+
+        newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=True)
+
+        self.stages.append(newStage_tf)
+        self.implemented_tf.appendStage(newStage_tf)
         self.remainingGain /= append_gain
         for z in z_arr:
             self.remainingZeros.remove(z)
@@ -321,7 +317,9 @@ class AnalogFilter():
         
 
     def removeStage(self, i):
-        self.remainingGain *= self.stages[i].k
+        self.implemented_tf.removeStage(self.stages[i])
+        self.stages[i].denormalize()
+        self.remainingGain *= np.real(self.stages[i].k)
         for z in self.stages[i].z:
             self.remainingZeros.append(z)
         for p in self.stages[i].p:

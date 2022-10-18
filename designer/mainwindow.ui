@@ -2116,93 +2116,6 @@
         <string>Stages</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_19" columnstretch="0,0">
-        <item row="0" column="1">
-         <widget class="QTabWidget" name="tabWidget_3">
-          <property name="currentIndex">
-           <number>1</number>
-          </property>
-          <widget class="QWidget" name="tab_19">
-           <attribute name="title">
-            <string>Filter PZ map</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_33">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_pz_filt" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_22">
-           <attribute name="title">
-            <string>Remaining PZ</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_34">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_pz_rem" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_15">
-           <attribute name="title">
-            <string>Stage PZ map</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_27" rowstretch="0" rowminimumheight="0">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_pz" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_16">
-           <attribute name="title">
-            <string>Stage gain</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_28">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_sgain" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_20">
-           <attribute name="title">
-            <string>Stage phase</string>
-           </attribute>
-           <widget class="MplWidget" name="splot_sphase" native="true">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>0</y>
-              <width>736</width>
-              <height>500</height>
-             </rect>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QWidget" name="tab_17">
-           <attribute name="title">
-            <string>Total gain</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_29">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_tgain" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_21">
-           <attribute name="title">
-            <string>Total phase</string>
-           </attribute>
-           <widget class="MplWidget" name="splot_tphase" native="true">
-            <property name="geometry">
-             <rect>
-              <x>0</x>
-              <y>0</y>
-              <width>736</width>
-              <height>500</height>
-             </rect>
-            </property>
-           </widget>
-          </widget>
-         </widget>
-        </item>
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_12">
           <property name="leftMargin">
@@ -2340,6 +2253,83 @@
            </widget>
           </item>
          </layout>
+        </item>
+        <item row="0" column="1">
+         <widget class="QTabWidget" name="tabWidget_3">
+          <property name="currentIndex">
+           <number>3</number>
+          </property>
+          <widget class="QWidget" name="tab_15">
+           <attribute name="title">
+            <string>Stage PZ map</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_27" rowstretch="0" rowminimumheight="0">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_pz" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_16">
+           <attribute name="title">
+            <string>Stage gain</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_28">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_sgain" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_20">
+           <attribute name="title">
+            <string>Stage phase</string>
+           </attribute>
+           <widget class="MplWidget" name="splot_sphase" native="true">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>0</y>
+              <width>736</width>
+              <height>500</height>
+             </rect>
+            </property>
+           </widget>
+          </widget>
+          <widget class="QWidget" name="tab_22">
+           <attribute name="title">
+            <string>Accumulated PZ map</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_34">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_tpz" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_17">
+           <attribute name="title">
+            <string>Accumulated gain</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_29">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_tgain" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_21">
+           <attribute name="title">
+            <string>Accumulated phase</string>
+           </attribute>
+           <widget class="MplWidget" name="splot_tphase" native="true">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>736</width>
+              <height>500</height>
+             </rect>
+            </property>
+           </widget>
+          </widget>
+         </widget>
         </item>
        </layout>
       </widget>

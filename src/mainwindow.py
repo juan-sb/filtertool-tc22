@@ -686,7 +686,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if(pole.isSelected()):
                 if(x not in selected_pol_indexes):
                     sel = Selection(
-                        artist=self.splot_pz_filt.canvas.ax,
+                        artist=self.splot_pz.canvas.ax,
                         target_=[poledata.real, poledata.imag],
                         index=self.poles_list.row(pole),
                         dist=0,
@@ -706,7 +706,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if(zero.isSelected()):
                 if(x not in selected_zer_indexes):
                     sel = Selection(
-                        artist=self.splot_pz_filt.canvas.ax,
+                        artist=self.splot_pz.canvas.ax,
                         target_=[zerodata.real, zerodata.imag],
                         index=self.zeros_list.row(zero),
                         dist=0,
@@ -769,6 +769,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def removeFilterStage(self):
         i = self.stages_list.currentRow()
+        if i < 0:
+            return
 
         self.zeros_list.clear()
         self.poles_list.clear()
@@ -800,28 +802,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         sphasecanvas = self.splot_sphase.canvas
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
-        pzcanvas_stages = self.splot_pz_filt.canvas
+        tpzcanvas = self.splot_tpz.canvas
 
         self.condition_canvas(spzcanvas, '', '')
-        self.condition_canvas(pzcanvas_stages, '', '')
+        self.condition_canvas(tpzcanvas, '', '')
         self.condition_canvas(sgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
         self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
+        self.condition_canvas(tgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
+        self.condition_canvas(tphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
 
-        z, p = self.selected_dataset_data.origin.tf.getZP()
-        (min, max) = self.getRelevantFrequencies(z, p)
+        zt, pt = self.selected_dataset_data.origin.tf.getZP()
+        (mint, maxt) = self.getRelevantFrequencies(zt, pt)
 
-        pzcanvas_stages.ax.axis('equal')
-        pzcanvas_stages.ax.axhline(0, color="black", alpha=0.1)
-        pzcanvas_stages.ax.axvline(0, color="black", alpha=0.1)
+        tpzcanvas.ax.axis('equal')
+        tpzcanvas.ax.axhline(0, color="black", alpha=0.1)
+        tpzcanvas.ax.axvline(0, color="black", alpha=0.1)
+        tpzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
+        tpzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
+        tpzcanvas.ax.set_xlim(left=-maxt*1.2, right=maxt*1.2)
+        tpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
 
-        polcol = ['#FF0000' if pole in self.selected_dataset_data.origin.remainingPoles else '#00FF00' for pole in p]
-        zercol = ['#FF0000' if zero in self.selected_dataset_data.origin.remainingZeros else '#00FF00' for zero in z]
-        zeroes_f = pzcanvas_stages.ax.scatter(z.real, z.imag, c=zercol, marker='o')
-        poles_f = pzcanvas_stages.ax.scatter(p.real, p.imag, c=polcol, marker='x')
-        pzcanvas_stages.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
-        pzcanvas_stages.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
-        pzcanvas_stages.ax.set_xlim(left=-max*1.2, right=max*1.2)
-        pzcanvas_stages.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+        polcol = ['#FF0000' if pole in self.selected_dataset_data.origin.remainingPoles else '#00FF00' for pole in pt]
+        zercol = ['#FF0000' if zero in self.selected_dataset_data.origin.remainingZeros else '#00FF00' for zero in zt]
+        zeroes_f = tpzcanvas.ax.scatter(zt.real, zt.imag, c=zercol, marker='o')
+        poles_f = tpzcanvas.ax.scatter(pt.real, pt.imag, c=polcol, marker='x')
         self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
         self.stageCursorZer.connect(
             "add", lambda sel: 
@@ -836,17 +840,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
         self.stageCursorPol.connect("add", self.updateSelectedPolesFromPlot)
         self.stageCursorPol.connect("remove", self.updateSelectedPolesFromPlot)
-        pzcanvas_stages.draw()
+
+        accumulated_ds = Dataset(origin=self.selected_dataset_data.origin.implemented_tf)
+
+        f = accumulated_ds.data[0]['f']
+        g = accumulated_ds.data[0]['g']
+        ph = accumulated_ds.data[0]['ph']
+
+        gline, = tgaincanvas.ax.plot(f, g)
+        phline, = tphasecanvas.ax.plot(f, ph)
 
 
         if(not self.stages_list.currentItem()):
             return
-        stageds = self.stages_list.currentItem().data(Qt.UserRole)
+        accumulated_ds = self.stages_list.currentItem().data(Qt.UserRole)
 
-        f = stageds.data[0]['f']
-        g = stageds.data[0]['g']
-        ph = stageds.data[0]['ph']
-        z, p = stageds.origin.getZP()
+        f = accumulated_ds.data[0]['f']
+        g = accumulated_ds.data[0]['g']
+        ph = accumulated_ds.data[0]['ph']
+        z, p = accumulated_ds.origin.getZP()
 
         gline, = sgaincanvas.ax.plot(f, g)
         phline, = sphasecanvas.ax.plot(f, ph)
@@ -855,12 +867,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         spzcanvas.ax.axis('equal')
         spzcanvas.ax.axhline(0, color="black", alpha=0.1)
         spzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
-        poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
         spzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
         spzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
         spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
         spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+
+        zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
+        poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
 
         cursor(zeroes_f).connect(
             "add", lambda sel: 
@@ -870,6 +883,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "add", lambda sel: 
                 sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
         )
+        tpzcanvas.draw()
+        tgaincanvas.draw()
+        tphasecanvas.draw()
         spzcanvas.draw()
         sgaincanvas.draw()
         sphasecanvas.draw()
