@@ -267,7 +267,7 @@ class AnalogFilter():
         elif self.filter_type == BAND_PASS:
             transformation = (self.w0 / (self.wp[1] - self.wp[0])) * ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == BAND_REJECT:
-            transformation = ((self.wa[1] - self.wa[0]) / self.w0) / ((s / self.w0) + (self.w0 / s))
+            transformation = ((self.wp[1] - self.wp[0]) / self.w0) / ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == GROUP_DELAY:
             transformation = s * self.tau0
         
