@@ -3,6 +3,7 @@ import scipy.signal as signal
 from scipy.optimize import basinhopping
 import numpy as np
 from numpy.polynomial import Polynomial
+from src.package.Parser import ExprParser
 
 # Evaluate a polynomial in reverse order using Horner's Rule,
 # for example: a3*x^3+a2*x^2+a1*x+a0 = ((a3*x+a2)x+a1)x+a0
@@ -14,8 +15,8 @@ def poly_at(p, x):
 
 class TFunction():
     def __init__(self, *args, normalize=False):
-        self.s = sym.Symbol('s')
         self.tf_object = {}
+        self.eparser = ExprParser()
 
         if(len(args) == 1):
             self.setExpression(args[0], normalize=normalize)
@@ -26,12 +27,8 @@ class TFunction():
 
     def setExpression(self, txt, normalize=False):
         try:
-            expression = sym.parsing.sympy_parser.parse_expr(txt, transformations = 'all')
-            expression = sym.simplify(expression)
-            expression = sym.fraction(expression)
-
-            N = sym.Poly(expression[0]).all_coeffs() if (self.s in expression[0].free_symbols) else [expression[0].evalf()]
-            D = sym.Poly(expression[1]).all_coeffs() if (self.s in expression[1].free_symbols) else [expression[1].evalf()]
+            self.eparser.setTxt(txt)
+            N, D = self.eparser.getND()
             self.setND(N, D, normalize=normalize)
             return True
         except:
@@ -136,4 +133,4 @@ class TFunction():
         self.setZPK([i for i in self.z if i not in tf.z], [i for i in self.p if i not in tf.p], self.k/tf.k)
         
     def getLatex(self, txt):
-        return sym.latex(sym.parsing.sympy_parser.parse_expr(txt, transformations = 'all'))
+        return self.eparser.getLatex()

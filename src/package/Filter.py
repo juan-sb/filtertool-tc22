@@ -1,12 +1,12 @@
 import sys
 import traceback
-import math
 from src.package.transfer_function import TFunction
 import scipy.signal as signal
 import numpy as np
 from numpy.polynomial import Polynomial
 from numpy.polynomial import Legendre
 import sympy as sym
+from src.package.Parser import ExprParser
 
 pi = np.pi
 
@@ -79,6 +79,7 @@ class AnalogFilter():
         self.remainingZeros = []
         self.remainingPoles = []
         self.remainingGain = np.nan
+        self.eparser = ExprParser()
         
     def validate(self):
         try:
@@ -257,7 +258,7 @@ class AnalogFilter():
     def compute_denormalized_parameters(self):
         # no es necesario (por ahora) desnormalizar las ganancias
         s = sym.symbols('s')
-        h_norm = sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s)
+        self.eparser.setExpression(sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s))
         
         if self.filter_type == LOW_PASS:
             transformation = s / self.wp
@@ -266,17 +267,12 @@ class AnalogFilter():
         elif self.filter_type == BAND_PASS:
             transformation = (self.w0 / (self.wp[1] - self.wp[0])) * ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == BAND_REJECT:
-            transformation = ((self.wp[1] - self.wp[0]) / self.w0) * ((s / self.w0) + (self.w0 / s))
+            transformation = ((self.wa[1] - self.wa[0]) / self.w0) / ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == GROUP_DELAY:
             transformation = s * self.tau0
         
-        h_denorm = h_norm.subs(s, transformation) 
-        h_denorm = sym.simplify(h_denorm)
-        h_denorm = sym.fraction(h_denorm)
-
-        N = sym.Poly(h_denorm[0]).all_coeffs() if (s in h_denorm[0].free_symbols) else [h_denorm[0].evalf()]
-        D = sym.Poly(h_denorm[1]).all_coeffs() if (s in h_denorm[1].free_symbols) else [h_denorm[1].evalf()]
-
+        self.eparser.transform(transformation)
+        N, D = self.eparser.getND()
         self.tf = TFunction([a * self.gain for a in N], D)
 
     def resetStages(self):
