@@ -103,12 +103,16 @@ class TFunction():
     def getZP(self):
         return self.z, self.p
 
-    def getBode(self, start=-2, stop=7, num=3312):
-        ws = np.logspace(start, stop, num)
+    def getBode(self, linear=False, start=-2, stop=6, num=5000):
+        if linear:
+            ws = np.linspace(start, stop, num) * 2 * np.pi
+        else:
+            ws = np.logspace(start, stop, num) * 2 * np.pi
+        #h = self.at(1j*ws)
         w, g, ph = signal.bode(self.tf_object, w=ws)
-        gd = self.gd_at(w) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
-        f = w / (2 * np.pi)
-        return f, np.power(10, g/20), ph, gd
+        gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
+        f = ws / (2 * np.pi)
+        return f, 10**(g/20), ph, gd
 
     def optimize(self, start, stop, maximize = False):
         # rewrite the bounds in the way required by L-BFGS-B

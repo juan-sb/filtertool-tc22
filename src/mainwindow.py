@@ -526,8 +526,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         filtds = self.selected_dataset_data
         
-        tstep, stepres = signal.step(filtds.tf.getND())
-        timp, impres = signal.impulse(filtds.tf.getND())
+       # tstep, stepres = signal.step(filtds.tf.getND(), T=np.linspace(1e-2, 10, 1000))
+        #timp, impres = signal.impulse(filtds.tf.getND(), T=np.linspace(1e-2, 10, 1000))
+        tstep, stepres = np.zeros(10), np.zeros(10)
+        timp, impres = np.zeros(10), np.zeros(10)
         
         f = np.array(filtds.data[0]['f'])
         g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
@@ -535,7 +537,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         gd = np.array(filtds.data[0]['gd'])
         z, p = filtds.origin.tf.getZP()
 
-        attline, = attcanvas.ax.plot(f, -g)
         gainline, = gaincanvas.ax.plot(f, g)
         magline, = magcanvas.ax.plot(f, g)
         phaseline, = phasecanvas.ax.plot(f, ph)
@@ -547,6 +548,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         gp = filtds.origin.gp_dB
         ga = filtds.origin.ga_dB
 
+        x = [10e-2, 10e6]
+
         if filtds.origin.filter_type == Filter.LOW_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
@@ -557,7 +560,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             x = [fa, fa + bw/3]
             y = [-ga, -ga]
             attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.set_xlim([fp - bw/3, fa + bw/3])
+            x = [fp - bw/3, fa + bw/3]
             attcanvas.ax.set_ylim([0, -ga*1.5])
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
@@ -570,7 +573,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             x = [fa - bw/3, fa]
             y = [-ga, -ga]
             attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.set_xlim([fa - bw/3, fp + bw/3])
+            x = [fa - bw/3, fp + bw/3]
             attcanvas.ax.set_ylim([0, -ga*1.5])
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
@@ -585,9 +588,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             x = [fp[0], fp[1]]
             y = [-gp, -gp]
             attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            
-            attcanvas.ax.set_xlim([fa[0] - bw/3, fa[1] + bw/3])
+            x = [fa[0] - bw/3, fa[1] + bw/3]
             attcanvas.ax.set_ylim([0, -ga*1.5])
+
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
@@ -600,10 +603,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             x = [fa[0], fa[1]]
             y = [-ga, -ga]
             attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            
-            attcanvas.ax.set_xlim([fp[0] - bw/3, fp[1] + bw/3])
+            x = [fp[0] - bw/3, fp[1] + bw/3]
             attcanvas.ax.set_ylim([0, -ga*1.5])
 
+        attcanvas.ax.set_xlim(x)
+        fa, ga, pa, gda = filtds.tf.getBode(True, start=x[0], stop=x[1], num=5000)
+        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)

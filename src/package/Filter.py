@@ -183,6 +183,7 @@ class AnalogFilter():
                     self.N = self.N_min
                 z, p, k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
                 self.tf_norm = TFunction(z, p, k)
+                
             
             
             elif self.approx_type == LEGENDRE:
@@ -250,7 +251,7 @@ class AnalogFilter():
                 self.wan = (self.wp[1] - self.wp[0]) / (self.wa[1] - self.wa[0])
         elif self.filter_type == GROUP_DELAY and init:
             self.wrg_n = self.wrg * self.tau0
-        else: #debería calcular las ganancias del group delay, pero cuáles si nunca definí la plantilla?
+        else:
             pass
     
     def compute_denormalized_parameters(self):
@@ -265,7 +266,7 @@ class AnalogFilter():
         elif self.filter_type == BAND_PASS:
             transformation = (self.w0 / (self.wp[1] - self.wp[0])) * ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == BAND_REJECT:
-            transformation = ((self.wa[1] - self.wa[0]) / self.w0) / ((s / self.w0) + (self.w0 / s))
+            transformation = ((self.wp[1] - self.wp[0]) / self.w0) * ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == GROUP_DELAY:
             transformation = s * self.tau0
         
