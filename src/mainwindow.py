@@ -332,13 +332,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return AnalogFilter(**params)
     
     def resolveFilterDialog(self):
+        print("AGREGANDO FILTER")
         newFilter = self.buildFilterFromParams()
         valid, msg = newFilter.validate()
         if not valid:
             self.pmptd.setErrorMsg(msg)
             self.pmptd.open()
             return
-
+        print(newFilter.tf.N)
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
         self.addDataset(ds)
     
@@ -1321,7 +1322,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         singularitiesNorm = np.append(np.abs(zeros), np.abs(poles))
         singularitiesNormWithoutZeros = singularitiesNorm[singularitiesNorm!=0]
         if(len(singularitiesNormWithoutZeros) == 0):
-            return (1,1)
+            return (1, 1)
         return (np.min(singularitiesNormWithoutZeros), np.max(singularitiesNormWithoutZeros))
     
     def getMultiplierAndPrefix(self, val):

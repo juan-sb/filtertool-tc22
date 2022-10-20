@@ -70,8 +70,8 @@ def is_equal(z1, z2):
 
 class AnalogFilter():
     def __init__(self, **kwargs):
-        self.tf = TFunction()
-        self.tf_norm = TFunction()
+        self.tf = {}
+        self.tf_norm = {}
         for k, v in kwargs.items():
             setattr(self, k, v) #Seteo todos los atributos de 1
         self.stages = []
@@ -173,6 +173,7 @@ class AnalogFilter():
                 if self.N < self.N_min:
                     self.N = self.N_min
                 self.z, self.p, self.k = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='zpk')
+                self.num, self.den = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='ba')
                 self.tf_norm = TFunction(self.z, self.p, self.k)
 
             elif self.approx_type == CHEBYSHEV2:
@@ -181,6 +182,7 @@ class AnalogFilter():
                 if self.N < self.N_min:
                     self.N = self.N_min
                 self.z, self.p, self.k = signal.cheby2(self.N, -self.ga_dB, self.wc, analog=True, output='zpk')
+                self.num, self.den = signal.cheby2(self.N, -self.gp_dB, self.wc, analog=True, output='ba')
                 self.tf_norm = TFunction(self.z, self.p, self.k)
             
             elif self.approx_type == CAUER:
@@ -189,6 +191,7 @@ class AnalogFilter():
                 if self.N < self.N_min:
                     self.N = self.N_min
                 self.z, self.p, self.k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
+                self.num, self.den = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='ba')
                 self.tf_norm = TFunction(self.z, self.p, self.k)
             
             elif self.approx_type == LEGENDRE:
@@ -205,6 +208,11 @@ class AnalogFilter():
                     tf2_wmax = abs(tf2.at(self.wan*1j))
                     if tf2_wmin >= self.gp and tf2_wmax <= self.ga:
                         self.tf_norm = TFunction(z, p, p0)
+                        self.z = z
+                        self.p = p
+                        self.k = p0
+                        self.num = self.tf_norm.N
+                        self.den = self.tf_norm.D
                         break
                     self.N += 1
                     assert self.N <= self.N_max 
@@ -216,6 +224,11 @@ class AnalogFilter():
                     tf2 = TFunction(z, p, k)
                     if 1 - tf2.gd_at(self.wrg_n) <= self.gamma/100: #si el gd es menor-igual que el esperado, estamos
                         self.tf_norm = TFunction(z, p, k)
+                        self.z = z
+                        self.p = p
+                        self.k = k
+                        self.num = self.tf_norm.N
+                        self.den = self.tf_norm.D
                         break
                     self.N += 1
                     assert self.N <= self.N_max
@@ -234,6 +247,11 @@ class AnalogFilter():
                             g0 = tf2.gd_at(0)                       
                             p = [r * g0 for r in p]
                             self.tf_norm = TFunction(z, p, p0)
+                            self.z = z
+                            self.p = p
+                            self.k = p0
+                            self.num = self.tf_norm.N
+                            self.den = self.tf_norm.D
                             break
                     self.N += 1
                     assert self.N <= self.N_max
