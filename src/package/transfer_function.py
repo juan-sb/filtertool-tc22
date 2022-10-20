@@ -3,20 +3,27 @@ import scipy.signal as signal
 from scipy.optimize import basinhopping
 import numpy as np
 from numpy.polynomial import Polynomial
-from src.package.Parser import ExprParser
+from .Parser import ExprParser
+import traceback
 
 # Evaluate a polynomial in reverse order using Horner's Rule,
 # for example: a3*x^3+a2*x^2+a1*x+a0 = ((a3*x+a2)x+a1)x+a0
 def poly_at(p, x):
     total = 0
     for a in p:
-        total = total*x+a
+        total = total * x + a
     return total
 
 class TFunction():
     def __init__(self, *args, normalize=False):
         self.tf_object = {}
         self.eparser = ExprParser()
+
+        self.p = []
+        self.z = []
+        self.k = 1
+        self.N = {}
+        self.D = {}
 
         if(len(args) == 1):
             self.setExpression(args[0], normalize=normalize)
@@ -35,7 +42,7 @@ class TFunction():
             return False
 
     def setND(self, N, D, normalize=False):
-        self.z, self.p, self.k = signal.tf2zpk(np.array(N, dtype=np.complex128), np.array(D, dtype=np.complex128))
+        self.z, self.p, self.k = signal.tf2zpk(np.array(N, dtype=np.float64), np.array(D, dtype=np.float64))
         self.setZPK(self.z, self.p, self.k, normalize=normalize)
     
     def getND(self):
@@ -48,7 +55,7 @@ class TFunction():
         if normalize:
             self.normalize()
         self.N, self.D = signal.zpk2tf(self.z, self.p, self.k)
-        self.tf_object = signal.TransferFunction(self.N, self.D)
+        self.tf_object = signal.ZerosPolesGain(self.z, self.p, self.k)
         self.computedDerivatives = False
 
     def getZPK(self):
@@ -100,14 +107,15 @@ class TFunction():
     def getZP(self):
         return self.z, self.p
 
-    def getBode(self, linear=False, start=-2, stop=6, num=5000):
+    def getBode(self, linear=False, start=-2, stop=6, num=10000):
         if linear:
             ws = np.linspace(start, stop, num) * 2 * np.pi
         else:
             ws = np.logspace(start, stop, num) * 2 * np.pi
         #h = self.at(1j*ws)
         w, g, ph = signal.bode(self.tf_object, w=ws)
-        gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
+        # gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
+        gd = ph
         f = ws / (2 * np.pi)
         return f, 10**(g/20), ph, gd
 

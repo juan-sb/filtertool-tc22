@@ -79,6 +79,11 @@ class AnalogFilter():
         self.remainingZeros = []
         self.remainingPoles = []
         self.remainingGain = np.nan
+        self.z = []
+        self.p = []
+        self.k = 1
+        self.num = {}
+        self.den = {}
         self.eparser = ExprParser()
         
     def validate(self):
@@ -158,34 +163,33 @@ class AnalogFilter():
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                z, p, k = signal.butter(self.N, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, k)
+                self.z, self.p, self.k = signal.butter(self.N, self.wc, analog=True, output='zpk')
+                self.num, self.den = signal.butter(self.N, self.wc, analog=True, output='ba')
+                self.tf_norm = TFunction(self.z, self.p, self.k)
 
             elif self.approx_type == CHEBYSHEV:
                 self.N, self.wc = signal.cheb1ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                z, p, k = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, k)
+                self.z, self.p, self.k = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='zpk')
+                self.tf_norm = TFunction(self.z, self.p, self.k)
 
             elif self.approx_type == CHEBYSHEV2:
                 self.N, self.wc = signal.cheb2ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                z, p, k = signal.cheby2(self.N, -self.ga_dB, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, k)
+                self.z, self.p, self.k = signal.cheby2(self.N, -self.ga_dB, self.wc, analog=True, output='zpk')
+                self.tf_norm = TFunction(self.z, self.p, self.k)
             
             elif self.approx_type == CAUER:
                 self.N, self.wc = signal.ellipord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                z, p, k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
-                self.tf_norm = TFunction(z, p, k)
-                
-            
+                self.z, self.p, self.k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
+                self.tf_norm = TFunction(self.z, self.p, self.k)
             
             elif self.approx_type == LEGENDRE:
                 self.N = self.N_min
@@ -246,10 +250,8 @@ class AnalogFilter():
                 self.wan = self.wa / self.wp
             elif self.filter_type == HIGH_PASS:
                 self.wan = self.wp / self.wa
-            elif self.filter_type == BAND_PASS:
-                self.wan = (self.wa[1] - self.wa[0]) / (self.wp[1] - self.wp[0])
-            elif self.filter_type == BAND_REJECT:
-                self.wan = (self.wp[1] - self.wp[0]) / (self.wa[1] - self.wa[0])
+            elif self.filter_type in [BAND_PASS, BAND_REJECT]:
+                self.wan = self.bw[1] / self.bw[0]
         elif self.filter_type == GROUP_DELAY and init:
             self.wrg_n = self.wrg * self.tau0
         else:
@@ -258,22 +260,47 @@ class AnalogFilter():
     def compute_denormalized_parameters(self):
         # no es necesario (por ahora) desnormalizar las ganancias
         s = sym.symbols('s')
-        self.eparser.setExpression(sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s))
-        
+        self.eparser.setExpression(sym.Poly(self.num, s)/sym.Poly(self.den, s))
         if self.filter_type == LOW_PASS:
             transformation = s / self.wp
         elif self.filter_type == HIGH_PASS:
             transformation = self.wp / s
         elif self.filter_type == BAND_PASS:
-            transformation = (self.w0 / (self.wp[1] - self.wp[0])) * ((s / self.w0) + (self.w0 / s))
+            transformation = (self.w0 / self.bw[0]) * ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == BAND_REJECT:
-            transformation = ((self.wp[1] - self.wp[0]) / self.w0) / ((s / self.w0) + (self.w0 / s))
+            transformation = (self.bw[1] / self.w0) / ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == GROUP_DELAY:
             transformation = s * self.tau0
         
-        self.eparser.transform(transformation)
-        N, D = self.eparser.getND()
-        self.tf = TFunction([a * self.gain for a in N], D)
+        if(self.filter_type in [BAND_PASS, BAND_REJECT]):
+            denorm_z = []
+            denorm_p = []
+            pprod = 1
+            zprod = 1
+            c = np.power(self.w0, 2)
+            for z in self.z:                
+                b = z*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/z
+                denorm_z.append(b/2 + np.sqrt(np.power(b/2,2) - c))
+                denorm_z.append(b/2 - np.sqrt(np.power(b/2,2) - c))
+                zprod *= z
+            for p in self.p:
+                b = p*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/p
+                denorm_p.append(b/2 + np.sqrt(np.power(b/2,2) - c))
+                denorm_p.append(b/2 - np.sqrt(np.power(b/2,2) - c))
+                pprod *= p
+            orddiff = len(self.p) - len(self.z)
+            if(self.filter_type==BAND_PASS):
+                denorm_z += [0]*orddiff
+                k = self.bw[0]**orddiff * pprod / zprod
+            else:
+                denorm_z = np.append(denorm_z, [self.w0*1j, -self.w0*1j]*orddiff) if orddiff > 0 else []
+                k = 1
+                
+            self.tf = TFunction(denorm_z, denorm_p, k)            
+        else:
+            self.eparser.transform(transformation)
+            N, D = self.eparser.getND()
+            self.tf = TFunction([a * self.gain for a in N], D)
 
     def resetStages(self):
         self.remainingGain = self.gain

@@ -20,6 +20,10 @@ class ExprParser():
       if expr != None:
         self.setExpression(expr)
 
+    def applyFactor(self, factor):
+      symEx = symEx * factor
+      # self.simplify()
+
     def setTxt(self, txt):
       self.txt = txt
       self.symEx = sym.parsing.sympy_parser.parse_expr(txt, transformations = 'all')
@@ -30,7 +34,7 @@ class ExprParser():
       self.simplify()
 
     def simplify(self):
-      self.symEx = sym.simplify(self.symEx, ratio=oo, measure=determinar_complejidad)
+      self.symEx = sym.cancel(self.symEx) # sym.simplify(self.symEx, ratio=oo, measure=determinar_complejidad)
       self.fractionEx = sym.fraction(self.symEx)
 
     def transform(self, transformation):

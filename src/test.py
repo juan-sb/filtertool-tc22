@@ -1,34 +1,37 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
-import io
+import scipy.signal as signal
+from package.transfer_function import TFunction
+import matplotlib.pyplot as plt
 
-num_rows = 2
-num_cols = 1
-fig, axs = plt.subplots(num_rows, num_cols, sharex=True)
-for i in range(num_rows):
-     ax = axs[i]
-     ax.plot(np.arange(10), np.arange(10)**i)
+N, wc = signal.buttord(1, 1.591549431, 3, 20, analog=True)
+z, p, k = signal.butter(N, wc, analog=True, output='zpk')
+tf_norm = TFunction(z, p, k)
 
-def on_click(event):
-    print(event.inaxes)
-    print(axs)
-    if not event.inaxes: return
-    inx = list(fig.axes).index(event.inaxes)
-    print(inx)
-    buf = io.BytesIO()
-    pickle.dump(fig, buf)
-    buf.seek(0)
-    fig2 = pickle.load(buf) 
+print(tf_norm.z)
+print(tf_norm.p)
+denorm_z = []
+denorm_p = []
 
-    for i, ax in enumerate(fig2.axes):
-        if i != inx:
-            fig2.delaxes(ax)
-        else:
-            axes=ax
+for z in tf_norm.z:
+    denorm_z.append(z/2 + np.sqrt(np.power(z/2,2) - 1))
+    denorm_z.append(z/2 - np.sqrt(np.power(z/2,2) - 1))
+for p in tf_norm.p:
+    denorm_p.append(p/2 + np.sqrt(np.power(p/2,2) - 1))
+    denorm_p.append(p/2 - np.sqrt(np.power(p/2,2) - 1))
+denorm_z += [0 for i in range(0, len(tf_norm.p) - len(tf_norm.z))]
 
-    fig2.show()
+print(denorm_z)
+print(denorm_p)
 
-fig.canvas.mpl_connect('button_press_event', on_click)
+# tf = TFunction(denorm_z, denorm_p, 1)
+N, wc = signal.buttord(2*np.pi*np.array([975.5, 1025.3]), 2*np.pi*np.array([905, 1105]), 3, 20, analog=True)
+z, p, k = signal.butter(N, wc, analog=True, btype="bandpass", output='zpk')
 
+tf = TFunction(z, p, k)
+f, g, ph, gd = tf.getBode()
+plt.figure()
+plt.semilogx(f, g)    # Bode magnitude pl
 plt.show()
+
+
