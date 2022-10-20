@@ -674,7 +674,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if(pole.isSelected()):
                 if(x not in selected_pol_indexes):
                     sel = Selection(
-                        artist=self.splot_pz.canvas.ax,
+                        artist=self.splot_tpz.canvas.ax,
                         target_=[poledata.real, poledata.imag],
                         index=self.poles_list.row(pole),
                         dist=0,
@@ -694,7 +694,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if(zero.isSelected()):
                 if(x not in selected_zer_indexes):
                     sel = Selection(
-                        artist=self.splot_pz.canvas.ax,
+                        artist=self.splot_tpz.canvas.ax,
                         target_=[zerodata.real, zerodata.imag],
                         index=self.zeros_list.row(zero),
                         dist=0,
@@ -811,7 +811,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
 
         polcol = ['#FF0000' if pole in self.selected_dataset_data.origin.remainingPoles else '#00FF00' for pole in pt]
-        zercol = ['#FF0000' if zero in self.selected_dataset_data.origin.remainingZeros else '#00FF00' for zero in zt]
+        zercol = ['#0000FF' if zero in self.selected_dataset_data.origin.remainingZeros else '#00FF00' for zero in zt]
         zeroes_f = tpzcanvas.ax.scatter(zt.real, zt.imag, c=zercol, marker='o')
         poles_f = tpzcanvas.ax.scatter(pt.real, pt.imag, c=polcol, marker='x')
         self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
@@ -838,6 +838,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         gline, = tgaincanvas.ax.plot(f, g)
         phline, = tphasecanvas.ax.plot(f, ph)
 
+        tpzcanvas.draw()
+        tgaincanvas.draw()
+        tphasecanvas.draw()
 
         if(not self.stages_list.currentItem()):
             return
@@ -871,9 +874,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "add", lambda sel: 
                 sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
         )
-        tpzcanvas.draw()
-        tgaincanvas.draw()
-        tphasecanvas.draw()
         spzcanvas.draw()
         sgaincanvas.draw()
         sphasecanvas.draw()

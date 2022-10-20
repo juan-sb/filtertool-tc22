@@ -257,9 +257,9 @@ class AnalogFilter():
         s = sym.symbols('s')
         self.eparser.setExpression(sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s))
         if self.filter_type == LOW_PASS:
-            transformation = s / self.wp
+            transformation = s / (self.wp*self.denorm/100 + 1*(1-self.denorm/100))
         elif self.filter_type == HIGH_PASS:
-            transformation = self.wp / s
+            transformation = (self.wp*self.denorm/100 + 1*(1-self.denorm/100)) / s
         elif self.filter_type == GROUP_DELAY:
             transformation = s * self.tau0
         elif(self.filter_type in [BAND_PASS, BAND_REJECT]):
