@@ -548,46 +548,51 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         aa = filtds.origin.aa_dB
 
         xmax = 0
+        ymax = aa*1.5
         if filtds.origin.filter_type == Filter.LOW_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
             bw = fa - fp
             xmax = fa + bw/3
-            attcanvas.ax.fill_between([0, fp], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            ymax = aa*1.5
+            attcanvas.ax.fill_between([0, fp], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, aa*1.5])
+            attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
             bw = fp - fa
             xmax = fp + bw/3
-            attcanvas.ax.fill_between([fp, xmax], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            ymax = aa*1.5
+            attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([0, fa], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, aa*1.5])
+            attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
             bw = fa[1] - fa[0]
             xmax = fa[1] + bw/3
+            ymax = aa*1.5
             attcanvas.ax.fill_between([0, fa[0]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa[1], xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, aa*1.5])
+            attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
             bw = fp[1] - fp[0]
             xmax = fp[1] + bw/3
-            attcanvas.ax.fill_between([0, fp[0]], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fp[1], xmax], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            ymax = aa*1.5
+            attcanvas.ax.fill_between([0, fp[0]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fp[1], xmax], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, aa*1.5])
+            attcanvas.ax.set_ylim([0, ymax])
 
         attcanvas.ax.set_xlim(0, xmax)
-        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=0, stop=xmax, num=5000)
+        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=0, stop=xmax*10, num=5000)
         attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')
