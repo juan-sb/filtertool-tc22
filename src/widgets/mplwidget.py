@@ -1,13 +1,14 @@
 # Imports
 from PyQt5 import QtWidgets
+import matplotlib
+matplotlib.use('Agg')
+
 from matplotlib.figure import Figure
 from matplotlib.widgets import Cursor
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as Canvas
-from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
-import matplotlib
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as Canvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 # Ensure using PyQt5 backend
-matplotlib.use('QT5Agg')
 matplotlib.use('pgf')
 matplotlib.rcParams.update({
     "pgf.texsystem": "pdflatex",
