@@ -265,14 +265,9 @@ class AnalogFilter():
             transformation = s / self.wp
         elif self.filter_type == HIGH_PASS:
             transformation = self.wp / s
-        elif self.filter_type == BAND_PASS:
-            transformation = (self.w0 / self.bw[0]) * ((s / self.w0) + (self.w0 / s))
-        elif self.filter_type == BAND_REJECT:
-            transformation = (self.bw[1] / self.w0) / ((s / self.w0) + (self.w0 / s))
         elif self.filter_type == GROUP_DELAY:
             transformation = s * self.tau0
-        
-        if(self.filter_type in [BAND_PASS, BAND_REJECT]):
+        elif(self.filter_type in [BAND_PASS, BAND_REJECT]):
             denorm_z = []
             denorm_p = []
             pprod = 1
@@ -296,11 +291,11 @@ class AnalogFilter():
                 denorm_z = np.append(denorm_z, [self.w0*1j, -self.w0*1j]*orddiff) if orddiff > 0 else []
                 k = 1
                 
-            self.tf = TFunction(denorm_z, denorm_p, k)            
-        else:
-            self.eparser.transform(transformation)
-            N, D = self.eparser.getND()
-            self.tf = TFunction([a * self.gain for a in N], D)
+            self.tf = TFunction(denorm_z, denorm_p, k) 
+            return
+        self.eparser.transform(transformation)
+        N, D = self.eparser.getND()
+        self.tf = TFunction([a * self.gain for a in N], D)
 
     def resetStages(self):
         self.remainingGain = self.gain
