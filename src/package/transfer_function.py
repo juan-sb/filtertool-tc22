@@ -1,4 +1,3 @@
-from inspect import trace
 import sympy as sym
 import scipy.signal as signal
 from scipy.optimize import basinhopping
@@ -23,8 +22,10 @@ class TFunction():
         self.p = []
         self.z = []
         self.k = 1
-        self.N = {}
-        self.D = {}
+        self.N = []
+        self.D = []
+        self.dN = []
+        self.dD = []
 
         if(len(args) == 1):
             self.setExpression(args[0], normalize=normalize)
@@ -43,21 +44,34 @@ class TFunction():
             return False
 
     def setND(self, N, D, normalize=False):
-        self.z, self.p, self.k = signal.tf2zpk(np.array(N, dtype=np.float64), np.array(D, dtype=np.float64))
-        self.setZPK(self.z, self.p, self.k, normalize=normalize)
+        if not hasattr(N, '__iter__'):
+            N = [N]
+        if not hasattr(D, '__iter__'):
+            D = [D]
+        self.N, self.D = np.array(N, dtype=np.float64), np.array(D, dtype=np.float64)
+        self.z, self.p, self.k = signal.tf2zpk(self.N, self.D)        
+        if normalize:
+            self.normalize()
+        self.tf_object = signal.TransferFunction(self.N, self.D)
+        self.computedDerivatives = False
     
     def getND(self):
         return self.N, self.D
 
     #Nota: signal NO normaliza la transferencia, por lo que k multiplica pero no es la ganancia en s=0
     def setZPK(self, z, p, k, normalize=False):
-        self.z, self.p = np.array(z, dtype=np.complex128), np.array(p, dtype=np.complex128)
+        self.z, self.p, self.k = np.array(z, dtype=np.complex128), np.array(p, dtype=np.complex128), self.k
         self.k = k
+        N, D = signal.zpk2tf(self.z, self.p, self.k)
+        if not hasattr(N, '__iter__'):
+            N = [N]
+        if not hasattr(D, '__iter__'):
+            D = [D]
+        self.N, self.D = np.array(N, dtype=np.float64), np.array(D, dtype=np.float64)
         if normalize:
             self.normalize()
-        self.N, self.D = signal.zpk2tf(self.z, self.p, self.k)
-        self.tf_object = signal.ZerosPolesGain(self.z, self.p, self.k)
         self.computedDerivatives = False
+        self.tf_object = signal.ZerosPolesGain(self.z, self.p, self.k)
 
     def getZPK(self):
         return self.z, self.p, self.k
@@ -65,8 +79,8 @@ class TFunction():
     def getDerivatives(self):
         N = Polynomial(np.flip(self.N))
         D = Polynomial(np.flip(self.D))
-        self.derivN = np.flip(((N.deriv())*D - N*(D.deriv())).coef)
-        self.derivD = np.flip((D * D).coef)
+        self.dN = np.flip(N.deriv().coef)
+        self.dD = np.flip(D.deriv().coef)
         self.computedDerivatives = True
 
     def normalize(self):
@@ -76,6 +90,7 @@ class TFunction():
         for pole in self.p:
             a /= -pole
         self.k /= a
+        self.N /= a
         self.computedDerivatives = False
     
     def denormalize(self):
@@ -85,15 +100,11 @@ class TFunction():
         for pole in self.p:
             a /= -pole
         self.k *= a
+        self.N *= a
         self.computedDerivatives = False
 
     def at(self, s):
         return poly_at(self.N, s) / poly_at(self.D, s)
-
-    def deriv_at(self, s):
-        if not self.computedDerivatives:
-            self.getDerivatives()
-        return poly_at(self.derivN, s)/poly_at(self.derivD, s)
     
     def minFunctionMod(self, w):
         return abs(self.at(1j*w))
@@ -103,7 +114,9 @@ class TFunction():
     
     #como ln(H) = ln(G) + j phi --> H'/H = G'/G + j phi'
     def gd_at(self, w0):
-        return -np.imag(1j*self.deriv_at(1j*w0)/self.at(1j*w0)) #'1j*..' --> regla de la cadena
+        if not self.computedDerivatives:
+            self.getDerivatives()
+        return -np.imag(1j*(poly_at(self.dN, 1j*w0)/poly_at(self.N, 1j*w0) - poly_at(self.dD, 1j*w0)/poly_at(self.D, 1j*w0))) #'1j*..' --> regla de la cadena
         
     def getZP(self):
         return self.z, self.p
@@ -116,7 +129,6 @@ class TFunction():
         #h = self.at(1j*ws)
         w, g, ph = signal.bode(self.tf_object, w=ws)
         gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
-        
         f = ws / (2 * np.pi)
         return f, 10**(g/20), ph, gd
 

@@ -79,11 +79,6 @@ class AnalogFilter():
         self.remainingZeros = []
         self.remainingPoles = []
         self.remainingGain = np.nan
-        self.z = []
-        self.p = []
-        self.k = 1
-        self.num = {}
-        self.den = {}
         self.eparser = ExprParser()
         
     def validate(self):
@@ -165,36 +160,32 @@ class AnalogFilter():
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                self.z, self.p, self.k = signal.butter(self.N, self.wc, analog=True, output='zpk')
-                self.num, self.den = signal.butter(self.N, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(self.z, self.p, self.k)
+                N, D = signal.butter(self.N, self.wc, analog=True, output='ba')
+                self.tf_norm = TFunction(N, D)
 
             elif self.approx_type == CHEBYSHEV:
                 self.N, self.wc = signal.cheb1ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                self.z, self.p, self.k = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='zpk')
-                self.num, self.den = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(self.z, self.p, self.k)
+                N, D = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='ba')
+                self.tf_norm = TFunction(N, D)
 
             elif self.approx_type == CHEBYSHEV2:
                 self.N, self.wc = signal.cheb2ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                self.z, self.p, self.k = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='zpk')
-                self.num, self.den = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(self.z, self.p, self.k)
+                N, D = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='ba')
+                self.tf_norm = TFunction(N, D)
             
             elif self.approx_type == CAUER:
                 self.N, self.wc = signal.ellipord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                self.z, self.p, self.k = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='zpk')
-                self.num, self.den = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(self.z, self.p, self.k)
+                N, D = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='ba')
+                self.tf_norm = TFunction(N, D)
             
             elif self.approx_type == LEGENDRE:
                 self.N = self.N_min
@@ -210,11 +201,6 @@ class AnalogFilter():
                     tf2_wmax = abs(tf2.at(self.wan*1j))
                     if tf2_wmin >= self.gp and tf2_wmax <= self.ga:
                         self.tf_norm = TFunction(z, p, p0)
-                        self.z = z
-                        self.p = p
-                        self.k = p0
-                        self.num = self.tf_norm.N
-                        self.den = self.tf_norm.D
                         break
                     self.N += 1
                     assert self.N <= self.N_max 
@@ -222,15 +208,10 @@ class AnalogFilter():
             elif self.approx_type == BESSEL:
                 self.N = self.N_min
                 while True:
-                    z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
-                    tf2 = TFunction(z, p, k)
+                    N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
+                    tf2 = TFunction(N, D)
                     if 1 - tf2.gd_at(self.wrg_n) <= self.gamma/100: #si el gd es menor-igual que el esperado, estamos
-                        self.tf_norm = TFunction(z, p, k)
-                        self.z = z
-                        self.p = p
-                        self.k = k
-                        self.num = self.tf_norm.N
-                        self.den = self.tf_norm.D
+                        self.tf_norm = TFunction(N, D)
                         break
                     self.N += 1
                     assert self.N <= self.N_max
@@ -249,12 +230,6 @@ class AnalogFilter():
                             g0 = tf2.gd_at(0)                       
                             p = [r * g0 for r in p]
                             self.tf_norm = TFunction(z, p, p0)
-                            self.z = z
-                            self.p = p
-                            self.k = p0
-                            print(p)
-                            self.num = self.tf_norm.N
-                            self.den = self.tf_norm.D
                             break
                     self.N += 1
                     assert self.N <= self.N_max
@@ -279,13 +254,12 @@ class AnalogFilter():
             pass
     
     def compute_denormalized_parameters(self):
-        # no es necesario (por ahora) desnormalizar las ganancias
         s = sym.symbols('s')
-        self.eparser.setExpression(sym.Poly(self.num, s)/sym.Poly(self.den, s))
+        self.eparser.setExpression(sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s))
         if self.filter_type == LOW_PASS:
-            transformation = (s / (self.wp*self.denorm/100 + 1*(1-self.denorm/100)))
+            transformation = s / self.wp
         elif self.filter_type == HIGH_PASS:
-            transformation = ((self.wp*self.denorm/100 + 1*(1-self.denorm/100)) / s)
+            transformation = self.wp / s
         elif self.filter_type == GROUP_DELAY:
             transformation = s * self.tau0
         elif(self.filter_type in [BAND_PASS, BAND_REJECT]):
@@ -294,17 +268,18 @@ class AnalogFilter():
             pprod = 1
             zprod = 1
             c = np.power(self.w0, 2)
-            for z in self.z:                
+            zeros, poles = self.tf_norm.getZP()
+            for z in zeros:                
                 b = z*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/z
                 denorm_z.append(b/2 + np.sqrt(np.power(b/2,2) - c))
                 denorm_z.append(b/2 - np.sqrt(np.power(b/2,2) - c))
                 zprod *= z
-            for p in self.p:
+            for p in poles:
                 b = p*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/p
                 denorm_p.append(b/2 + np.sqrt(np.power(b/2,2) - c))
                 denorm_p.append(b/2 - np.sqrt(np.power(b/2,2) - c))
                 pprod *= p
-            orddiff = len(self.p) - len(self.z)
+            orddiff = len(poles) - len(zeros)
             if(self.filter_type==BAND_PASS):
                 denorm_z += [0]*orddiff
                 k = self.bw[0]**orddiff * pprod / zprod
@@ -312,7 +287,7 @@ class AnalogFilter():
                 denorm_z = np.append(denorm_z, [self.w0*1j, -self.w0*1j]*orddiff) if orddiff > 0 else []
                 k = 1
                 
-            self.tf = TFunction(denorm_z, denorm_p, k) 
+            self.tf = TFunction(denorm_z, denorm_p, k*self.gain) 
             return
         self.eparser.transform(transformation)
         N, D = self.eparser.getND()
