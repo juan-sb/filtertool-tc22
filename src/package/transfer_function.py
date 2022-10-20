@@ -89,8 +89,8 @@ class TFunction():
             a *= -zero
         for pole in self.p:
             a /= -pole
-        self.k /= a
-        self.N /= a
+        self.k = self.k/a
+        self.N = self.N/a
         self.computedDerivatives = False
     
     def denormalize(self):
@@ -99,8 +99,8 @@ class TFunction():
             a *= -zero
         for pole in self.p:
             a /= -pole
-        self.k *= a
-        self.N *= a
+        self.k = self.k*a
+        self.N = self.N*a
         self.computedDerivatives = False
 
     def at(self, s):
