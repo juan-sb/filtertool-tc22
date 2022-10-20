@@ -525,10 +525,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         filtds = self.selected_dataset_data
         
-       # tstep, stepres = signal.step(filtds.tf.getND(), T=np.linspace(1e-2, 10, 1000))
-        #timp, impres = signal.impulse(filtds.tf.getND(), T=np.linspace(1e-2, 10, 1000))
-        tstep, stepres = np.zeros(10), np.zeros(10)
-        timp, impres = np.zeros(10), np.zeros(10)
+        tstep, stepres = signal.step(filtds.tf.tf_object, N=5000)
+        timp, impres = signal.impulse(filtds.tf.tf_object, N=5000)
         
         f = np.array(filtds.data[0]['f'])
         g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
