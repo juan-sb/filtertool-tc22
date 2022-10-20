@@ -87,6 +87,8 @@ class AnalogFilter():
         self.eparser = ExprParser()
         
     def validate(self):
+        self.gp_dB = -self.ap_dB
+        self.ga_dB = -self.aa_dB
         try:
             assert self.N_max <= MAX_ORDER
             assert self.N_min >= 1
@@ -159,7 +161,7 @@ class AnalogFilter():
     def get_tf_norm(self):
             
             if self.approx_type == BUTTERWORTH:
-                self.N, self.wc = signal.buttord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                self.N, self.wc = signal.buttord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
@@ -168,30 +170,30 @@ class AnalogFilter():
                 self.tf_norm = TFunction(self.z, self.p, self.k)
 
             elif self.approx_type == CHEBYSHEV:
-                self.N, self.wc = signal.cheb1ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                self.N, self.wc = signal.cheb1ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                self.z, self.p, self.k = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='zpk')
-                self.num, self.den = signal.cheby1(self.N, -self.gp_dB, self.wc, analog=True, output='ba')
+                self.z, self.p, self.k = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='zpk')
+                self.num, self.den = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='ba')
                 self.tf_norm = TFunction(self.z, self.p, self.k)
 
             elif self.approx_type == CHEBYSHEV2:
-                self.N, self.wc = signal.cheb2ord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                self.N, self.wc = signal.cheb2ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                self.z, self.p, self.k = signal.cheby2(self.N, -self.ga_dB, self.wc, analog=True, output='zpk')
-                self.num, self.den = signal.cheby2(self.N, -self.gp_dB, self.wc, analog=True, output='ba')
+                self.z, self.p, self.k = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='zpk')
+                self.num, self.den = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='ba')
                 self.tf_norm = TFunction(self.z, self.p, self.k)
             
             elif self.approx_type == CAUER:
-                self.N, self.wc = signal.ellipord(1, self.wan, -self.gp_dB, -self.ga_dB, analog=True)
+                self.N, self.wc = signal.ellipord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
                 assert self.N <= self.N_max
                 if self.N < self.N_min:
                     self.N = self.N_min
-                self.z, self.p, self.k = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='zpk')
-                self.num, self.den = signal.ellip(self.N, -self.gp_dB, -self.ga_dB, self.wc, analog=True, output='ba')
+                self.z, self.p, self.k = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='zpk')
+                self.num, self.den = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='ba')
                 self.tf_norm = TFunction(self.z, self.p, self.k)
             
             elif self.approx_type == LEGENDRE:
@@ -250,6 +252,7 @@ class AnalogFilter():
                             self.z = z
                             self.p = p
                             self.k = p0
+                            print(p)
                             self.num = self.tf_norm.N
                             self.den = self.tf_norm.D
                             break

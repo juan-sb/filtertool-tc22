@@ -318,8 +318,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "Q_max": self.Q_max_box.value(),
             "gain": self.gain_box.value(),
             "denorm": self.denorm_box.value(),
-            "ga_dB": self.ga_box.value(),
-            "gp_dB": self.gp_box.value(),
+            "aa_dB": self.aa_box.value(),
+            "ap_dB": self.ap_box.value(),
             "wa": wa,
             "wp": wp,
             "w0": 2 * np.pi * self.f0_box.value(),
@@ -332,14 +332,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return AnalogFilter(**params)
     
     def resolveFilterDialog(self):
-        print("AGREGANDO FILTER")
         newFilter = self.buildFilterFromParams()
         valid, msg = newFilter.validate()
         if not valid:
             self.pmptd.setErrorMsg(msg)
             self.pmptd.open()
             return
-        print(newFilter.tf.N)
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
         self.addDataset(ds)
     
@@ -369,10 +367,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
             self.define_with_box.setVisible(False)
             self.label_definewith.setVisible(False)
-            self.gp_box.setVisible(True)
-            self.label_gp.setVisible(True)
-            self.ga_box.setVisible(True)
-            self.label_ga.setVisible(True)
+            self.ap_box.setVisible(True)
+            self.label_ap.setVisible(True)
+            self.aa_box.setVisible(True)
+            self.label_aa.setVisible(True)
             self.fp_box.setVisible(True)
             self.label_fp.setVisible(True)
             self.fa_box.setVisible(True)
@@ -407,10 +405,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
             self.define_with_box.setVisible(True)
             self.label_definewith.setVisible(True)
-            self.gp_box.setVisible(True)
-            self.label_gp.setVisible(True)
-            self.ga_box.setVisible(True)
-            self.label_ga.setVisible(True)
+            self.ap_box.setVisible(True)
+            self.label_ap.setVisible(True)
+            self.aa_box.setVisible(True)
+            self.label_aa.setVisible(True)
             self.fp_box.setVisible(False)
             self.label_fp.setVisible(False)
             self.fa_box.setVisible(False)
@@ -464,10 +462,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             self.define_with_box.setVisible(False)
             self.label_definewith.setVisible(False)
-            self.gp_box.setVisible(False)
-            self.label_gp.setVisible(False)
-            self.ga_box.setVisible(False)
-            self.label_ga.setVisible(False)
+            self.ap_box.setVisible(False)
+            self.label_ap.setVisible(False)
+            self.aa_box.setVisible(False)
+            self.label_aa.setVisible(False)
             self.fp_box.setVisible(False)
             self.label_fp.setVisible(False)
             self.fa_box.setVisible(False)
@@ -546,69 +544,50 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         impulseline, = impulsecanvas.ax.plot(timp, impres)
         
 
-        gp = filtds.origin.gp_dB
-        ga = filtds.origin.ga_dB
+        ap = filtds.origin.ap_dB
+        aa = filtds.origin.aa_dB
 
-        x = [10e-2, 10e6]
-
+        xmax = 0
         if filtds.origin.filter_type == Filter.LOW_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
             bw = fa - fp
-            x = [fp - bw/3, fp]
-            y = [-gp, -gp]
-            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fa, fa + bw/3]
-            y = [-ga, -ga]
-            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fp - bw/3, fa + bw/3]
-            attcanvas.ax.set_ylim([0, -ga*1.5])
+            xmax = fa + bw/3
+            attcanvas.ax.fill_between([0, fp], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([0, aa*1.5])
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
             bw = fp - fa
-            x = [fp, fp + bw/3]
-            y = [-gp, -gp]
-            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fa - bw/3, fa]
-            y = [-ga, -ga]
-            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fa - bw/3, fp + bw/3]
-            attcanvas.ax.set_ylim([0, -ga*1.5])
+            xmax = fp + bw/3
+            attcanvas.ax.fill_between([fp, xmax], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([0, fa], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([0, aa*1.5])
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
+            xmax = fa[1] + bw/3
             bw = fa[1] - fa[0]
-            x = [fa[0]-bw/3, fa[0]]
-            y = [-ga, -ga]
-            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fa[1], fa[1]+bw/3]
-            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fp[0], fp[1]]
-            y = [-gp, -gp]
-            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fa[0] - bw/3, fa[1] + bw/3]
-            attcanvas.ax.set_ylim([0, -ga*1.5])
+            attcanvas.ax.fill_between([0, fa[0]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fa[1], xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([0, aa*1.5])
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
+            xmax = fp[1] + bw/3
             bw = fp[1] - fp[0]
-            x = [fp[0]-bw/3, fp[0]]
-            y = [-gp, -gp]
-            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fp[1], fp[1]+bw/3]
-            attcanvas.ax.fill_between(x, y, -ga*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fa[0], fa[1]]
-            y = [-ga, -ga]
-            attcanvas.ax.fill_between(x, y, 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            x = [fp[0] - bw/3, fp[1] + bw/3]
-            attcanvas.ax.set_ylim([0, -ga*1.5])
+            attcanvas.ax.fill_between([0, fp[0]], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fp[1], xmax], [ap, ap], aa*1.5, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([0, aa*1.5])
 
-        attcanvas.ax.set_xlim(x)
-        fa, ga, pa, gda = filtds.tf.getBode(True, start=x[0], stop=x[1], num=5000)
+        attcanvas.ax.set_xlim(0, xmax)
+        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=0, stop=xmax, num=5000)
         attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')
@@ -980,8 +959,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.tipo_box.setCurrentIndex(self.selected_dataset_data.origin.filter_type)
             self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
             self.gain_box.setValue(self.selected_dataset_data.origin.gain)
-            self.ga_box.setValue(self.selected_dataset_data.origin.ga_dB)
-            self.gp_box.setValue(self.selected_dataset_data.origin.gp_dB)
+            self.aa_box.setValue(self.selected_dataset_data.origin.aa_dB)
+            self.ap_box.setValue(self.selected_dataset_data.origin.ap_dB)
             self.N_label.setText(str(self.selected_dataset_data.origin.N))
             self.N_min_box.setValue(self.selected_dataset_data.origin.N_min)
             self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)

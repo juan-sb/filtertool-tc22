@@ -1642,7 +1642,7 @@
                  <property name="geometry">
                   <rect>
                    <x>0</x>
-                   <y>-220</y>
+                   <y>0</y>
                    <width>173</width>
                    <height>402</height>
                   </rect>
@@ -1661,9 +1661,9 @@
                    <number>9</number>
                   </property>
                   <item row="1" column="0">
-                   <widget class="QLabel" name="label_gp">
+                   <widget class="QLabel" name="label_ap">
                     <property name="text">
-                     <string>Gp</string>
+                     <string>Ap</string>
                     </property>
                    </widget>
                   </item>
@@ -1748,21 +1748,24 @@
                    </widget>
                   </item>
                   <item row="2" column="1">
-                   <widget class="QDoubleSpinBox" name="ga_box">
+                   <widget class="QDoubleSpinBox" name="aa_box">
                     <property name="enabled">
                      <bool>true</bool>
+                    </property>
+                    <property name="prefix">
+                     <string/>
                     </property>
                     <property name="suffix">
                      <string> dB</string>
                     </property>
                     <property name="minimum">
-                     <double>-9999999.000000000000000</double>
-                    </property>
-                    <property name="maximum">
                      <double>0.000000000000000</double>
                     </property>
+                    <property name="maximum">
+                     <double>1000000.000000000000000</double>
+                    </property>
                     <property name="value">
-                     <double>-20.000000000000000</double>
+                     <double>20.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -1835,9 +1838,9 @@
                    </widget>
                   </item>
                   <item row="2" column="0">
-                   <widget class="QLabel" name="label_ga">
+                   <widget class="QLabel" name="label_aa">
                     <property name="text">
-                     <string>Ga</string>
+                     <string>Aa</string>
                     </property>
                    </widget>
                   </item>
@@ -1950,7 +1953,7 @@
                    </widget>
                   </item>
                   <item row="1" column="1">
-                   <widget class="QDoubleSpinBox" name="gp_box">
+                   <widget class="QDoubleSpinBox" name="ap_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
@@ -1964,13 +1967,13 @@
                      <string> dB</string>
                     </property>
                     <property name="minimum">
-                     <double>-9999999.000000000000000</double>
-                    </property>
-                    <property name="maximum">
                      <double>0.000000000000000</double>
                     </property>
+                    <property name="maximum">
+                     <double>1000000.000000000000000</double>
+                    </property>
                     <property name="value">
-                     <double>-3.000000000000000</double>
+                     <double>3.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -2454,8 +2457,8 @@
   <tabstop>denorm_box</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>define_with_box</tabstop>
-  <tabstop>gp_box</tabstop>
-  <tabstop>ga_box</tabstop>
+  <tabstop>ap_box</tabstop>
+  <tabstop>aa_box</tabstop>
   <tabstop>fp_box</tabstop>
   <tabstop>fa_box</tabstop>
   <tabstop>fa_min_box</tabstop>
