@@ -47,7 +47,7 @@
           </property>
           <property name="maximumSize">
            <size>
-            <width>220</width>
+            <width>230</width>
             <height>16777215</height>
            </size>
           </property>
@@ -101,7 +101,7 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
+                <width>193</width>
                 <height>469</height>
                </rect>
               </property>
@@ -140,7 +140,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>163</width>
+                   <width>175</width>
                    <height>16777215</height>
                   </size>
                  </property>
@@ -284,7 +284,7 @@
                 <widget class="QGroupBox" name="groupBox_2">
                  <property name="maximumSize">
                   <size>
-                   <width>163</width>
+                   <width>175</width>
                    <height>16777215</height>
                   </size>
                  </property>
@@ -704,7 +704,7 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
+                <width>200</width>
                 <height>492</height>
                </rect>
               </property>
@@ -1291,7 +1291,7 @@
          <widget class="QGroupBox" name="groupBox_3">
           <property name="maximumSize">
            <size>
-            <width>250</width>
+            <width>235</width>
             <height>16777215</height>
            </size>
           </property>
@@ -1357,7 +1357,7 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>230</width>
+                <width>215</width>
                 <height>303</height>
                </rect>
               </property>
@@ -1663,7 +1663,7 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>193</width>
+                   <width>178</width>
                    <height>402</height>
                   </rect>
                  </property>

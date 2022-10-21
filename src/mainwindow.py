@@ -20,6 +20,7 @@ from scipy.interpolate import splrep, splev, splprep
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from mplcursors import HoverMode, cursor, Selection
+from matplotlib.patches import Rectangle
 
 import numpy as np
 import random
@@ -169,7 +170,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.dataline_list.takeItem(first_dataline_index)
         self.datalines.pop(i)
         #self.stage_datasets.pop(i)
-        
+        ds = self.dataset_list.item(i).data(Qt.UserRole)
+        if(ds.type == 'filter'):
+            fi = self.filters.index(ds)
+            self.filters.pop(fi)
+            self.selfil_cb.removeItem(fi)
+            if(self.selfil_cb.count() == 0):
+                self.chg_filter_btn.setEnabled(False)
         self.dataset_list.takeItem(i)
         self.updatePlots()
 
@@ -361,6 +368,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_widget.setText(self.filtername_box.text())
         self.selfil_cb.setItemText(self.selfil_cb.currentIndex(), ds.title)
         self.selected_dataset_widget.setData(Qt.UserRole, ds)
+        self.filters[self.selfil_cb.currentIndex()] = ds
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
 
     def updateFilterParametersAvailable(self):
@@ -597,6 +605,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
         
+        elif filtds.origin.filter_type == Filter.GROUP_DELAY:
+            frg = filtds.origin.wrg/(2*np.pi)
+            xmax = 2 * frg
+            xmin = 0
 
         attcanvas.ax.set_xlim(xmin, xmax)
         fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.1*xmin, stop=10*xmax, num=15000)
