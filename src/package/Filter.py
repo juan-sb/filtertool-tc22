@@ -291,11 +291,10 @@ class AnalogFilter():
                 denorm_z += [0]*orddiff
                 k = self.bw[0]**orddiff * pprod / zprod
             else:
-                denorm_z = np.append(denorm_z, [self.w0*1j, -self.w0*1j]*orddiff) if orddiff > 0 else []
+                denorm_z = np.append(denorm_z, [self.w0*1j, -self.w0*1j]*orddiff if orddiff > 0 else [])
                 k = 1 # (self.w0**2)**-orddiff
-            if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CHEBYSHEV2, CAUER]):
+            if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
                 k *= np.power(10, -self.ap_dB/20)    
-            print("BUENAS", orddiff, len(denorm_p), len(denorm_z))
             self.tf = TFunction(denorm_z, denorm_p, k*self.gain) 
             return
         self.eparser.transform(transformation)
