@@ -347,4 +347,3 @@ class AnalogFilter():
         for p in self.stages[i].p:
             self.remainingPoles.append(p)
         self.stages.pop(i)
-

@@ -122,7 +122,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             [ self.plot_5 ],
         ]
 
-        self.new_filter_btn.clicked.connect(self.resolveFilterDialog)
+        self.new_filter_btn.clicked.connect(self.addFilter)
         self.chg_filter_btn.clicked.connect(self.changeSelectedFilter)
         self.tipo_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
         self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
@@ -140,6 +140,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.poles_list.itemSelectionChanged.connect(self.stage_sel_changed)
         self.zeros_list.itemSelectionChanged.connect(self.stage_sel_changed)
         self.stages_list.itemSelectionChanged.connect(self.updateStagePlots)
+
+        self.filters = []
+        self.selfil_cb.currentIndexChanged.connect(self.populateSelectedFilterDetails)
 
 
     def addDataset(self, ds):
@@ -235,7 +238,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def importFiles(self):
         options = QFileDialog.Options()
-        #options |= QFileDialog.DontUseNativeDialog
+        # options |= QFileDialog.DontUseNativeDialog
         files, _ = QFileDialog.getOpenFileNames(self,"Select files", "","All Files (*);;CSV files (*.csv);;SPICE output files (*.raw)", options=options)
         self.processFiles(files)
 
@@ -331,7 +334,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         return AnalogFilter(**params)
     
-    def resolveFilterDialog(self):
+    def addFilter(self):
         newFilter = self.buildFilterFromParams()
         valid, msg = newFilter.validate()
         if not valid:
@@ -339,6 +342,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.pmptd.open()
             return
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
+        self.filters.append(ds)
+        self.selfil_cb.blockSignals(True)
+        self.selfil_cb.addItem(ds.title, ds)
+        self.selfil_cb.blockSignals(False)
+        self.chg_filter_btn.setEnabled(True)
         self.addDataset(ds)
     
     def changeSelectedFilter(self):
@@ -348,12 +356,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.pmptd.setErrorMsg(msg)
             self.pmptd.open()
             return
-
         temp_datalines = self.selected_dataset_data.datalines
         ds = Dataset('', self.filtername_box.text(), newFilter)
         ds.datalines = temp_datalines
         ds.title = self.filtername_box.text()
         self.selected_dataset_widget.setText(self.filtername_box.text())
+        self.selfil_cb.setCurrentText(ds.title)
         self.selected_dataset_widget.setData(Qt.UserRole, ds)
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
 
@@ -545,58 +553,63 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ap = filtds.origin.ap_dB
         aa = filtds.origin.aa_dB
 
+        xmin = 0
         xmax = 0
         ymax = aa*1.5
         if filtds.origin.filter_type == Filter.LOW_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
-            bw = fa - fp
-            xmax = fa + bw/3
+            deltaf = fa - fp
+            xmax = fa + deltaf/3
+            xmin = max([0, fp - deltaf/3])
             ymax = aa*1.5
-            attcanvas.ax.fill_between([0, fp], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([xmin, fp], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
-            bw = fp - fa
-            xmax = fp + bw/3
+            deltaf = fp - fa
+            xmax = fp + deltaf/3
+            xmin = max([0, fa - deltaf/3])
             ymax = aa*1.5
             attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([0, fa], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
-            bw = fa[1] - fa[0]
-            xmax = fa[1] + bw/3
+            deltaf = fa[1] - fa[0]
+            xmax = fa[1] + deltaf/3
+            xmin = max([0, fa[0] - deltaf/3])
             ymax = aa*1.5
-            attcanvas.ax.fill_between([0, fa[0]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fa[1], xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([xmin , fa[0]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fa[1], xmax ], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
-            bw = fp[1] - fp[0]
-            xmax = fp[1] + bw/3
+            deltaf = fp[1] - fp[0]
+            xmax = fp[1] + deltaf/3
+            xmin = max([0, fp[0] - deltaf/3])
             ymax = aa*1.5
-            attcanvas.ax.fill_between([0, fp[0]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fp[1], xmax], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([xmin,  fp[0]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fp[1], xmax ], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
         
-        attcanvas.ax.set_xlim(filtds.origin.w0*0.1, xmax)
-        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=0, stop=xmax*10, num=15000)
+        attcanvas.ax.set_xlim(xmin, xmax)
+        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=xmin/10, stop=xmax*10, num=15000)
         attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        (min, max) = self.getRelevantFrequencies(z, p)
+        minf, maxf = self.getRelevantFrequencies(z, p)
         zx = z.real
         zy = z.imag
         px = p.real
@@ -605,8 +618,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         poles = pzcanvas.ax.scatter(px, py, marker='x')
         pzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
         pzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
-        pzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
-        pzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+        pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
+        pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         cursor(zeroes, multiple=True, highlight=True).connect(
             "add", lambda sel: 
                 sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
@@ -958,54 +971,72 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         #relleno las cajas del filtro
         if(self.selected_dataset_data.type == 'filter'):
-            self.filtername_box.setText(self.selected_dataset_data.title)
-            self.tipo_box.setCurrentIndex(self.selected_dataset_data.origin.filter_type)
-            self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
-            self.gain_box.setValue(self.selected_dataset_data.origin.gain)
-            self.aa_box.setValue(self.selected_dataset_data.origin.aa_dB)
-            self.ap_box.setValue(self.selected_dataset_data.origin.ap_dB)
-            self.N_label.setText(str(self.selected_dataset_data.origin.N))
-            self.N_min_box.setValue(self.selected_dataset_data.origin.N_min)
-            self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)
-            self.Q_max_box.setValue(self.selected_dataset_data.origin.Q_max)
+            self.populateSelectedFilterDetails()
 
-            if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
-                self.fp_box.setValue(0)
-                self.fa_box.setValue(0)
-                self.fa_min_box.setValue(self.selected_dataset_data.origin.wa[0] / (2 * np.pi))
-                self.fa_max_box.setValue(self.selected_dataset_data.origin.wa[1] / (2 * np.pi))
-                self.fp_min_box.setValue(self.selected_dataset_data.origin.wp[0] / (2 * np.pi))
-                self.fp_max_box.setValue(self.selected_dataset_data.origin.wp[1] / (2 * np.pi)) 
-            elif self.selected_dataset_data.origin.filter_type in [Filter.LOW_PASS, Filter.HIGH_PASS]:
-                self.fp_box.setValue(self.selected_dataset_data.origin.wp / (2 * np.pi))
-                self.fa_box.setValue(self.selected_dataset_data.origin.wa / (2 * np.pi))
-                self.fa_min_box.setValue(0)
-                self.fa_max_box.setValue(0)
-                self.fp_min_box.setValue(0)
-                self.fp_max_box.setValue(0)
-            else:
-                self.fp_box.setValue(0)
-                self.fa_box.setValue(0)
-                self.fa_min_box.setValue(0)
-                self.fa_max_box.setValue(0)
-                self.fp_min_box.setValue(0)
-                self.fp_max_box.setValue(0)
-                
-            self.f0_box.setValue(self.selected_dataset_data.origin.w0 / (2 * np.pi))
-            self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0] / (2 * np.pi))
-            self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1] / (2 * np.pi))
-            self.tol_box.setValue(self.selected_dataset_data.origin.gamma)
-            self.tau0_box.setValue(self.selected_dataset_data.origin.tau0)
-            self.frg_box.setValue(self.selected_dataset_data.origin.wrg / (2* np.pi))
+    
+    def populateSelectedFilterDetails(self, index=-2):
+        if(index == -2):
+            for i, fds in enumerate(self.filters):
+                if(fds.origin == self.selected_dataset_data.origin):
+                    self.selfil_cb.blockSignals(True)
+                    self.selfil_cb.setCurrentIndex(i)
+                    self.selfil_cb.blockSignals(False)
+                    break
+        elif(index != -1):
+            filtds = self.selfil_cb.currentData()
+            if(self.selected_dataset_data.origin != filtds.origin):
+                for x in range(self.dataset_list.count()):
+                    item = self.dataset_list.item(x)
+                    ds = item.data(Qt.UserRole)
+                    if(ds.origin == filtds.origin):
+                        self.dataset_list.setCurrentRow(x)
+                        self.populateSelectedDatasetDetails(item, None)
+                        return
+        else:
+            return
+        self.filtername_box.setText(self.selected_dataset_data.title)
+        self.tipo_box.setCurrentIndex(self.selected_dataset_data.origin.filter_type)
+        self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
+        self.gain_box.setValue(self.selected_dataset_data.origin.gain)
+        self.aa_box.setValue(self.selected_dataset_data.origin.aa_dB)
+        self.ap_box.setValue(self.selected_dataset_data.origin.ap_dB)
+        self.N_label.setText(str(self.selected_dataset_data.origin.N))
+        self.N_min_box.setValue(self.selected_dataset_data.origin.N_min)
+        self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)
+        self.Q_max_box.setValue(self.selected_dataset_data.origin.Q_max)
 
-            self.updateFilterPlots()
-            self.updateFilterStages()
-            self.updateFilterParametersAvailable()
+        if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
+            self.fp_box.setValue(0)
+            self.fa_box.setValue(0)
+            self.fa_min_box.setValue(self.selected_dataset_data.origin.wa[0] / (2 * np.pi))
+            self.fa_max_box.setValue(self.selected_dataset_data.origin.wa[1] / (2 * np.pi))
+            self.fp_min_box.setValue(self.selected_dataset_data.origin.wp[0] / (2 * np.pi))
+            self.fp_max_box.setValue(self.selected_dataset_data.origin.wp[1] / (2 * np.pi)) 
+        elif self.selected_dataset_data.origin.filter_type in [Filter.LOW_PASS, Filter.HIGH_PASS]:
+            self.fp_box.setValue(self.selected_dataset_data.origin.wp / (2 * np.pi))
+            self.fa_box.setValue(self.selected_dataset_data.origin.wa / (2 * np.pi))
+            self.fa_min_box.setValue(0)
+            self.fa_max_box.setValue(0)
+            self.fp_min_box.setValue(0)
+            self.fp_max_box.setValue(0)
+        else:
+            self.fp_box.setValue(0)
+            self.fa_box.setValue(0)
+            self.fa_min_box.setValue(0)
+            self.fa_max_box.setValue(0)
+            self.fp_min_box.setValue(0)
+            self.fp_max_box.setValue(0)
+        self.updateFilterPlots()
+        self.updateFilterStages()
+        self.updateFilterParametersAvailable()
 
     def updateSelectedDatasetName(self):
         new_title = self.ds_title_edit.text()
         self.selected_dataset_widget.setText(new_title)
         self.selected_dataset_data.title = new_title
+        if(self.selected_dataset_data.type == 'filter'):
+            self.selfil_cb.setItemText(self.selfil_cb.currentIndex(), new_title)
+            self.filtername_box.setText(new_title)
 
     def populateSelectedDatalineDetails(self, listitemwidget, qlistwidget):
         if(not listitemwidget):
@@ -1082,6 +1113,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.populateSelectedDatalineDetails(self.selected_dataline_widget, None)
         self.updatePlots()
 
+    
     def openColorPicker(self):
         dialog = QColorDialog(self)
         dialog.setCurrentColor(Qt.red)
