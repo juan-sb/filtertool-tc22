@@ -3,17 +3,17 @@ import sys
 from PyQt5 import QtWidgets
 
 # Project modules
-from src.ui.tf_window import Ui_tf_window
+from src.ui.response_window import Ui_ResponseDialog
 
 import ast
 import scipy.signal as signal
 
-class ResponseDialog(QtWidgets.QDialog, Ui_tf_window):
+class ResponseDialog(QtWidgets.QDialog, Ui_ResponseDialog):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
 
-        self.tf_title.textChanged.connect(self.enableResponseFunction)
+        self.input_txt.textChanged.connect(self.enableResponseFunction)
         self.check_btn.clicked.connect(self.processResponseValues)
 
 
@@ -29,22 +29,22 @@ class ResponseDialog(QtWidgets.QDialog, Ui_tf_window):
             pass
 
     def getResponseTitle(self):
-        return self.tf_title.text()
+        return self.input_txt.text()
 
     def getResponseExpression(self):
-        return self.tf_raw.text()
+        return self.input_txt.text()
     
     def getTimeDomain(self):
         return np.arange(self.minbox.value(), self.maxbox.value(), self.stepbox.value())
 
     def enableResponseFunction(self, txt):
         if txt != '':
-            self.tf_raw.setEnabled(True)
+            self.input_txt.setEnabled(True)
     
     def validateResponse(self):
         try:
-            ast.parse(self.tf_raw.text())
-            if (self.minbox >= self.maxbox):
+            ast.parse(self.input_txt.text())
+            if (self.minbox.value() >= self.maxbox.value()):
                 return False
         except SyntaxError:
             return False

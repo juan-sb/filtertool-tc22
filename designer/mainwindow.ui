@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -101,8 +101,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
-                <height>559</height>
+                <width>183</width>
+                <height>469</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -704,8 +704,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
-                <height>575</height>
+                <width>200</width>
+                <height>492</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1357,8 +1357,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>187</width>
-                <height>282</height>
+                <width>210</width>
+                <height>259</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1563,7 +1563,7 @@
                   <double>1.000000000000000</double>
                  </property>
                  <property name="value">
-                  <double>100.000000000000000</double>
+                  <double>0.000000000000000</double>
                  </property>
                 </widget>
                </item>
@@ -1643,8 +1643,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>163</width>
-                   <height>478</height>
+                   <width>173</width>
+                   <height>402</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -2348,7 +2348,7 @@
      <x>0</x>
      <y>0</y>
      <width>1076</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">

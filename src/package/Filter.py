@@ -72,10 +72,11 @@ class AnalogFilter():
     def __init__(self, **kwargs):
         self.tf = {}
         self.tf_norm = {}
+        self.tf_template = {}
         for k, v in kwargs.items():
             setattr(self, k, v) #Seteo todos los atributos de 1
         self.stages = []
-        self.implemented_tf = TFunction(1, 1, normalize=False)
+        self.implemented_tf = {}
         self.remainingZeros = []
         self.remainingPoles = []
         self.remainingGain = np.nan
@@ -256,12 +257,30 @@ class AnalogFilter():
     def compute_denormalized_parameters(self):
         s = sym.symbols('s')
         self.eparser.setExpression(sym.Poly(self.tf_norm.N, s)/sym.Poly(self.tf_norm.D, s))
+
+        #Primera desnormalización: la elegida en las opciones
+        if self.filter_type != GROUP_DELAY:
+            f, g, p, gd = self.tf_norm.getBode(linear=True, start=1/(2*pi), stop=1.5*self.wan/(2*pi), num=10000)
+            w = 2* pi * f
+            wd = np.nan
+            for wi in reversed(w):
+                if abs(self.tf_norm.at(1j*wi)) >= self.ga:
+                    wd = wi
+                    break
+            assert not np.isnan(wd)
+
+            transformation = s * ((1 - self.denorm/100) * self.wan + self.denorm/100 * wd)/self.wan
+            self.eparser.transform(transformation)
+            N, D = self.eparser.getND()
+            self.tf_norm = TFunction(N, D)
+
+        #segunda desnormalización: según el tipo de filtro
         if self.filter_type == LOW_PASS:
-            transformation = s / (self.wp*self.denorm/100 + 1*(1-self.denorm/100))
+            transformation = (s / self.wp)
         elif self.filter_type == HIGH_PASS:
-            transformation = (self.wp*self.denorm/100 + 1*(1-self.denorm/100)) / s
+            transformation = (self.wp / s)
         elif self.filter_type == GROUP_DELAY:
-            transformation = s * self.tau0
+            transformation = (s * self.tau0)
         elif(self.filter_type in [BAND_PASS, BAND_REJECT]):
             denorm_z = []
             denorm_p = []
@@ -286,6 +305,7 @@ class AnalogFilter():
                 pprod *= p
                 pprod2 *= p1 * p2
             orddiff = len(poles) - len(zeros)
+            assert orddiff >= 0
             
             if(self.filter_type==BAND_PASS):
                 denorm_z += [0]*orddiff
@@ -295,11 +315,13 @@ class AnalogFilter():
                 k = 1 # (self.w0**2)**-orddiff
             if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
                 k *= np.power(10, -self.ap_dB/20)    
-            self.tf = TFunction(denorm_z, denorm_p, k*self.gain) 
+            self.tf = TFunction(denorm_z, denorm_p, k*self.gain)
+            self.tf_template = TFunction(denorm_z, denorm_p, k)
             return
         self.eparser.transform(transformation)
         N, D = self.eparser.getND()
         self.tf = TFunction([a * self.gain for a in N], D)
+        self.tf_template = TFunction(N, D)
 
     def resetStages(self):
         self.remainingGain = self.gain
