@@ -589,8 +589,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
         
-        attcanvas.ax.set_xlim(0, xmax)
-        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=0, stop=xmax*10, num=5000)
+        attcanvas.ax.set_xlim(filtds.origin.w0*0.1, xmax)
+        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=0, stop=xmax*10, num=15000)
         attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')

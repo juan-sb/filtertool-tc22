@@ -267,26 +267,35 @@ class AnalogFilter():
             denorm_p = []
             pprod = 1
             zprod = 1
+            pprod2 = 1
+            zprod2 = 1
             c = np.power(self.w0, 2)
             zeros, poles = self.tf_norm.getZP()
             for z in zeros:                
                 b = z*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/z
-                denorm_z.append(b/2 + np.sqrt(np.power(b/2,2) - c))
-                denorm_z.append(b/2 - np.sqrt(np.power(b/2,2) - c))
+                z1 = b/2 + np.sqrt(np.power(b/2,2) - c)
+                z2 = b/2 - np.sqrt(np.power(b/2,2) - c)
+                denorm_z += [z1, z2]
                 zprod *= z
+                zprod2 *= z1 * z2
             for p in poles:
                 b = p*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/p
-                denorm_p.append(b/2 + np.sqrt(np.power(b/2,2) - c))
-                denorm_p.append(b/2 - np.sqrt(np.power(b/2,2) - c))
+                p1 = b/2 + np.sqrt(np.power(b/2,2) - c)
+                p2 = b/2 - np.sqrt(np.power(b/2,2) - c)
+                denorm_p += [p1, p2]
                 pprod *= p
+                pprod2 *= p1 * p2
             orddiff = len(poles) - len(zeros)
+            
             if(self.filter_type==BAND_PASS):
                 denorm_z += [0]*orddiff
                 k = self.bw[0]**orddiff * pprod / zprod
             else:
                 denorm_z = np.append(denorm_z, [self.w0*1j, -self.w0*1j]*orddiff) if orddiff > 0 else []
-                k = 1
-                
+                k = 1 # (self.w0**2)**-orddiff
+            if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CHEBYSHEV2, CAUER]):
+                k *= np.power(10, -self.ap_dB/20)    
+            print("BUENAS", orddiff, len(denorm_p), len(denorm_z))
             self.tf = TFunction(denorm_z, denorm_p, k*self.gain) 
             return
         self.eparser.transform(transformation)
