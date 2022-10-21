@@ -11,16 +11,16 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
-class Ui_Dialog(object):
-    def setupUi(self, Dialog):
-        Dialog.setObjectName("Dialog")
-        Dialog.resize(731, 378)
-        self.buttonBox = QtWidgets.QDialogButtonBox(Dialog)
+class Ui_ResponseDialog(object):
+    def setupUi(self, ResponseDialog):
+        ResponseDialog.setObjectName("ResponseDialog")
+        ResponseDialog.resize(731, 378)
+        self.buttonBox = QtWidgets.QDialogButtonBox(ResponseDialog)
         self.buttonBox.setGeometry(QtCore.QRect(50, 340, 251, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
-        self.layoutWidget = QtWidgets.QWidget(Dialog)
+        self.layoutWidget = QtWidgets.QWidget(ResponseDialog)
         self.layoutWidget.setGeometry(QtCore.QRect(10, 10, 291, 321))
         self.layoutWidget.setObjectName("layoutWidget")
         self.gridLayout = QtWidgets.QGridLayout(self.layoutWidget)
@@ -43,10 +43,10 @@ class Ui_Dialog(object):
         self.check_btn.setEnabled(True)
         self.check_btn.setObjectName("check_btn")
         self.gridLayout.addWidget(self.check_btn, 4, 0, 1, 1)
-        self.tf_raw = QtWidgets.QLineEdit(self.layoutWidget)
-        self.tf_raw.setEnabled(False)
-        self.tf_raw.setObjectName("tf_raw")
-        self.gridLayout.addWidget(self.tf_raw, 0, 0, 1, 1)
+        self.input_txt = QtWidgets.QLineEdit(self.layoutWidget)
+        self.input_txt.setEnabled(True)
+        self.input_txt.setObjectName("input_txt")
+        self.gridLayout.addWidget(self.input_txt, 0, 0, 1, 1)
         self.formLayout = QtWidgets.QFormLayout()
         self.formLayout.setObjectName("formLayout")
         self.label = QtWidgets.QLabel(self.layoutWidget)
@@ -77,25 +77,25 @@ class Ui_Dialog(object):
         self.stepbox.setObjectName("stepbox")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.stepbox)
         self.gridLayout.addLayout(self.formLayout, 1, 0, 1, 1)
-        self.textBrowser = QtWidgets.QTextBrowser(Dialog)
+        self.textBrowser = QtWidgets.QTextBrowser(ResponseDialog)
         self.textBrowser.setEnabled(True)
         self.textBrowser.setGeometry(QtCore.QRect(310, 10, 401, 321))
         self.textBrowser.setObjectName("textBrowser")
 
-        self.retranslateUi(Dialog)
-        self.buttonBox.accepted.connect(Dialog.accept)
-        self.buttonBox.rejected.connect(Dialog.reject)
-        QtCore.QMetaObject.connectSlotsByName(Dialog)
+        self.retranslateUi(ResponseDialog)
+        self.buttonBox.accepted.connect(ResponseDialog.accept)
+        self.buttonBox.rejected.connect(ResponseDialog.reject)
+        QtCore.QMetaObject.connectSlotsByName(ResponseDialog)
 
-    def retranslateUi(self, Dialog):
+    def retranslateUi(self, ResponseDialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-        self.check_btn.setText(_translate("Dialog", "Validar"))
-        self.tf_raw.setPlaceholderText(_translate("Dialog", "Function"))
-        self.label.setText(_translate("Dialog", "Mínimo"))
-        self.label_2.setText(_translate("Dialog", "Máximo"))
-        self.label_3.setText(_translate("Dialog", "Intervalo"))
-        self.textBrowser.setHtml(_translate("Dialog", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+        ResponseDialog.setWindowTitle(_translate("ResponseDialog", "Dialog"))
+        self.check_btn.setText(_translate("ResponseDialog", "Validar"))
+        self.input_txt.setPlaceholderText(_translate("ResponseDialog", "Function"))
+        self.label.setText(_translate("ResponseDialog", "Mínimo"))
+        self.label_2.setText(_translate("ResponseDialog", "Máximo"))
+        self.label_3.setText(_translate("ResponseDialog", "Intervalo"))
+        self.textBrowser.setHtml(_translate("ResponseDialog", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
@@ -122,8 +122,8 @@ from src.widgets.exprwidget import ExprWidget
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    Dialog = QtWidgets.QDialog()
-    ui = Ui_Dialog()
-    ui.setupUi(Dialog)
-    Dialog.show()
+    ResponseDialog = QtWidgets.QDialog()
+    ui = Ui_ResponseDialog()
+    ui.setupUi(ResponseDialog)
+    ResponseDialog.show()
     sys.exit(app.exec_())

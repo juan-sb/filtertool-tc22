@@ -1,8 +1,0 @@
-PyQt5
-pyqt5-tools
-ltspice
-matplotlib
-numpy
-sympy
-scipy
-mplcursors

@@ -60,9 +60,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.zpWindow = type('ZPWindow', (), {})()
         
         self.import_file_btn.clicked.connect(self.importFiles)
-
-        #self.populateSelectedDatasetDetails({}, {}) ?
-        #self.populateSelectedDatalineDetails({}, {}) ?
         
         self.dataset_list.currentItemChanged.connect(self.populateSelectedDatasetDetails)
         self.ds_title_edit.textEdited.connect(self.updateSelectedDatasetName)
@@ -269,7 +266,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def openResponseDialog(self):
         self.respd.open()
-        self.respd.tf_title.setFocus()
+        self.respd.input_txt.setFocus()
 
     def resolveResponseDialog(self):
         if not(self.respd.validateResponse()):
@@ -340,6 +337,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not valid:
             self.pmptd.setErrorMsg(msg)
             self.pmptd.open()
+            self.pmptd.setFocus()
             return
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
         self.filters.append(ds)
@@ -354,14 +352,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         valid, msg = newFilter.validate()
         if not valid:
             self.pmptd.setErrorMsg(msg)
-            self.pmptd.open()
+            self.pmptd.setFocus()
             return
         temp_datalines = self.selected_dataset_data.datalines
         ds = Dataset('', self.filtername_box.text(), newFilter)
         ds.datalines = temp_datalines
         ds.title = self.filtername_box.text()
         self.selected_dataset_widget.setText(self.filtername_box.text())
-        self.selfil_cb.setCurrentText(ds.title)
+        self.selfil_cb.setItemText(self.selfil_cb.currentIndex(), ds.title)
         self.selected_dataset_widget.setData(Qt.UserRole, ds)
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
 
@@ -555,14 +553,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         xmin = 0
         xmax = 0
-        ymax = aa*1.5
+        xmin = 0
+        ymax = aa*2
         if filtds.origin.filter_type == Filter.LOW_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
-            deltaf = fa - fp
-            xmax = fa + deltaf/3
-            xmin = max([0, fp - deltaf/3])
-            ymax = aa*1.5
+            deltaf = (fa - fp)/2
+            xmax = fa + deltaf
+            xmin = max([0, fp - deltaf])
             attcanvas.ax.fill_between([xmin, fp], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
@@ -570,10 +568,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
             fp = filtds.origin.wp/(2*np.pi)
             fa = filtds.origin.wa/(2*np.pi)
-            deltaf = fp - fa
-            xmax = fp + deltaf/3
-            xmin = max([0, fa - deltaf/3])
-            ymax = aa*1.5
+            deltaf = (fp - fa)/2
+            xmax = fp + deltaf
+            xmin = max([0, fa - deltaf])
             attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
@@ -581,11 +578,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
-            deltaf = fa[1] - fa[0]
-            xmax = fa[1] + deltaf/3
-            xmin = max([0, fa[0] - deltaf/3])
-            ymax = aa*1.5
-            attcanvas.ax.fill_between([xmin , fa[0]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            deltaf = (fa[1] - fa[0])/2
+            xmax = fa[1] + deltaf
+            xmin = max([0, fa[0] - deltaf])
+            attcanvas.ax.fill_between([xmin,  fa[0]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa[1], xmax ], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
@@ -593,17 +589,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
             fp = [w/(2*np.pi) for w in filtds.origin.wp]
             fa = [w/(2*np.pi) for w in filtds.origin.wa]
-            deltaf = fp[1] - fp[0]
-            xmax = fp[1] + deltaf/3
-            xmin = max([0, fp[0] - deltaf/3])
-            ymax = aa*1.5
+            deltaf = (fp[1] - fp[0])/2
+            xmax = fp[1] + deltaf
+            xmin = max([0, fp[0] - deltaf])
             attcanvas.ax.fill_between([xmin,  fp[0]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fp[1], xmax ], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
         
+
         attcanvas.ax.set_xlim(xmin, xmax)
-        fa, ga, pa, gda = filtds.tf.getBode(linear=True, start=xmin/10, stop=xmax*10, num=15000)
+        fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.1*xmin, stop=10*xmax, num=15000)
         attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')
@@ -963,8 +959,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_widget = listitemwidget
         self.selected_dataset_data = listitemwidget.data(Qt.UserRole)
         isTF = self.selected_dataset_data.type in ['TF', 'filter']
-        self.ds_poleszeros_btn.setVisible(isTF)
-        self.resp_btn.setVisible(isTF)
+        self.ds_poleszeros_btn.setEnabled(isTF)
+        self.resp_btn.setEnabled(isTF)
         self.ds_casenum_lb.setText(str(len(self.selected_dataset_data.data)))
         self.ds_caseadd_btn.setVisible(len(self.selected_dataset_data.data) > 1)
         self.ds_info_lb.setText(self.selected_dataset_data.miscinfo)

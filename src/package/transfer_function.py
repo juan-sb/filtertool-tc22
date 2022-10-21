@@ -132,6 +132,7 @@ class TFunction():
         f = ws / (2 * np.pi)
         return f, 10**(g/20), ph, gd
 
+    #No funciona (y no lo necesitamos) actualmente
     def optimize(self, start, stop, maximize = False):
         # rewrite the bounds in the way required by L-BFGS-B
         bounds = [(start, stop)]
