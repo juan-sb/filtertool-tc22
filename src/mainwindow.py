@@ -335,11 +335,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             wa = F_TO_W * self.fa_box.value()
             wp = F_TO_W * self.fp_box.value()
-
-        params =         {
+            
+        params = {
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
             "approx_type": self.aprox_box.currentIndex(),
+            "helper_approx": self.compareapprox_cb.currentIndex(),
+            "helper_N": self.comp_N_box.value(),
+            "is_helper": False,
             "define_with": self.define_with_box.currentIndex(),
             "N_min": self.N_min_box.value(),
             "N_max": self.N_max_box.value(),
@@ -435,10 +438,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.tipo_box.currentIndex() == Filter.LOW_PASS or self.tipo_box.currentIndex() == Filter.HIGH_PASS:
             for i in range(Filter.LEGENDRE + 1):
                 self.aprox_box.model().item(i).setEnabled(True)
+                self.compareapprox_cb.model().item(i).setEnabled(True)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
                 self.aprox_box.model().item(i).setEnabled(False)
+                self.compareapprox_cb.model().item(i).setEnabled(False)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
+                self.compareapprox_cb.setCurrentIndex(Filter.BUTTERWORTH)
             self.define_with_box.setVisible(False)
             self.label_definewith.setVisible(False)
             self.ap_box.setVisible(True)
@@ -474,10 +480,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif self.tipo_box.currentIndex() == Filter.BAND_PASS or self.tipo_box.currentIndex() == Filter.BAND_REJECT:
             for i in range(Filter.LEGENDRE + 1):
                 self.aprox_box.model().item(i).setEnabled(True)
+                self.compareapprox_cb.model().item(i).setEnabled(True)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
                 self.aprox_box.model().item(i).setEnabled(False)
+                self.compareapprox_cb.model().item(i).setEnabled(False)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
+                self.compareapprox_cb.setCurrentIndex(Filter.BUTTERWORTH)
             self.define_with_box.setVisible(True)
             self.label_definewith.setVisible(True)
             self.ap_box.setVisible(True)
@@ -532,10 +541,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif self.tipo_box.currentIndex() == Filter.GROUP_DELAY:
             for i in range(Filter.LEGENDRE + 1):
                 self.aprox_box.model().item(i).setEnabled(False)
+                self.compareapprox_cb.model().item(i).setEnabled(False)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
                 self.aprox_box.model().item(i).setEnabled(True)
+                self.compareapprox_cb.model().item(i).setEnabled(True)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BESSEL)
+                self.compareapprox_cb.setCurrentIndex(Filter.BESSEL)
             
             self.define_with_box.setVisible(False)
             self.label_definewith.setVisible(False)
@@ -693,6 +705,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         attcanvas.ax.set_xlim(xmin, xmax)
         fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
+        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
+        fa, ga, pa, gda = filtds.origin.helperFilters.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
         attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')
@@ -1110,6 +1124,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.filtername_box.setText(self.selected_dataset_data.title)
         self.tipo_box.setCurrentIndex(self.selected_dataset_data.origin.filter_type)
         self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
+        self.compareapprox_cb.setCurrentIndex(self.selected_dataset_data.origin.helper_approx)
+        self.comp_N_box.setValue(self.selected_dataset_data.origin.helper_N)
         self.gain_box.setValue(self.selected_dataset_data.origin.gain)
         self.aa_box.setValue(self.selected_dataset_data.origin.aa_dB)
         self.ap_box.setValue(self.selected_dataset_data.origin.ap_dB)

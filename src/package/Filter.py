@@ -12,7 +12,7 @@ pi = np.pi
 
 MAX_ORDER = 50
 LOW_PASS, HIGH_PASS, BAND_PASS, BAND_REJECT, GROUP_DELAY = range(5)
-BUTTERWORTH, CHEBYSHEV, CHEBYSHEV2, CAUER, LEGENDRE, BESSEL, GAUSS = range(7)
+BUTTERWORTH, CHEBYSHEV, CHEBYSHEV2, CAUER, LEGENDRE, BESSEL, GAUSS, APPRX_NONE = range(8)
 TEMPLATE_FREQS, F0_BW = range(2)
 
 def get_Leps(n, eps):
@@ -81,7 +81,7 @@ class AnalogFilter():
         self.remainingPoles = []
         self.remainingGain = np.nan
         self.eparser = ExprParser()
-        self.helperFilters = []
+        self.helperFilters = 0
         self.helperLabels = []
         self.reqwa = 0
         self.reqwp = 0
@@ -172,6 +172,8 @@ class AnalogFilter():
             assert self.tf_norm
             self.compute_denormalized_parameters()
             self.resetStages()
+            if(not self.is_helper):
+                self.addHelperFilters()
             
         except:
             a, err, tb = sys.exc_info()
@@ -184,90 +186,89 @@ class AnalogFilter():
             return False, err_msg
         return True, "OK"
 
-    def get_tf_norm(self):
-            
-            if self.approx_type == BUTTERWORTH:
-                self.N, self.wc = signal.buttord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
-                if(self.N > self.N_max):
-                    self.N = self.N_max
-                if self.N < self.N_min:
-                    self.N = self.N_min
-                N, D = signal.butter(self.N, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(N, D)
-
-            elif self.approx_type == CHEBYSHEV:
-                self.N, self.wc = signal.cheb1ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
-                if(self.N > self.N_max):
-                    self.N = self.N_max
-                if self.N < self.N_min:
-                    self.N = self.N_min
-                N, D = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(N, D)
-
-            elif self.approx_type == CHEBYSHEV2:
-                self.N, self.wc = signal.cheb2ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
-                if(self.N > self.N_max):
-                    self.N = self.N_max
-                if self.N < self.N_min:
-                    self.N = self.N_min
-                N, D = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(N, D)
-            
-            elif self.approx_type == CAUER:
-                self.N, self.wc = signal.ellipord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
-                if(self.N > self.N_max):
-                    self.N = self.N_max
-                if self.N < self.N_min:
-                    self.N = self.N_min
-                N, D = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='ba')
-                self.tf_norm = TFunction(N, D)
-            
-            elif self.approx_type == LEGENDRE:
+    def get_tf_norm(self):     
+        if self.approx_type == BUTTERWORTH:
+            self.N, self.wc = signal.buttord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
+            if(self.N > self.N_max):
+                self.N = self.N_max
+            if self.N < self.N_min:
                 self.N = self.N_min
-                eps = np.sqrt(((10 ** (-0.1 * self.gp_dB)) - 1))
+            N, D = signal.butter(self.N, self.wc, analog=True, output='ba')
+            self.tf_norm = TFunction(N, D)
 
-                while True:
-                    L_eps = get_Leps(self.N, eps)
+        elif self.approx_type == CHEBYSHEV:
+            self.N, self.wc = signal.cheb1ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
+            if(self.N > self.N_max):
+                self.N = self.N_max
+            if self.N < self.N_min:
+                self.N = self.N_min
+            N, D = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='ba')
+            self.tf_norm = TFunction(N, D)
+
+        elif self.approx_type == CHEBYSHEV2:
+            self.N, self.wc = signal.cheb2ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
+            if(self.N > self.N_max):
+                self.N = self.N_max
+            if self.N < self.N_min:
+                self.N = self.N_min
+            N, D = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='ba')
+            self.tf_norm = TFunction(N, D)
+        
+        elif self.approx_type == CAUER:
+            self.N, self.wc = signal.ellipord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
+            if(self.N > self.N_max):
+                self.N = self.N_max
+            if self.N < self.N_min:
+                self.N = self.N_min
+            N, D = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='ba')
+            self.tf_norm = TFunction(N, D)
+        
+        elif self.approx_type == LEGENDRE:
+            self.N = self.N_min
+            eps = np.sqrt(((10 ** (-0.1 * self.gp_dB)) - 1))
+
+            while True:
+                L_eps = get_Leps(self.N, eps)
+                z = []
+                p = select_roots(L_eps)
+                p0 = np.prod(p) * (1 if self.N % 2 == 0 else -1) #en N tengo N polos y yo quiero obtener el producto de los polos negados para normalizar
+                tf2 = TFunction(z, p, p0)
+                tf2_wmin = abs(tf2.at(1j))
+                tf2_wmax = abs(tf2.at(self.wan*1j))
+                if(self.N == self.N_max or (tf2_wmin >= self.gp and tf2_wmax <= self.ga)):
+                    self.tf_norm = TFunction(z, p, p0)
+                    break
+                self.N += 1
+        
+        elif self.approx_type == BESSEL:
+            self.N = self.N_min
+            while True:
+                N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
+                tf2 = TFunction(N, D)
+                if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
+                    self.tf_norm = TFunction(N, D)
+                    break
+                self.N += 1
+
+        elif self.approx_type == GAUSS:
+            self.N = 1
+            gauss_poly = [1, 0, 1] # producirá un delay de 1 segundo
+            fact_prod = 1
+            while True:
+                if self.N >= self.N_min:
                     z = []
-                    p = select_roots(L_eps)
-                    p0 = np.prod(p) * (1 if self.N % 2 == 0 else -1) #en N tengo N polos y yo quiero obtener el producto de los polos negados para normalizar
+                    p = select_roots(Polynomial(gauss_poly))
+                    p0 = np.prod(p)
                     tf2 = TFunction(z, p, p0)
-                    tf2_wmin = abs(tf2.at(1j))
-                    tf2_wmax = abs(tf2.at(self.wan*1j))
-                    if(self.N == self.N_max or (tf2_wmin >= self.gp and tf2_wmax <= self.ga)):
+                    if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
+                        g0 = tf2.gd_at(0)                       
+                        p = [r * g0 for r in p]
                         self.tf_norm = TFunction(z, p, p0)
                         break
-                    self.N += 1
-            
-            elif self.approx_type == BESSEL:
-                self.N = self.N_min
-                while True:
-                    N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
-                    tf2 = TFunction(N, D)
-                    if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
-                        self.tf_norm = TFunction(N, D)
-                        break
-                    self.N += 1
-
-            elif self.approx_type == GAUSS:
-                self.N = 1
-                gauss_poly = [1, 0, 1] # producirá un delay de 1 segundo
-                fact_prod = 1
-                while True:
-                    if self.N >= self.N_min:
-                        z = []
-                        p = select_roots(Polynomial(gauss_poly))
-                        p0 = np.prod(p)
-                        tf2 = TFunction(z, p, p0)
-                        if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
-                            g0 = tf2.gd_at(0)                       
-                            p = [r * g0 for r in p]
-                            self.tf_norm = TFunction(z, p, p0)
-                            break
-                    self.N += 1
-                    fact_prod *= self.N
-                    gauss_poly.append(0)
-                    gauss_poly.append(1/fact_prod)
+                self.N += 1
+                fact_prod *= self.N
+                gauss_poly.append(0)
+                gauss_poly.append(1/fact_prod)
     
     def compute_normalized_parameters(self, init=False):
         if self.filter_type < GROUP_DELAY:
@@ -412,3 +413,34 @@ class AnalogFilter():
         for p in self.stages[i].p:
             self.remainingPoles.append(p)
         self.stages.pop(i)
+
+    def addHelperFilters(self):
+        params = {
+            "filter_type": self.filter_type,
+            "approx_type": self.helper_approx,
+            "define_with": self.define_with,
+            "gain": self.gain,
+            "is_helper": True,
+            "denorm": self.denorm,
+            "aa_dB": self.aa_dB,
+            "ap_dB": self.ap_dB,
+            "wa": self.wa,
+            "wp": self.wp,
+            "w0": self.w0,
+            "bw": self.bw,
+            "gamma": self.gamma,
+            "tau0": self.tau0,
+            "wrg": self.wrg,
+        }
+        if(self.helper_N == -1):
+            params["N_min"] = self.N_min
+            params["N_max"] = self.N_max
+        elif(self.helper_N == 0):
+            params["N_min"] = self.N
+            params["N_max"] = self.N
+        else:
+            params["N_min"] = self.helper_N
+            params["N_max"] = self.helper_N
+            
+        self.helperFilters = AnalogFilter(**params)
+        valid, msg = self.helperFilters.validate()
