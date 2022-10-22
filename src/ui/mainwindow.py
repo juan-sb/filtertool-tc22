@@ -647,7 +647,7 @@ class Ui_MainWindow(object):
         self.N_min_box.setMaximum(50)
         self.N_min_box.setObjectName("N_min_box")
         self.gridLayout_2.addWidget(self.N_min_box, 6, 1, 1, 1)
-        self.compareapprox_cb = QtWidgets.QComboBox(self.scrollAreaWidgetContents_3)
+        self.compareapprox_cb = CheckableComboBox(self.scrollAreaWidgetContents_3)
         self.compareapprox_cb.setObjectName("compareapprox_cb")
         self.compareapprox_cb.addItem("")
         self.compareapprox_cb.addItem("")
@@ -1383,6 +1383,7 @@ class Ui_MainWindow(object):
         self.actionSave_2.setText(_translate("MainWindow", "Save..."))
         self.actionSet_size.setText(_translate("MainWindow", "Set size"))
 from src.widgets.mplwidget import MplWidget
+from src.widgets.multiple_cbox import CheckableComboBox
 from src.widgets.scientific_spinbox import ScienDSpinBox
 
 

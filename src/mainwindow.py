@@ -340,7 +340,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "name": self.filtername_box.text(),
             "filter_type": self.tipo_box.currentIndex(),
             "approx_type": self.aprox_box.currentIndex(),
-            "helper_approx": self.compareapprox_cb.currentIndex(),
+            "helper_approx": self.compareapprox_cb.currentIndexes(),
             "helper_N": self.comp_N_box.value(),
             "is_helper": False,
             "define_with": self.define_with_box.currentIndex(),
@@ -705,11 +705,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         attcanvas.ax.set_xlim(xmin, xmax)
         fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
-        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
-        fa, ga, pa, gda = filtds.origin.helperFilters.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
-        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin.helperFilters))
+        attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
+
+        for helper in filtds.origin.helperFilters:
+            fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
+            attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(helper))
         attcanvas.ax.legend()
-        
+
         pzcanvas.ax.axis('equal')
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
@@ -1125,7 +1127,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.filtername_box.setText(self.selected_dataset_data.title)
         self.tipo_box.setCurrentIndex(self.selected_dataset_data.origin.filter_type)
         self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
-        self.compareapprox_cb.setCurrentIndex(self.selected_dataset_data.origin.helper_approx)
+        self.compareapprox_cb.setCurrentIndexes(self.selected_dataset_data.origin.helper_approx)
         self.comp_N_box.setValue(self.selected_dataset_data.origin.helper_N)
         self.gain_box.setValue(self.selected_dataset_data.origin.gain)
         self.aa_box.setValue(self.selected_dataset_data.origin.aa_dB)

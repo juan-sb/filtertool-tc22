@@ -1589,7 +1589,7 @@
                 </widget>
                </item>
                <item row="12" column="1">
-                <widget class="QComboBox" name="compareapprox_cb">
+                <widget class="CheckableComboBox" name="compareapprox_cb">
                  <item>
                   <property name="text">
                    <string>Butterworth</string>
@@ -2507,6 +2507,11 @@
    <extends>QWidget</extends>
    <header>src.widgets.mplwidget</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CheckableComboBox</class>
+   <extends>QComboBox</extends>
+   <header>src.widgets.multiple_cbox</header>
   </customwidget>
  </customwidgets>
  <tabstops>

@@ -100,7 +100,7 @@ class AnalogFilter():
         self.remainingPoles = []
         self.remainingGain = np.nan
         self.eparser = ExprParser()
-        self.helperFilters = 0
+        self.helperFilters = []
         self.helperLabels = []
         self.reqwa = 0
         self.reqwp = 0
@@ -437,32 +437,35 @@ class AnalogFilter():
         self.stages.pop(i)
 
     def addHelperFilters(self):
-        params = {
-            "filter_type": self.filter_type,
-            "approx_type": self.helper_approx,
-            "define_with": self.define_with,
-            "gain": self.gain,
-            "is_helper": True,
-            "denorm": self.denorm,
-            "aa_dB": self.aa_dB,
-            "ap_dB": self.ap_dB,
-            "wa": self.wa,
-            "wp": self.wp,
-            "w0": self.w0,
-            "bw": self.bw,
-            "gamma": self.gamma,
-            "tau0": self.tau0,
-            "wrg": self.wrg,
-        }
-        if(self.helper_N == -1):
-            params["N_min"] = self.N_min
-            params["N_max"] = self.N_max
-        elif(self.helper_N == 0):
-            params["N_min"] = self.N
-            params["N_max"] = self.N
-        else:
-            params["N_min"] = self.helper_N
-            params["N_max"] = self.helper_N
+        self.helperFilters = []
+        for approx in self.helper_approx:
+            params = {
+                "filter_type": self.filter_type,
+                "approx_type": approx,
+                "define_with": self.define_with,
+                "gain": self.gain,
+                "is_helper": True,
+                "denorm": self.denorm,
+                "aa_dB": self.aa_dB,
+                "ap_dB": self.ap_dB,
+                "wa": self.wa,
+                "wp": self.wp,
+                "w0": self.w0,
+                "bw": self.bw,
+                "gamma": self.gamma,
+                "tau0": self.tau0,
+                "wrg": self.wrg,
+            }
+            if(self.helper_N == -1):
+                params["N_min"] = self.N_min
+                params["N_max"] = self.N_max
+            elif(self.helper_N == 0):
+                params["N_min"] = self.N
+                params["N_max"] = self.N
+            else:
+                params["N_min"] = self.helper_N
+                params["N_max"] = self.helper_N
 
-        self.helperFilters = AnalogFilter(**params)
-        valid, msg = self.helperFilters.validate()
+            filt = AnalogFilter(**params)
+            valid, msg = filt.validate()
+            self.helperFilters.append(filt)
