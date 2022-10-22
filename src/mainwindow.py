@@ -37,6 +37,11 @@ POLE_SEL_COLOR = '#00FF00'
 ZERO_COLOR = '#0000FF'
 ZERO_SEL_COLOR = '#00FF00'
 
+TEMPLATE_FACE_COLOR = '#ffcccb'
+TEMPLATE_EDGE_COLOR = '#ef9a9a'
+ADD_TEMPLATE_FACE_COLOR = '#c8e6c9'
+ADD_TEMPLATE_EDGE_COLOR = '#a5d6a7'
+
 SHOW_PZ_IN_HZ = True
 PZ_XLABEL = f'$\sigma/2\pi$ [1/s]' if SHOW_PZ_IN_HZ else '$\sigma$ ($rad/s$)'
 PZ_YLABEL = f'$jf$ [Hz]' if SHOW_PZ_IN_HZ else '$j\omega$ ($rad/s$)'
@@ -155,6 +160,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.filters = []
         self.selfil_cb.currentIndexChanged.connect(self.populateSelectedFilterDetails)
         self.stages_selfil_cb.currentIndexChanged.connect(self.populateSelectedFilterDetails)
+        self.symmetrize_btn.clicked.connect(self.makeFilterTemplateSymmetric)
 
 
     def addDataset(self, ds):
@@ -324,11 +330,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def buildFilterFromParams(self):
         if self.tipo_box.currentIndex() in [Filter.BAND_PASS, Filter.BAND_REJECT]:
-            wa = [2 * np.pi * self.fa_min_box.value(), 2 * np.pi * self.fa_max_box.value()]
-            wp = [2 * np.pi * self.fp_min_box.value(), 2 * np.pi * self.fp_max_box.value()]
+            wa = [F_TO_W * self.fa_min_box.value(), F_TO_W * self.fa_max_box.value()]
+            wp = [F_TO_W * self.fp_min_box.value(), F_TO_W * self.fp_max_box.value()]
         else:
-            wa = 2 * np.pi * self.fa_box.value()
-            wp = 2 * np.pi * self.fp_box.value()
+            wa = F_TO_W * self.fa_box.value()
+            wp = F_TO_W * self.fp_box.value()
 
         params =         {
             "name": self.filtername_box.text(),
@@ -337,20 +343,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "define_with": self.define_with_box.currentIndex(),
             "N_min": self.N_min_box.value(),
             "N_max": self.N_max_box.value(),
-            "Q_max": self.Q_max_box.value(),
             "gain": self.gain_box.value(),
             "denorm": self.denorm_box.value(),
             "aa_dB": self.aa_box.value(),
             "ap_dB": self.ap_box.value(),
             "wa": wa,
             "wp": wp,
-            "w0": 2 * np.pi * self.f0_box.value(),
-            "bw": [2 * np.pi * self.bw_min_box.value(), 2 * np.pi * self.bw_max_box.value()],
+            "w0": F_TO_W * self.f0_box.value(),
+            "bw": [F_TO_W * self.bw_min_box.value(), F_TO_W * self.bw_max_box.value()],
             "gamma": self.tol_box.value(),
             "tau0": self.tau0_box.value(),
-            "wrg": 2 * np.pi * self.frg_box.value(),
+            "wrg": F_TO_W * self.frg_box.value(),
         }
-        
         return AnalogFilter(**params)
     
     def addFilter(self):
@@ -372,6 +376,43 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.chg_filter_btn.setEnabled(True)
         self.addDataset(ds)
     
+    def makeFilterTemplateSymmetric(self):
+        fa = [self.fa_min_box.value(), self.fa_max_box.value()]
+        fp = [self.fp_min_box.value(), self.fp_max_box.value()]
+        f0 = 0
+        bw = [0, 0]
+        if(self.tipo_box.currentIndex() == Filter.BAND_PASS):
+            f0 = np.sqrt(fp[0] * fp[1])
+            bw[0] = fp[1] - fp[0]
+            if(fa[0] * fa[1] != f0**2):
+                famincalc = f0**2 / fa[1]
+                famaxcalc = f0**2 / fa[0]
+                if(famincalc > fa[0]):
+                    fa[0] = famincalc
+                elif(famaxcalc < fa[1]):
+                    fa[1] = famaxcalc
+            bw[1] = fa[1] - fa[0]
+
+        elif(self.tipo_box.currentIndex() == Filter.BAND_REJECT):
+            f0 = np.sqrt(fa[0] * fa[1])
+            bw[0] = fa[1] - fa[0]
+            if(fp[0] * fp[1] != f0**2):
+                fpmincalc = f0**2 / fp[1]
+                fpmaxcalc = f0**2 / fp[0]
+                if(fpmincalc > fp[0]):
+                    fp[0] = fpmincalc
+                elif(fpmaxcalc < fp[1]):
+                    fp[1] = fpmaxcalc    
+            bw[1] = fp[1] - fp[0]
+
+        self.fa_min_box.setValue(fa[0])
+        self.fa_max_box.setValue(fa[1])
+        self.fp_min_box.setValue(fp[0])
+        self.fp_max_box.setValue(fp[1])
+        self.f0_box.setValue(f0)
+        self.bw_min_box.setValue(bw[0])
+        self.bw_max_box.setValue(bw[1])
+
     def changeSelectedFilter(self):
         newFilter = self.buildFilterFromParams()
         valid, msg = newFilter.validate()
@@ -409,6 +450,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fa_box.setVisible(True)
             self.label_fa.setVisible(True)
             self.fa_min_box.setVisible(False)
+            self.symmetrize_btn.setVisible(False)
             self.label_famin.setVisible(False)
             self.fa_max_box.setVisible(False)
             self.label_famax.setVisible(False)
@@ -468,6 +510,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.label_bwmin.setVisible(False)
                 self.bw_max_box.setVisible(False)
                 self.label_bwmax.setVisible(False)
+                self.symmetrize_btn.setVisible(True)
 
             if self.define_with_box.currentIndex() == Filter.F0_BW:
                 self.fa_min_box.setVisible(False)
@@ -484,6 +527,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.label_bwmin.setVisible(True)
                 self.bw_max_box.setVisible(True)
                 self.label_bwmax.setVisible(True)
+                self.symmetrize_btn.setVisible(False)
         
         elif self.tipo_box.currentIndex() == Filter.GROUP_DELAY:
             for i in range(Filter.LEGENDRE + 1):
@@ -573,7 +617,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         gdline, = groupdelaycanvas.ax.plot(f, gd)
         stepline, = stepcanvas.ax.plot(tstep, stepres)
         impulseline, = impulsecanvas.ax.plot(timp, impres)
-        
 
         ap = filtds.origin.ap_dB
         aa = filtds.origin.aa_dB
@@ -583,49 +626,68 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         xmin = 0
         ymax = aa*2
         if filtds.origin.filter_type == Filter.LOW_PASS:
-            fp = filtds.origin.wp/(2*np.pi)
-            fa = filtds.origin.wa/(2*np.pi)
+            fp = filtds.origin.wp * W_TO_F
+            fa = filtds.origin.wa * W_TO_F
             deltaf = (fa - fp)/2
             xmax = fa + deltaf
             xmin = max([0, fp - deltaf])
-            attcanvas.ax.fill_between([xmin, fp], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([xmin, fp], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
-            fp = filtds.origin.wp/(2*np.pi)
-            fa = filtds.origin.wa/(2*np.pi)
+            fp = filtds.origin.wp * W_TO_F
+            fa = filtds.origin.wa * W_TO_F
             deltaf = (fp - fa)/2
             xmax = fp + deltaf
             xmin = max([0, fa - deltaf])
-            attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
-            fp = [w/(2*np.pi) for w in filtds.origin.wp]
-            fa = [w/(2*np.pi) for w in filtds.origin.wa]
+            fp = [w * W_TO_F for w in filtds.origin.wp]
+            fa = [w * W_TO_F for w in filtds.origin.wa]
+            reqfa = [w * W_TO_F for w in filtds.origin.reqwa]
             deltaf = (fa[1] - fa[0])/2
             xmax = fa[1] + deltaf
             xmin = max([0, fa[0] - deltaf])
-            attcanvas.ax.fill_between([xmin,  fa[0]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fa[1], xmax ], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            
+            attcanvas.ax.fill_between([xmin,  reqfa[0]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([reqfa[1], xmax ], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            
+            if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
+                if(fa[0] != reqfa[0]):
+                    attcanvas.ax.fill_between([fa[0],  reqfa[0]], [aa, aa], 0, facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
+                elif(fa[1] != reqfa[1]):
+                    attcanvas.ax.fill_between([reqfa[1], fa[1] ], [aa, aa], 0, facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
+                else:
+                    print("WTF1")
+            attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
-            fp = [w/(2*np.pi) for w in filtds.origin.wp]
-            fa = [w/(2*np.pi) for w in filtds.origin.wa]
+            fp = [w * W_TO_F for w in filtds.origin.wp]
+            fa = [w * W_TO_F for w in filtds.origin.wa]
             deltaf = (fp[1] - fp[0])/2
             xmax = fp[1] + deltaf
             xmin = max([0, fp[0] - deltaf])
-            attcanvas.ax.fill_between([xmin,  fp[0]], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fp[1], xmax ], [ap, ap], ymax, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor='#ffcccb', edgecolor='#ef9a9a', hatch='\\', linewidth=0)
+            
+            if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
+                reqfp = [w * W_TO_F for w in filtds.origin.reqwp]
+                if(fp[0] != reqfp[0]):
+                    attcanvas.ax.fill_between([xmin,  reqfp[0]], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
+                elif(fp[1] != reqfp[1]):
+                    attcanvas.ax.fill_between([reqfp[1], xmax ], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
+                else:
+                    print("WTF")
+            attcanvas.ax.fill_between([xmin,  fp[0]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fp[1], xmax ], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
         
         elif filtds.origin.filter_type == Filter.GROUP_DELAY:
-            frg = filtds.origin.wrg/(2*np.pi)
+            frg = filtds.origin.wrg * W_TO_F
             xmax = 2 * frg
             xmin = 0
 
@@ -1054,20 +1116,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.N_label.setText(str(self.selected_dataset_data.origin.N))
         self.N_min_box.setValue(self.selected_dataset_data.origin.N_min)
         self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)
-        self.Q_max_box.setValue(self.selected_dataset_data.origin.Q_max)
         Qs = [self.calcQ(p) for p in self.selected_dataset_data.origin.tf.getZP()[1]]
         self.max_Q_label.setText("{:.2f}".format(max(Qs)))
-
+        self.define_with_box.setCurrentIndex(self.selected_dataset_data.origin.define_with)
         if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             self.fp_box.setValue(0)
             self.fa_box.setValue(0)
-            self.fa_min_box.setValue(self.selected_dataset_data.origin.wa[0] / (2 * np.pi))
-            self.fa_max_box.setValue(self.selected_dataset_data.origin.wa[1] / (2 * np.pi))
-            self.fp_min_box.setValue(self.selected_dataset_data.origin.wp[0] / (2 * np.pi))
-            self.fp_max_box.setValue(self.selected_dataset_data.origin.wp[1] / (2 * np.pi)) 
+            
+            if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
+                fa = []
+                fp = []
+                if(self.selected_dataset_data.origin.filter_type == Filter.BAND_PASS):
+                    fp = [w * W_TO_F for w in self.selected_dataset_data.origin.wp]
+                    fa = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwa]
+                else:
+                    fp = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwp]
+                    fa = [w * W_TO_F for w in self.selected_dataset_data.origin.wa]
+                self.fa_min_box.setValue(fa[0])
+                self.fa_max_box.setValue(fa[1])
+                self.fp_min_box.setValue(fp[0])
+                self.fp_max_box.setValue(fp[1])
+            else:
+                self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1])
+                self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0])
+                self.f0_box.setValue(self.selected_dataset_data.origin.w0 * W_TO_F)
         elif self.selected_dataset_data.origin.filter_type in [Filter.LOW_PASS, Filter.HIGH_PASS]:
-            self.fp_box.setValue(self.selected_dataset_data.origin.wp / (2 * np.pi))
-            self.fa_box.setValue(self.selected_dataset_data.origin.wa / (2 * np.pi))
+            self.fp_box.setValue(self.selected_dataset_data.origin.wp * W_TO_F)
+            self.fa_box.setValue(self.selected_dataset_data.origin.wa * W_TO_F)
             self.fa_min_box.setValue(0)
             self.fa_max_box.setValue(0)
             self.fp_min_box.setValue(0)

@@ -1357,8 +1357,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>198</width>
-                <height>310</height>
+                <width>215</width>
+                <height>303</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1377,6 +1377,50 @@
                <property name="leftMargin">
                 <number>3</number>
                </property>
+               <item row="12" column="1">
+                <widget class="QComboBox" name="compareapprox_cb">
+                 <item>
+                  <property name="text">
+                   <string>None</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Butterworth</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Chebyshev</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Chebyshev 2</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Cauer</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Legendre</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Bessel</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Gauss</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
                <item row="3" column="1">
                 <widget class="QComboBox" name="aprox_box">
                  <item>
@@ -1423,17 +1467,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="9" column="1">
-                <widget class="QDoubleSpinBox" name="Q_max_box">
-                 <property name="maximum">
-                  <double>9999999.990000000223517</double>
-                 </property>
-                 <property name="value">
-                  <double>9999999.990000000223517</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="12" column="1">
+               <item row="11" column="1">
                 <widget class="QDoubleSpinBox" name="denorm_box">
                  <property name="suffix">
                   <string>%</string>
@@ -1455,19 +1489,6 @@
                  </property>
                 </widget>
                </item>
-               <item row="13" column="1">
-                <widget class="QComboBox" name="compareapprox_cb"/>
-               </item>
-               <item row="6" column="1">
-                <widget class="QSpinBox" name="N_min_box">
-                 <property name="minimum">
-                  <number>1</number>
-                 </property>
-                 <property name="maximum">
-                  <number>50</number>
-                 </property>
-                </widget>
-               </item>
                <item row="8" column="1">
                 <widget class="QLabel" name="N_label">
                  <property name="maximumSize">
@@ -1481,10 +1502,34 @@
                  </property>
                 </widget>
                </item>
+               <item row="6" column="1">
+                <widget class="QSpinBox" name="N_min_box">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>50</number>
+                 </property>
+                </widget>
+               </item>
                <item row="6" column="0">
                 <widget class="QLabel" name="label_49">
                  <property name="text">
                   <string>Min. order</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="9" column="0">
+                <widget class="QLabel" name="label_32">
+                 <property name="text">
+                  <string>Max Q</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="8" column="0">
+                <widget class="QLabel" name="label_36">
+                 <property name="text">
+                  <string>Order</string>
                  </property>
                 </widget>
                </item>
@@ -1523,13 +1568,6 @@
                  </item>
                 </widget>
                </item>
-               <item row="8" column="0">
-                <widget class="QLabel" name="label_36">
-                 <property name="text">
-                  <string>Order</string>
-                 </property>
-                </widget>
-               </item>
                <item row="2" column="0">
                 <widget class="QLabel" name="label_27">
                  <property name="text">
@@ -1539,13 +1577,6 @@
                </item>
                <item row="0" column="1">
                 <widget class="QComboBox" name="selfil_cb"/>
-               </item>
-               <item row="9" column="0">
-                <widget class="QLabel" name="label_83">
-                 <property name="text">
-                  <string>Max Q limit</string>
-                 </property>
-                </widget>
                </item>
                <item row="1" column="0">
                 <widget class="QLabel" name="label_26">
@@ -1571,14 +1602,14 @@
                  </property>
                 </widget>
                </item>
-               <item row="11" column="0">
+               <item row="10" column="0">
                 <widget class="QLabel" name="label_28">
                  <property name="text">
                   <string>Gain</string>
                  </property>
                 </widget>
                </item>
-               <item row="12" column="0">
+               <item row="11" column="0">
                 <widget class="QLabel" name="label_61">
                  <property name="text">
                   <string>Denormalization</string>
@@ -1605,14 +1636,14 @@
                  </property>
                 </widget>
                </item>
-               <item row="13" column="0">
+               <item row="12" column="0">
                 <widget class="QLabel" name="label_30">
                  <property name="text">
                   <string>Compare</string>
                  </property>
                 </widget>
                </item>
-               <item row="11" column="1">
+               <item row="10" column="1">
                 <widget class="QDoubleSpinBox" name="gain_box">
                  <property name="minimum">
                   <double>0.010000000000000</double>
@@ -1628,14 +1659,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="10" column="0">
-                <widget class="QLabel" name="label_32">
-                 <property name="text">
-                  <string>Max Q</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="10" column="1">
+               <item row="9" column="1">
                 <widget class="QLabel" name="max_Q_label">
                  <property name="text">
                   <string>?</string>
@@ -1676,9 +1700,9 @@
                  <property name="geometry">
                   <rect>
                    <x>0</x>
-                   <y>0</y>
+                   <y>-182</y>
                    <width>178</width>
-                   <height>402</height>
+                   <height>431</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -1694,195 +1718,6 @@
                   <property name="rightMargin">
                    <number>9</number>
                   </property>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="label_ap">
-                    <property name="text">
-                     <string>Ap</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="13" column="1">
-                   <widget class="ScienDSpinBox" name="frg_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>Hz</string>
-                    </property>
-                    <property name="maximum">
-                     <double>1000000000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="9" column="0">
-                   <widget class="QLabel" name="label_f0">
-                    <property name="text">
-                     <string>f0</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="14" column="0">
-                   <widget class="QLabel" name="label_tolerance">
-                    <property name="text">
-                     <string>Tolerance</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="7" column="1">
-                   <widget class="ScienDSpinBox" name="fp_max_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>Hz</string>
-                    </property>
-                    <property name="maximum">
-                     <double>1000000000.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="13" column="0">
-                   <widget class="QLabel" name="label_fRG">
-                    <property name="text">
-                     <string>fRG</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="10" column="0">
-                   <widget class="QLabel" name="label_tau0">
-                    <property name="text">
-                     <string>tau0</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="0">
-                   <widget class="QLabel" name="label_famin">
-                    <property name="text">
-                     <string>fa min</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="1">
-                   <widget class="ScienDSpinBox" name="fp_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>Hz</string>
-                    </property>
-                    <property name="maximum">
-                     <double>1000000000.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>1.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="1">
-                   <widget class="QDoubleSpinBox" name="aa_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="prefix">
-                     <string/>
-                    </property>
-                    <property name="suffix">
-                     <string> dB</string>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>1000000.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>20.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="9" column="1">
-                   <widget class="ScienDSpinBox" name="f0_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>Hz</string>
-                    </property>
-                    <property name="minimum">
-                     <double>0.000000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>1000000000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>1000.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="11" column="1">
-                   <widget class="ScienDSpinBox" name="bw_max_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>Hz</string>
-                    </property>
-                    <property name="maximum">
-                     <double>100000000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>200.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="6" column="0">
-                   <widget class="QLabel" name="label_fpmin">
-                    <property name="text">
-                     <string>fp min</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="1">
-                   <widget class="ScienDSpinBox" name="fa_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>Hz</string>
-                    </property>
-                    <property name="maximum">
-                     <double>1000000000.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>10.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="12" column="1">
-                   <widget class="ScienDSpinBox" name="bw_min_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>Hz</string>
-                    </property>
-                    <property name="maximum">
-                     <double>100000000.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>100.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="2" column="0">
                    <widget class="QLabel" name="label_aa">
                     <property name="text">
@@ -1890,7 +1725,7 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="14" column="1">
+                  <item row="16" column="1">
                    <widget class="QDoubleSpinBox" name="tol_box">
                     <property name="enabled">
                      <bool>true</bool>
@@ -1909,43 +1744,6 @@
                     </property>
                     <property name="singleStep">
                      <double>0.500000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="10" column="1">
-                   <widget class="ScienDSpinBox" name="tau0_box">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="suffix">
-                     <string>s</string>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                    <property name="value">
-                     <double>0.010000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="label_fp">
-                    <property name="text">
-                     <string>fp</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="8" column="0">
-                   <widget class="QLabel" name="label_famax">
-                    <property name="text">
-                     <string>fa max</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="0">
-                   <widget class="QLabel" name="label_fa">
-                    <property name="text">
-                     <string>fa</string>
                     </property>
                    </widget>
                   </item>
@@ -1982,8 +1780,15 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="8" column="1">
-                   <widget class="ScienDSpinBox" name="fa_max_box">
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="label_fa">
+                    <property name="text">
+                     <string>fa</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="ScienDSpinBox" name="fp_box">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
@@ -1993,8 +1798,73 @@
                     <property name="maximum">
                      <double>1000000000.000000000000000</double>
                     </property>
+                    <property name="value">
+                     <double>1.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="ScienDSpinBox" name="fa_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
+                    <property name="maximum">
+                     <double>1000000000.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>10.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="13" column="0">
+                   <widget class="QLabel" name="label_bwmin">
+                    <property name="text">
+                     <string>Bw min</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="12" column="1">
+                   <widget class="ScienDSpinBox" name="bw_max_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
+                    <property name="maximum">
+                     <double>100000000.000000000000000</double>
+                    </property>
                     <property name="singleStep">
                      <double>1.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>200.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="13" column="1">
+                   <widget class="ScienDSpinBox" name="bw_min_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
+                    <property name="maximum">
+                     <double>100000000.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>100.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="0">
+                   <widget class="QLabel" name="label_famax">
+                    <property name="text">
+                     <string>fa max</string>
                     </property>
                    </widget>
                   </item>
@@ -2023,24 +1893,30 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="12" column="0">
-                   <widget class="QLabel" name="label_bwmin">
-                    <property name="text">
-                     <string>Bw min</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="11" column="0">
-                   <widget class="QLabel" name="label_bwmax">
+                   <widget class="QLabel" name="label_tau0">
                     <property name="text">
-                     <string>Bw max</string>
+                     <string>tau0</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_definewith">
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="label_famin">
                     <property name="text">
-                     <string>Define with</string>
+                     <string>fa min</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="1">
+                   <widget class="ScienDSpinBox" name="fp_max_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
+                    <property name="maximum">
+                     <double>1000000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -2059,6 +1935,161 @@
                       <string>f0, Bw</string>
                      </property>
                     </item>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="label_fp">
+                    <property name="text">
+                     <string>fp</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QDoubleSpinBox" name="aa_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="prefix">
+                     <string/>
+                    </property>
+                    <property name="suffix">
+                     <string> dB</string>
+                    </property>
+                    <property name="minimum">
+                     <double>0.000000000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>1000000.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>20.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="15" column="1">
+                   <widget class="ScienDSpinBox" name="frg_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
+                    <property name="maximum">
+                     <double>1000000000.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>1.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="12" column="0">
+                   <widget class="QLabel" name="label_bwmax">
+                    <property name="text">
+                     <string>Bw max</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="15" column="0">
+                   <widget class="QLabel" name="label_fRG">
+                    <property name="text">
+                     <string>fRG</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="10" column="0">
+                   <widget class="QLabel" name="label_f0">
+                    <property name="text">
+                     <string>f0</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="label_fpmin">
+                    <property name="text">
+                     <string>fp min</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="11" column="1">
+                   <widget class="ScienDSpinBox" name="tau0_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>s</string>
+                    </property>
+                    <property name="singleStep">
+                     <double>1.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.010000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="10" column="1">
+                   <widget class="ScienDSpinBox" name="f0_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
+                    <property name="minimum">
+                     <double>0.000000000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>1000000000.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>1.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>1000.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_ap">
+                    <property name="text">
+                     <string>Ap</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="1">
+                   <widget class="ScienDSpinBox" name="fa_max_box">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="suffix">
+                     <string>Hz</string>
+                    </property>
+                    <property name="maximum">
+                     <double>1000000000.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>1.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="16" column="0">
+                   <widget class="QLabel" name="label_tolerance">
+                    <property name="text">
+                     <string>Tolerance</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_definewith">
+                    <property name="text">
+                     <string>Define with</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="9" column="0" colspan="2">
+                   <widget class="QPushButton" name="symmetrize_btn">
+                    <property name="text">
+                     <string>Symmetrize to tightest template</string>
+                    </property>
                    </widget>
                   </item>
                  </layout>
@@ -2515,10 +2546,8 @@
   <tabstop>aprox_box</tabstop>
   <tabstop>N_min_box</tabstop>
   <tabstop>N_max_box</tabstop>
-  <tabstop>Q_max_box</tabstop>
   <tabstop>gain_box</tabstop>
   <tabstop>denorm_box</tabstop>
-  <tabstop>compareapprox_cb</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>define_with_box</tabstop>
   <tabstop>ap_box</tabstop>

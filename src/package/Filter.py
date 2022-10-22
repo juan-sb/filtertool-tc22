@@ -81,10 +81,16 @@ class AnalogFilter():
         self.remainingPoles = []
         self.remainingGain = np.nan
         self.eparser = ExprParser()
+        self.helperFilters = []
+        self.helperLabels = []
+        self.reqwa = 0
+        self.reqwp = 0
         
     def validate(self):
         self.gp_dB = -self.ap_dB
         self.ga_dB = -self.aa_dB
+        self.reqwa = [-1, -1]
+        self.reqwp = [-1, -1]
         try:
             assert self.N_max <= MAX_ORDER
             assert self.N_min >= 1
@@ -99,6 +105,7 @@ class AnalogFilter():
                 assert self.wp > self.wa
 
             if self.filter_type == BAND_PASS:
+                self.reqwa = self.wa[:]
                 assert self.gp_dB > self.ga_dB 
                 if self.define_with == TEMPLATE_FREQS:
                     assert self.wa[0] < self.wp[0]
@@ -106,15 +113,27 @@ class AnalogFilter():
                     assert self.wp[1] < self.wa[1]
                     self.w0 = np.sqrt(self.wp[0]*self.wp[1]) # me quedo con las frecuencias centrales
                     self.bw[0] = self.wp[1] - self.wp[0] # y los anchos de banda
+                    if(self.wa[0]*self.wa[1] != self.w0**2):
+                        wamincalc = self.w0**2/self.wa[1]
+                        wamaxcalc = self.w0**2/self.wa[0]
+                        if(wamincalc > self.wa[0]):
+                            # mas restrictiva hacia abajo
+                            self.wa[0] = wamincalc
+                        elif(wamaxcalc < self.wa[1]):
+                            # mas restrictiva hacia arriba
+                            self.wa[1] = wamaxcalc
+                        else:
+                            print("WTF")
                     self.bw[1] = self.wa[1] - self.wa[0]
                 elif self.define_with == F0_BW:
                     assert self.bw[0] < self.bw[1]
                     self.wp[0] = 0.5 * (-self.bw[0] + np.sqrt(self.bw[0]**2 + 4*(self.w0**2))) #defino las frecuencias centrales a partir del ancho de banda
                     self.wp[1] = self.wp[0] + self.bw[0]
-                self.wa[0] = 0.5 * (-self.bw[1] + np.sqrt(self.bw[1]**2 + 4*(self.w0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
-                self.wa[1] = self.wa[0] + self.bw[1]
+                    self.wa[0] = 0.5 * (-self.bw[1] + np.sqrt(self.bw[1]**2 + 4*(self.w0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
+                    self.wa[1] = self.wa[0] + self.bw[1]
 
             if self.filter_type == BAND_REJECT:
+                self.reqwp = self.wp[:]
                 assert self.gp_dB > self.ga_dB 
                 if self.define_with == TEMPLATE_FREQS:
                     assert self.wp[0] < self.wa[0]
@@ -122,13 +141,24 @@ class AnalogFilter():
                     assert self.wa[1] < self.wp[1]
                     self.w0 = np.sqrt(self.wa[0]*self.wa[1]) # me quedo con las frecuencias centrales
                     self.bw[0] = self.wa[1] - self.wa[0] # y los anchos de banda
+                    if(self.wp[0]*self.wp[1] != self.w0**2):
+                        wpmincalc = self.w0**2/self.wp[1]
+                        wpmaxcalc = self.w0**2/self.wp[0]
+                        if(wpmincalc > self.wp[0]):
+                            # mas restrictiva hacia abajo
+                            self.wp[0] = wpmincalc
+                        elif(wpmaxcalc < self.wp[1]):
+                            # mas restrictiva hacia arriba
+                            self.wp[1] = wpmaxcalc
+                        else:
+                            print("WTF")
                     self.bw[1] = self.wp[1] - self.wp[0]
                 elif self.define_with == F0_BW:
                     assert self.bw[0] < self.bw[1]
                     self.wa[0] = 0.5 * (-self.bw[0] + np.sqrt(self.bw[0]**2 + 4*(self.w0**2))) #defino las frecuencias centrales a partir del ancho de banda
                     self.wa[1] = self.wa[0] + self.bw[0]
-                self.wp[0] = 0.5 * (-self.bw[1] + np.sqrt(self.bw[1]**2 + 4*(self.w0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
-                self.wp[1] = self.wp[0] + self.bw[1]
+                    self.wp[0] = 0.5 * (-self.bw[1] + np.sqrt(self.bw[1]**2 + 4*(self.w0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
+                    self.wp[1] = self.wp[0] + self.bw[1]
 
             if self.filter_type == GROUP_DELAY:
                 assert self.gamma > 0 and self.gamma < 100
