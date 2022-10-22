@@ -863,38 +863,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tgaincanvas.draw()
         tphasecanvas.draw()
 
-        if(not self.stages_list.currentItem()):
-            return
-        accumulated_ds = self.stages_list.currentItem().data(Qt.UserRole)
+        if(self.stages_list.currentItem()):
+            accumulated_ds = self.stages_list.currentItem().data(Qt.UserRole)
 
-        f = accumulated_ds.data[0]['f']
-        g = accumulated_ds.data[0]['g']
-        ph = accumulated_ds.data[0]['ph']
-        z, p = accumulated_ds.origin.getZP()
+            f = accumulated_ds.data[0]['f']
+            g = accumulated_ds.data[0]['g']
+            ph = accumulated_ds.data[0]['ph']
+            z, p = accumulated_ds.origin.getZP()
 
-        gline, = sgaincanvas.ax.plot(f, g)
-        phline, = sphasecanvas.ax.plot(f, ph)
+            gline, = sgaincanvas.ax.plot(f, g)
+            phline, = sphasecanvas.ax.plot(f, ph)
 
-        (min, max) = self.getRelevantFrequencies(z, p)
-        spzcanvas.ax.axis('equal')
-        spzcanvas.ax.axhline(0, color="black", alpha=0.1)
-        spzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        spzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
-        spzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
-        spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
-        spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+            (min, max) = self.getRelevantFrequencies(z, p)
+            spzcanvas.ax.axis('equal')
+            spzcanvas.ax.axhline(0, color="black", alpha=0.1)
+            spzcanvas.ax.axvline(0, color="black", alpha=0.1)
+            spzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
+            spzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
+            spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
+            spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
 
-        zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
-        poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
+            zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
+            poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
 
-        cursor(zeroes_f).connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
-        cursor(poles_f).connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
+            cursor(zeroes_f).connect(
+                "add", lambda sel: 
+                    sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+            )
+            cursor(poles_f).connect(
+                "add", lambda sel: 
+                    sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+            )
         spzcanvas.draw()
         sgaincanvas.draw()
         sphasecanvas.draw()
@@ -1034,8 +1033,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fa_max_box.setValue(0)
             self.fp_min_box.setValue(0)
             self.fp_max_box.setValue(0)
-        self.updateFilterPlots()
         self.updateFilterStages()
+        self.updateFilterPlots()
         self.updateFilterParametersAvailable()
 
     def updateSelectedDatasetName(self):
