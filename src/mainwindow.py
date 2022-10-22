@@ -169,7 +169,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for x in range(first_dataline_index, last_dataline_index):
             self.dataline_list.takeItem(first_dataline_index)
         self.datalines.pop(i)
-        #self.stage_datasets.pop(i)
+
         ds = self.dataset_list.item(i).data(Qt.UserRole)
         if(ds.type == 'filter'):
             fi = self.filters.index(ds)
@@ -674,7 +674,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.zeros_list.addItem(qlwt)
             for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
-                qlwt.setData(Qt.UserRole, implemented_stage)
+                qlwt.setData(Qt.UserRole, Dataset(origin=implemented_stage))
                 qlwt.setText(stage_to_str(implemented_stage))
                 self.stages_list.addItem(qlwt)
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
