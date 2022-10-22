@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -1357,8 +1357,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>215</width>
-                <height>303</height>
+                <width>198</width>
+                <height>310</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1377,55 +1377,6 @@
                <property name="leftMargin">
                 <number>3</number>
                </property>
-               <item row="8" column="0">
-                <widget class="QLabel" name="label_83">
-                 <property name="text">
-                  <string>Max Q</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QComboBox" name="tipo_box">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <item>
-                  <property name="text">
-                   <string>Low-pass</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>High-pass</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>Band-pass</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>Band-reject</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>Group delay</string>
-                  </property>
-                 </item>
-                </widget>
-               </item>
-               <item row="5" column="0">
-                <widget class="QLabel" name="label_36">
-                 <property name="text">
-                  <string>Order</string>
-                 </property>
-                </widget>
-               </item>
                <item row="3" column="1">
                 <widget class="QComboBox" name="aprox_box">
                  <item>
@@ -1465,7 +1416,24 @@
                  </item>
                 </widget>
                </item>
-               <item row="10" column="1">
+               <item row="3" column="0">
+                <widget class="QLabel" name="label_54">
+                 <property name="text">
+                  <string>Approximation</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="9" column="1">
+                <widget class="QDoubleSpinBox" name="Q_max_box">
+                 <property name="maximum">
+                  <double>9999999.990000000223517</double>
+                 </property>
+                 <property name="value">
+                  <double>9999999.990000000223517</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="12" column="1">
                 <widget class="QDoubleSpinBox" name="denorm_box">
                  <property name="suffix">
                   <string>%</string>
@@ -1487,7 +1455,20 @@
                  </property>
                 </widget>
                </item>
-               <item row="5" column="1">
+               <item row="13" column="1">
+                <widget class="QComboBox" name="compareapprox_cb"/>
+               </item>
+               <item row="6" column="1">
+                <widget class="QSpinBox" name="N_min_box">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>50</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="8" column="1">
                 <widget class="QLabel" name="N_label">
                  <property name="maximumSize">
                   <size>
@@ -1500,7 +1481,138 @@
                  </property>
                 </widget>
                </item>
-               <item row="9" column="1">
+               <item row="6" column="0">
+                <widget class="QLabel" name="label_49">
+                 <property name="text">
+                  <string>Min. order</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QComboBox" name="tipo_box">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>Low-pass</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>High-pass</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Band-pass</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Band-reject</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Group delay</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item row="8" column="0">
+                <widget class="QLabel" name="label_36">
+                 <property name="text">
+                  <string>Order</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="label_27">
+                 <property name="text">
+                  <string>Type</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QComboBox" name="selfil_cb"/>
+               </item>
+               <item row="9" column="0">
+                <widget class="QLabel" name="label_83">
+                 <property name="text">
+                  <string>Max Q limit</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_26">
+                 <property name="text">
+                  <string>Name</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="7" column="0">
+                <widget class="QLabel" name="label_59">
+                 <property name="text">
+                  <string>Max. order</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QLineEdit" name="filtername_box">
+                 <property name="mouseTracking">
+                  <bool>false</bool>
+                 </property>
+                 <property name="acceptDrops">
+                  <bool>false</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="11" column="0">
+                <widget class="QLabel" name="label_28">
+                 <property name="text">
+                  <string>Gain</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="12" column="0">
+                <widget class="QLabel" name="label_61">
+                 <property name="text">
+                  <string>Denormalization</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="7" column="1">
+                <widget class="QSpinBox" name="N_max_box">
+                 <property name="minimum">
+                  <number>0</number>
+                 </property>
+                 <property name="maximum">
+                  <number>50</number>
+                 </property>
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_29">
+                 <property name="text">
+                  <string>Selected</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="13" column="0">
+                <widget class="QLabel" name="label_30">
+                 <property name="text">
+                  <string>Compare</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="11" column="1">
                 <widget class="QDoubleSpinBox" name="gain_box">
                  <property name="minimum">
                   <double>0.010000000000000</double>
@@ -1517,114 +1629,16 @@
                 </widget>
                </item>
                <item row="10" column="0">
-                <widget class="QLabel" name="label_61">
+                <widget class="QLabel" name="label_32">
                  <property name="text">
-                  <string>Denormalization</string>
+                  <string>Max Q</string>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="1">
-                <widget class="QLineEdit" name="filtername_box">
-                 <property name="mouseTracking">
-                  <bool>false</bool>
-                 </property>
-                 <property name="acceptDrops">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="9" column="0">
-                <widget class="QLabel" name="label_28">
+               <item row="10" column="1">
+                <widget class="QLabel" name="max_Q_label">
                  <property name="text">
-                  <string>Gain</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QComboBox" name="selfil_cb"/>
-               </item>
-               <item row="7" column="0">
-                <widget class="QLabel" name="label_59">
-                 <property name="text">
-                  <string>Max. order</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QLabel" name="label_29">
-                 <property name="text">
-                  <string>Selected</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="7" column="1">
-                <widget class="QSpinBox" name="N_max_box">
-                 <property name="minimum">
-                  <number>25</number>
-                 </property>
-                 <property name="maximum">
-                  <number>50</number>
-                 </property>
-                 <property name="value">
-                  <number>25</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QLabel" name="label_27">
-                 <property name="text">
-                  <string>Type</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="6" column="1">
-                <widget class="QSpinBox" name="N_min_box">
-                 <property name="minimum">
-                  <number>1</number>
-                 </property>
-                 <property name="maximum">
-                  <number>25</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="label_26">
-                 <property name="text">
-                  <string>Name</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="8" column="1">
-                <widget class="QDoubleSpinBox" name="Q_max_box">
-                 <property name="maximum">
-                  <double>9999999.990000000223517</double>
-                 </property>
-                 <property name="value">
-                  <double>9999999.990000000223517</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QLabel" name="label_54">
-                 <property name="text">
-                  <string>Approximation</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="6" column="0">
-                <widget class="QLabel" name="label_49">
-                 <property name="text">
-                  <string>Min. order</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="11" column="1">
-                <widget class="QComboBox" name="compareapprox_cb"/>
-               </item>
-               <item row="11" column="0">
-                <widget class="QLabel" name="label_30">
-                 <property name="text">
-                  <string>Compare</string>
+                  <string>?</string>
                  </property>
                 </widget>
                </item>
@@ -2308,7 +2322,7 @@
         <item row="0" column="1">
          <widget class="QTabWidget" name="tabWidget_3">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab_19">
            <attribute name="title">

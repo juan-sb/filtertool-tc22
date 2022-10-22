@@ -630,7 +630,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             xmin = 0
 
         attcanvas.ax.set_xlim(xmin, xmax)
-        fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.1*xmin, stop=10*xmax, num=15000)
+        fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
         attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
 
         pzcanvas.ax.axis('equal')
@@ -1055,6 +1055,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.N_min_box.setValue(self.selected_dataset_data.origin.N_min)
         self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)
         self.Q_max_box.setValue(self.selected_dataset_data.origin.Q_max)
+        Qs = [self.calcQ(p) for p in self.selected_dataset_data.origin.tf.getZP()[1]]
+        self.max_Q_label.setText("{:.2f}".format(max(Qs)))
 
         if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             self.fp_box.setValue(0)
