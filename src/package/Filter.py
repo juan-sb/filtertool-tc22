@@ -67,6 +67,25 @@ def is_complex(z):
 def is_equal(z1, z2):
     return abs(np.real(z1) - np.real(z2)) + abs(np.imag(z1) - np.imag(z2)) < 1e-5
 
+def approx_to_str(apprind):
+    if(apprind == BUTTERWORTH):
+        return "Butterworth"
+    elif(apprind == CHEBYSHEV):
+        return "Chebyshev I"
+    elif(apprind == CHEBYSHEV2):
+        return "Chebyshev II"
+    elif(apprind == CAUER):
+        return "Cauer"
+    elif(apprind == LEGENDRE):
+        return "Legendre"
+    elif(apprind == BESSEL):
+        return "Bessel"
+    elif(apprind == GAUSS):
+        return "Gauss"
+    elif(apprind == APPRX_NONE):
+        return "None"
+    return "None"
+
 
 class AnalogFilter():
     def __init__(self, **kwargs):
@@ -86,6 +105,9 @@ class AnalogFilter():
         self.reqwa = 0
         self.reqwp = 0
         
+    def __str__(self):
+        return "{} - orden {}".format(approx_to_str(self.approx_type), self.N)
+
     def validate(self):
         self.gp_dB = -self.ap_dB
         self.ga_dB = -self.aa_dB
@@ -441,6 +463,6 @@ class AnalogFilter():
         else:
             params["N_min"] = self.helper_N
             params["N_max"] = self.helper_N
-            
+
         self.helperFilters = AnalogFilter(**params)
         valid, msg = self.helperFilters.validate()

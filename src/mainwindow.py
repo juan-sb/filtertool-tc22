@@ -705,10 +705,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         attcanvas.ax.set_xlim(xmin, xmax)
         fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
-        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
+        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
         fa, ga, pa, gda = filtds.origin.helperFilters.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
-        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga))
-
+        attline, = attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin.helperFilters))
+        attcanvas.ax.legend()
+        
         pzcanvas.ax.axis('equal')
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
