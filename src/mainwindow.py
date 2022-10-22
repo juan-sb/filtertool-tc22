@@ -1453,6 +1453,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     qlwt.setData(Qt.UserRole, dl)
                     qlwt.setText(dl.name)
                     self.dataline_list.addItem(qlwt)
+                if(ds.type == 'filter'):
+                    self.filters.append(ds)
+                    self.selfil_cb.blockSignals(True)
+                    self.stages_selfil_cb.blockSignals(True)
+                    self.selfil_cb.addItem(ds.title, ds)
+                    self.stages_selfil_cb.addItem(ds.title, ds)
+                    self.selfil_cb.blockSignals(False)
+                    self.stages_selfil_cb.blockSignals(False)
+
             self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
             self.updateAll()
     
