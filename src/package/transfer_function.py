@@ -73,8 +73,11 @@ class TFunction():
         self.computedDerivatives = False
         self.tf_object = signal.ZerosPolesGain(self.z, self.p, self.k)
 
-    def getZPK(self):
-        return self.z, self.p, self.k
+    def getZPK(self, in_hz=False):
+        if(in_hz):
+            return self.z/(2*np.pi), self.p/(2*np.pi), self.k
+        else:
+            return self.z, self.p, self.k
 
     def getDerivatives(self):
         N = Polynomial(np.flip(self.N))
@@ -118,8 +121,11 @@ class TFunction():
             self.getDerivatives()
         return -np.imag(1j*(poly_at(self.dN, 1j*w0)/poly_at(self.N, 1j*w0) - poly_at(self.dD, 1j*w0)/poly_at(self.D, 1j*w0))) #'1j*..' --> regla de la cadena
         
-    def getZP(self):
-        return self.z, self.p
+    def getZP(self, in_hz=False):
+        if(in_hz):
+            return self.z/(2*np.pi), self.p/(2*np.pi)
+        else:
+            return self.z, self.p
 
     def getBode(self, linear=False, start=-2, stop=6, num=10000):
         if linear:

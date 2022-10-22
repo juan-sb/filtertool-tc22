@@ -1,4 +1,5 @@
 # PyQt5 modules
+from math import inf
 from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QColorDialog, QFileDialog, QDialog
 from PyQt5.QtCore import Qt
 
@@ -31,6 +32,18 @@ import pickle
 MARKER_STYLES = { 'None': '', 'Point': '.',  'Pixel': ',',  'Circle': 'o',  'Triangle down': 'v',  'Triangle up': '^',  'Triangle left': '<',  'Triangle right': '>',  'Tri down': '1',  'Tri up': '2',  'Tri left': '3',  'Tri right': '4',  'Octagon': '8',  'Square': 's',  'Pentagon': 'p',  'Plus (filled)': 'P',  'Star': '*',  'Hexagon': 'h',  'Hexagon alt.': 'H',  'Plus': '+',  'x': 'x',  'x (filled)': 'X',  'Diamond': 'D',  'Diamond (thin)': 'd',  'Vline': '|',  'Hline': '_' }
 LINE_STYLES = { 'None': '', 'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':' }
 
+POLE_COLOR = '#FF0000'
+POLE_SEL_COLOR = '#00FF00'
+ZERO_COLOR = '#0000FF'
+ZERO_SEL_COLOR = '#00FF00'
+
+SHOW_PZ_IN_HZ = True
+PZ_XLABEL = f'$\sigma/2\pi$ [1/s]' if SHOW_PZ_IN_HZ else '$\sigma$ ($rad/s$)'
+PZ_YLABEL = f'$jf$ [Hz]' if SHOW_PZ_IN_HZ else '$j\omega$ ($rad/s$)'
+F_TO_W = 2*np.pi
+W_TO_F = 1/F_TO_W
+SING_B_TO_F = W_TO_F if SHOW_PZ_IN_HZ else 1
+SING_F_TO_B = F_TO_W if SHOW_PZ_IN_HZ else 1
 
 def stage_to_str(stage):
     stage_str = 'Z={'
@@ -141,6 +154,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.filters = []
         self.selfil_cb.currentIndexChanged.connect(self.populateSelectedFilterDetails)
+        self.stages_selfil_cb.currentIndexChanged.connect(self.populateSelectedFilterDetails)
 
 
     def addDataset(self, ds):
@@ -175,6 +189,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             fi = self.filters.index(ds)
             self.filters.pop(fi)
             self.selfil_cb.removeItem(fi)
+            self.stages_selfil_cb.removeItem(fi)
             if(self.selfil_cb.count() == 0):
                 self.chg_filter_btn.setEnabled(False)
         self.dataset_list.takeItem(i)
@@ -349,8 +364,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ds = Dataset(filepath='', origin=newFilter, title=self.filtername_box.text())
         self.filters.append(ds)
         self.selfil_cb.blockSignals(True)
+        self.stages_selfil_cb.blockSignals(True)
         self.selfil_cb.addItem(ds.title, ds)
+        self.stages_selfil_cb.addItem(ds.title, ds)
         self.selfil_cb.blockSignals(False)
+        self.stages_selfil_cb.blockSignals(False)
         self.chg_filter_btn.setEnabled(True)
         self.addDataset(ds)
     
@@ -367,6 +385,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ds.title = self.filtername_box.text()
         self.selected_dataset_widget.setText(self.filtername_box.text())
         self.selfil_cb.setItemText(self.selfil_cb.currentIndex(), ds.title)
+        self.stages_selfil_cb.setItemText(self.selfil_cb.currentIndex(), ds.title)
         self.selected_dataset_widget.setData(Qt.UserRole, ds)
         self.filters[self.selfil_cb.currentIndex()] = ds
         self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
@@ -546,7 +565,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
         ph = np.array(filtds.data[0]['ph'])
         gd = np.array(filtds.data[0]['gd'])
-        z, p = filtds.origin.tf.getZP()
+        z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
 
         gainline, = gaincanvas.ax.plot(f, g)
         magline, = magcanvas.ax.plot(f, g)
@@ -624,19 +643,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         py = p.imag
         zeroes = pzcanvas.ax.scatter(zx, zy, marker='o')
         poles = pzcanvas.ax.scatter(px, py, marker='x')
-        pzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
-        pzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
+        pzcanvas.ax.set_xlabel(PZ_XLABEL)
+        pzcanvas.ax.set_ylabel(PZ_YLABEL)
         pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
         pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
-        cursor(zeroes, multiple=True, highlight=True).connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
-        cursor(poles, multiple=True, highlight=True).connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
-        
+        cursor(zeroes, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
+        cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
 
         attcanvas.draw()
         gaincanvas.draw()
@@ -657,19 +669,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
-            zeros, poles = self.selected_dataset_data.origin.tf.getZP()
+            zeros, poles = self.selected_dataset_data.origin.tf.getZP(SHOW_PZ_IN_HZ)
             for p in poles:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, p)
                 qlwt.setText(str(p))
-                if(p not in self.selected_dataset_data.origin.remainingPoles):
+                if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.poles_list.addItem(qlwt)
             for z in zeros:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, z)
                 qlwt.setText(str(z))
-                if(z not in self.selected_dataset_data.origin.remainingZeros):
+                if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.zeros_list.addItem(qlwt)
             for implemented_stage in self.selected_dataset_data.origin.stages:
@@ -695,7 +707,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if(pole.isSelected()):
                 if(x not in selected_pol_indexes):
                     sel = Selection(
-                        artist=self.splot_tpz.canvas.ax,
+                        artist=self.splot_fpz.canvas.ax,
                         target_=[poledata.real, poledata.imag],
                         index=self.poles_list.row(pole),
                         dist=0,
@@ -715,7 +727,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if(zero.isSelected()):
                 if(x not in selected_zer_indexes):
                     sel = Selection(
-                        artist=self.splot_tpz.canvas.ax,
+                        artist=self.splot_fpz.canvas.ax,
                         target_=[zerodata.real, zerodata.imag],
                         index=self.zeros_list.row(zero),
                         dist=0,
@@ -755,7 +767,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         selected_poles_idx.sort(reverse=True)
         selected_zeros_idx.sort(reverse=True)
 
-        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain):
+        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, SHOW_PZ_IN_HZ):
             for z in selected_zeros_idx:
                 self.zeros_list.item(z).setFlags(Qt.ItemFlag.NoItemFlags)
             for p in selected_poles_idx:
@@ -786,24 +798,46 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.selected_dataset_data.origin.removeStage(i)
         
-        zeros, poles = self.selected_dataset_data.origin.tf.getZP()
+        zeros, poles = self.selected_dataset_data.origin.tf.getZP(SHOW_PZ_IN_HZ)
         for p in poles:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, p)
             qlwt.setText(str(p))
-            if(p not in self.selected_dataset_data.origin.remainingPoles):
+            if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F):
                 qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
             self.poles_list.addItem(qlwt)
         for z in zeros:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, z)
             qlwt.setText(str(z))
-            if(z not in self.selected_dataset_data.origin.remainingZeros):
+            if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F):
                 qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
             self.zeros_list.addItem(qlwt)
         self.stages_list.takeItem(i)
         self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
         self.stages_list.setCurrentRow(self.stages_list.count() - 1)
+
+    def formatPoleAnnotation(self, sel):
+        sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, sel.target[0], sel.target[1], self.calcQ(sel.target)))
+
+    def formatZeroAnnotation(self, sel):
+        if(True or sel.target[0] == 0 and sel.target[1] == 0):
+            sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
+        else:
+            sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, sel.target[0], sel.target[1], self.calcQ(sel.target)))
+
+    def calcQ(self, singRe, singIm):
+        return self.calcQ(singRe + singIm*1j)
+
+    def calcQ(self, sing):
+        if(isinstance(sing, (list, tuple, np.ndarray))):
+            sing = sing[0] + sing[1]*1j
+        if(sing.real == 0):
+            return inf
+        elif(sing.real > 0):
+            return -1
+        else:
+            return np.abs(sing)/(- 2 * sing.real)
 
     def updateStagePlots(self):
         spzcanvas = self.splot_pz.canvas
@@ -812,41 +846,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
         tpzcanvas = self.splot_tpz.canvas
+        fpzcanvas = self.splot_fpz.canvas
 
-        self.condition_canvas(spzcanvas, '', '')
-        self.condition_canvas(tpzcanvas, '', '')
+        self.condition_canvas(spzcanvas, PZ_XLABEL, PZ_YLABEL)
+        self.condition_canvas(fpzcanvas, PZ_XLABEL, PZ_YLABEL)
+        self.condition_canvas(tpzcanvas, PZ_XLABEL, PZ_YLABEL)
         self.condition_canvas(sgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
         self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
         self.condition_canvas(tgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
         self.condition_canvas(tphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
 
-        zt, pt = self.selected_dataset_data.origin.tf.getZP()
-        (mint, maxt) = self.getRelevantFrequencies(zt, pt)
+        zf, pf = self.selected_dataset_data.origin.tf.getZP(SHOW_PZ_IN_HZ)
+        mint, maxt = self.getRelevantFrequencies(zf, pf)
 
-        tpzcanvas.ax.axis('equal')
-        tpzcanvas.ax.axhline(0, color="black", alpha=0.1)
-        tpzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        tpzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
-        tpzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
-        tpzcanvas.ax.set_xlim(left=-maxt*1.2, right=maxt*1.2)
-        tpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
+        fpzcanvas.ax.axis('equal')
+        fpzcanvas.ax.axhline(0, color="black", alpha=0.1)
+        fpzcanvas.ax.axvline(0, color="black", alpha=0.1)
+        fpzcanvas.ax.set_xlim(left=-maxt*1.2, right=maxt*1.2)
+        fpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
 
-        polcol = ['#FF0000' if pole in self.selected_dataset_data.origin.remainingPoles else '#00FF00' for pole in pt]
-        zercol = ['#0000FF' if zero in self.selected_dataset_data.origin.remainingZeros else '#00FF00' for zero in zt]
-        zeroes_f = tpzcanvas.ax.scatter(zt.real, zt.imag, c=zercol, marker='o')
-        poles_f = tpzcanvas.ax.scatter(pt.real, pt.imag, c=polcol, marker='x')
+        polcol = [POLE_COLOR if pole in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F else POLE_SEL_COLOR for pole in pf]
+        zercol = [ZERO_COLOR if zero in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F else ZERO_SEL_COLOR for zero in zf]
+        zeroes_f = fpzcanvas.ax.scatter(zf.real, zf.imag, c=zercol, marker='o')
+        poles_f = fpzcanvas.ax.scatter(pf.real, pf.imag, c=polcol, marker='x')
         self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
-        self.stageCursorZer.connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
+        self.stageCursorZer.connect("add", self.formatZeroAnnotation)
         self.stageCursorZer.connect("add", self.updateSelectedZerosFromPlot)
         self.stageCursorZer.connect("remove", self.updateSelectedZerosFromPlot)
         self.stageCursorPol = cursor(poles_f, multiple=True, highlight=True)
-        self.stageCursorPol.connect(
-            "add", lambda sel: 
-                sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        )
+        self.stageCursorPol.connect("add", self.formatPoleAnnotation)
         self.stageCursorPol.connect("add", self.updateSelectedPolesFromPlot)
         self.stageCursorPol.connect("remove", self.updateSelectedPolesFromPlot)
 
@@ -855,10 +883,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         f = accumulated_ds.data[0]['f']
         g = accumulated_ds.data[0]['g']
         ph = accumulated_ds.data[0]['ph']
+        tgaincanvas.ax.plot(f, g)
+        tphasecanvas.ax.plot(f, ph)
+        
+        tpzcanvas.ax.axis('equal')
+        tpzcanvas.ax.axhline(0, color="black", alpha=0.1)
+        tpzcanvas.ax.axvline(0, color="black", alpha=0.1)
+        tpzcanvas.ax.set_xlim(left=-maxt*1.2, right=maxt*1.2)
+        tpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
+        zt, pt = self.selected_dataset_data.origin.implemented_tf.getZP(SHOW_PZ_IN_HZ)
+        
+        zeroes_t = tpzcanvas.ax.scatter(zt.real, zt.imag, c='#0000FF', marker='o')
+        poles_t = tpzcanvas.ax.scatter(pt.real, pt.imag, c='#FF0000', marker='x')
+        cursor(zeroes_t, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
+        cursor(poles_t, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
 
-        gline, = tgaincanvas.ax.plot(f, g)
-        phline, = tphasecanvas.ax.plot(f, ph)
-
+        fpzcanvas.draw()
         tpzcanvas.draw()
         tgaincanvas.draw()
         tphasecanvas.draw()
@@ -869,7 +909,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f = accumulated_ds.data[0]['f']
             g = accumulated_ds.data[0]['g']
             ph = accumulated_ds.data[0]['ph']
-            z, p = accumulated_ds.origin.getZP()
+            z, p = accumulated_ds.origin.getZP(SHOW_PZ_IN_HZ)
 
             gline, = sgaincanvas.ax.plot(f, g)
             phline, = sphasecanvas.ax.plot(f, ph)
@@ -878,22 +918,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             spzcanvas.ax.axis('equal')
             spzcanvas.ax.axhline(0, color="black", alpha=0.1)
             spzcanvas.ax.axvline(0, color="black", alpha=0.1)
-            spzcanvas.ax.set_xlabel(f'$\sigma$ ($rad/s$)')
-            spzcanvas.ax.set_ylabel(f'$j\omega$ ($rad/s$)')
             spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
             spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
 
             zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
             poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
 
-            cursor(zeroes_f).connect(
-                "add", lambda sel: 
-                    sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-            )
-            cursor(poles_f).connect(
-                "add", lambda sel: 
-                    sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-            )
+            cursor(zeroes_f).connect("add", self.formatZeroAnnotation)
+            cursor(poles_f).connect("add", self.formatPoleAnnotation)
         spzcanvas.draw()
         sgaincanvas.draw()
         sphasecanvas.draw()
@@ -986,11 +1018,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for i, fds in enumerate(self.filters):
                 if(fds.origin == self.selected_dataset_data.origin):
                     self.selfil_cb.blockSignals(True)
+                    self.stages_selfil_cb.blockSignals(True)
                     self.selfil_cb.setCurrentIndex(i)
+                    self.stages_selfil_cb.setCurrentIndex(i)
                     self.selfil_cb.blockSignals(False)
+                    self.stages_selfil_cb.blockSignals(False)
                     break
         elif(index != -1):
-            filtds = self.selfil_cb.currentData()
+            if(index == self.selfil_cb.currentIndex()):
+                filtds = self.selfil_cb.currentData()
+                self.stages_selfil_cb.blockSignals(True)
+                self.stages_selfil_cb.setCurrentIndex(index)
+                self.stages_selfil_cb.blockSignals(False)
+            else:
+                filtds = self.stages_selfil_cb.currentData()
+                self.selfil_cb.blockSignals(True)
+                self.selfil_cb.setCurrentIndex(index)
+                self.selfil_cb.blockSignals(False)
             if(self.selected_dataset_data.origin != filtds.origin):
                 for x in range(self.dataset_list.count()):
                     item = self.dataset_list.item(x)
@@ -1043,6 +1087,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_data.title = new_title
         if(self.selected_dataset_data.type == 'filter'):
             self.selfil_cb.setItemText(self.selfil_cb.currentIndex(), new_title)
+            self.stages_selfil_cb.setItemText(self.stages_selfil_cb.currentIndex(), new_title)
             self.filtername_box.setText(new_title)
 
     def populateSelectedDatalineDetails(self, listitemwidget, qlistwidget):

@@ -330,7 +330,19 @@ class AnalogFilter():
         self.stages = []
         self.implemented_tf = TFunction(1, 1, normalize=False)
 
-    def addStage(self, z_arr, p_arr, gain):
+    def addStage(self, z_arr, p_arr, gain, pz_in_hz=False):
+        if(pz_in_hz):
+            # Por problemas de precisión, tengo que buscar los polos originales haciendo la misma transformación exacta
+            # que los que llegaron en Hz
+            pindexes = []
+            zindexes = []
+            for p in p_arr:
+                pindexes += [(self.tf.p / (2*np.pi)).tolist().index(p)]
+            for z in z_arr:
+                zindexes += [(self.tf.z / (2*np.pi)).tolist().index(z)]
+            p_arr = [self.tf.p[i] for i in pindexes]
+            z_arr = [self.tf.z[i] for i in zindexes]
+
         if len(z_arr) > 2 or len(p_arr) > 2 or len(p_arr) == 0 or len(z_arr) > len(p_arr):
             return False
         
