@@ -771,7 +771,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
         
             self.stages_list.setCurrentRow(self.stages_list.count() - 1)
-
+            
             self.updateStagePlots()
         else:
             print('Error al crear STAGE')
