@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -101,7 +101,7 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
+                <width>193</width>
                 <height>451</height>
                </rect>
               </property>
@@ -665,7 +665,7 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
+                <width>200</width>
                 <height>492</height>
                </rect>
               </property>
@@ -1590,6 +1590,9 @@
                </item>
                <item row="12" column="1">
                 <widget class="CheckableComboBox" name="compareapprox_cb">
+                 <property name="currentIndex">
+                  <number>-1</number>
+                 </property>
                  <item>
                   <property name="text">
                    <string>Butterworth</string>
@@ -1625,11 +1628,6 @@
                    <string>Gauss</string>
                   </property>
                  </item>
-                 <item>
-                  <property name="text">
-                   <string>None</string>
-                  </property>
-                 </item>
                 </widget>
                </item>
                <item row="11" column="0">
@@ -1648,6 +1646,9 @@
                </item>
                <item row="13" column="1">
                 <widget class="QSpinBox" name="comp_N_box">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Order -1: find lowest order for template&lt;br/&gt;Order 0: use same order as the lead approximation&lt;/p&gt;&lt;p&gt;Order &amp;gt; 0: use this order&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="minimum">
                   <number>-1</number>
                  </property>
@@ -2331,7 +2332,7 @@
           <item row="2" column="0" colspan="2">
            <widget class="QLabel" name="label_87">
             <property name="text">
-             <string>Etapas implementadas</string>
+             <string>Stages</string>
             </property>
            </widget>
           </item>
@@ -2359,12 +2360,29 @@
           <item row="3" column="0" colspan="2">
            <widget class="QListWidget" name="stages_list"/>
           </item>
+          <item row="4" column="0">
+           <widget class="QPushButton" name="sswapup_btn">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QPushButton" name="sswapdown_btn">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="SP_TitleBarUnshadeButton"/>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item row="0" column="1">
          <widget class="QTabWidget" name="tabWidget_3">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_19">
            <attribute name="title">

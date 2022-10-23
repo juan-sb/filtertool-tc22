@@ -469,3 +469,8 @@ class AnalogFilter():
             filt = AnalogFilter(**params)
             valid, msg = filt.validate()
             self.helperFilters.append(filt)
+
+    def swapStages(self, index0, index1):
+        temp = self.stages[index0]
+        self.stages[index0] = self.stages[index1]
+        self.stages[index1] = temp

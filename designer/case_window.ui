@@ -110,17 +110,32 @@
        </item>
        <item>
         <property name="text">
-         <string>dB: 20log(.)</string>
+         <string>|.|</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>dBW: 10log(.)</string>
+         <string>Arg(.)</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>dBm: 10log(.) + 30</string>
+         <string>unwrap Arg(.)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>20log(.)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>20log(|.|)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>unwrap(.)</string>
         </property>
        </item>
       </widget>
@@ -508,7 +523,7 @@
        <property name="title">
         <string>Naming</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,0,0" columnstretch="1,0,0,0">
+       <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,0" columnstretch="1,0,0,0">
         <item row="1" column="0">
          <widget class="QCheckBox" name="case_addlegend_cb">
           <property name="text">

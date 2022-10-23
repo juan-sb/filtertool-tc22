@@ -1,6 +1,6 @@
 # PyQt5 modules
 from math import inf
-from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QColorDialog, QFileDialog, QDialog
+from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QColorDialog, QFileDialog, QDialog, QStyle
 from PyQt5.QtCore import Qt
 
 # Project modules
@@ -161,6 +161,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selfil_cb.currentIndexChanged.connect(self.populateSelectedFilterDetails)
         self.stages_selfil_cb.currentIndexChanged.connect(self.populateSelectedFilterDetails)
         self.symmetrize_btn.clicked.connect(self.makeFilterTemplateSymmetric)
+
+        self.sswapup_btn.setIcon(self.style().standardIcon(QStyle.SP_TitleBarShadeButton))
+        self.sswapdown_btn.setIcon(self.style().standardIcon(QStyle.SP_TitleBarUnshadeButton))
+        self.sswapup_btn.clicked.connect(self.swapStagesUpwards)
+        self.sswapdown_btn.clicked.connect(self.swapStagesDownwards)
 
 
     def addDataset(self, ds):
@@ -866,6 +871,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.updateStagePlots()
         else:
             print('Error al crear STAGE')
+
+    def swapStagesUpwards(self):
+        index = self.stages_list.currentRow()
+        if(not(self.stages_list.count() > 1 and index != 0)):
+            return
+        self.selected_dataset_data.origin.swapStages(index, index - 1)
+        self.stages_list.clear()
+        for stage in self.selected_dataset_data.origin.stages:
+            qlwt = QListWidgetItem()
+            qlwt.setData(Qt.UserRole, Dataset(origin=stage))
+            qlwt.setText(stage_to_str(stage))
+            self.stages_list.addItem(qlwt)
+        self.stages_list.setCurrentRow(index - 1)
+
+    def swapStagesDownwards(self):
+        index = self.stages_list.currentRow()
+        if(not(self.stages_list.count() > 1 and index != (self.stages_list.count() - 1))):
+            return
+        self.selected_dataset_data.origin.swapStages(index, index + 1)
+        self.stages_list.clear()
+        for stage in self.selected_dataset_data.origin.stages:
+            qlwt = QListWidgetItem()
+            qlwt.setData(Qt.UserRole, Dataset(origin=stage))
+            qlwt.setText(stage_to_str(stage))
+            self.stages_list.addItem(qlwt)
+        self.stages_list.setCurrentRow(index + 1)
 
     def removeFilterStage(self):
         i = self.stages_list.currentRow()
