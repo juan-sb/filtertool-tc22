@@ -43,7 +43,7 @@ ADD_TEMPLATE_FACE_COLOR = '#c8e6c9'
 ADD_TEMPLATE_EDGE_COLOR = '#a5d6a7'
 
 SHOW_PZ_IN_HZ = True
-PZ_XLABEL = f'$\sigma/2\pi$ [1/s]' if SHOW_PZ_IN_HZ else '$\sigma$ ($rad/s$)'
+PZ_XLABEL = f'$\sigma$ [1/s]' if SHOW_PZ_IN_HZ else '$\sigma$ ($rad/s$)'
 PZ_YLABEL = f'$jf$ [Hz]' if SHOW_PZ_IN_HZ else '$j\omega$ ($rad/s$)'
 F_TO_W = 2*np.pi
 W_TO_F = 1/F_TO_W
@@ -166,7 +166,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.sswapdown_btn.setIcon(self.style().standardIcon(QStyle.SP_TitleBarUnshadeButton))
         self.sswapup_btn.clicked.connect(self.swapStagesUpwards)
         self.sswapdown_btn.clicked.connect(self.swapStagesDownwards)
+        self.autoselectstagessp_btn.clicked.connect(self.orderStagesBySos)
 
+        self.prevFilterType = Filter.LOW_PASS
+        self.compareapprox_cb.setCurrentIndexes([])
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -174,7 +177,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         qlwt.setText(ds.title)
         self.dataset_list.addItem(qlwt)
         self.datasets.append(ds)
-        #self.stage_datasets.append([])
         self.datalines.append([])
         self.dataset_list.setCurrentRow(self.dataset_list.count() - 1)
 
@@ -334,6 +336,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.updateSelectedDataline()
 
     def buildFilterFromParams(self):
+        if(self.prevFilterType != self.tipo_box.currentIndex()):
+            self.compareapprox_cb.setCurrentIndexes([])
+        self.prevFilterType = self.tipo_box.currentIndex()
         if self.tipo_box.currentIndex() in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             wa = [F_TO_W * self.fa_min_box.value(), F_TO_W * self.fa_max_box.value()]
             wp = [F_TO_W * self.fp_min_box.value(), F_TO_W * self.fp_max_box.value()]
@@ -584,6 +589,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.label_fRG.setVisible(True)
             self.tol_box.setVisible(True)
             self.label_tolerance.setVisible(True)
+            self.symmetrize_btn.setVisible(False)
 
     def condition_canvas(self, canvas, xlabel, ylabel, xscale='linear', yscale='linear', grid=True):
         canvas.ax.clear()
@@ -628,12 +634,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         gd = np.array(filtds.data[0]['gd'])
         z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
 
-        gainline, = gaincanvas.ax.plot(f, g)
-        magline, = magcanvas.ax.plot(f, g)
-        phaseline, = phasecanvas.ax.plot(f, ph)
-        gdline, = groupdelaycanvas.ax.plot(f, gd)
-        stepline, = stepcanvas.ax.plot(tstep, stepres)
-        impulseline, = impulsecanvas.ax.plot(timp, impres)
+        gainline, = gaincanvas.ax.plot(f, g, label = str(filtds.origin))
+        magline, = magcanvas.ax.plot(f, g, label = str(filtds.origin))
+        phaseline, = phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
+        gdline, = groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin))
+        stepline, = stepcanvas.ax.plot(tstep, stepres, label = str(filtds.origin))
+        impulseline, = impulsecanvas.ax.plot(timp, impres, label = str(filtds.origin))
 
         ap = filtds.origin.ap_dB
         aa = filtds.origin.aa_dB
@@ -665,7 +671,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w * W_TO_F for w in filtds.origin.wp]
             fa = [w * W_TO_F for w in filtds.origin.wa]
-            reqfa = [w * W_TO_F for w in filtds.origin.reqwa]
+            reqfa = [w * W_TO_F for w in filtds.origin.reqwa] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fa
             deltaf = (fa[1] - fa[0])/2
             xmax = fa[1] + deltaf
             xmin = max([0, fa[0] - deltaf])
@@ -685,21 +691,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
             fp = [w * W_TO_F for w in filtds.origin.wp]
+            reqfp = [w * W_TO_F for w in filtds.origin.reqwp] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fp
             fa = [w * W_TO_F for w in filtds.origin.wa]
             deltaf = (fp[1] - fp[0])/2
             xmax = fp[1] + deltaf
             xmin = max([0, fp[0] - deltaf])
             
+            attcanvas.ax.fill_between([xmin,  reqfp[0]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([reqfp[1], xmax ], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
-                reqfp = [w * W_TO_F for w in filtds.origin.reqwp]
                 if(fp[0] != reqfp[0]):
-                    attcanvas.ax.fill_between([xmin,  reqfp[0]], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
+                    attcanvas.ax.fill_between([fp[0], reqfp[0]], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
                 elif(fp[1] != reqfp[1]):
-                    attcanvas.ax.fill_between([reqfp[1], xmax ], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
+                    attcanvas.ax.fill_between([reqfp[1], fp[1]], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
                 else:
                     print("WTF")
-            attcanvas.ax.fill_between([xmin,  fp[0]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fp[1], xmax ], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
         
@@ -712,11 +718,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
         attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
 
-        for helper in filtds.origin.helperFilters:
-            fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
-            attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(helper))
-        attcanvas.ax.legend()
-
         pzcanvas.ax.axis('equal')
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
@@ -725,15 +726,44 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         zy = z.imag
         px = p.real
         py = p.imag
-        zeroes = pzcanvas.ax.scatter(zx, zy, marker='o')
-        poles = pzcanvas.ax.scatter(px, py, marker='x')
+        zeroes = pzcanvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
         pzcanvas.ax.set_xlabel(PZ_XLABEL)
         pzcanvas.ax.set_ylabel(PZ_YLABEL)
         pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
         pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         cursor(zeroes, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
-        cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
+        
+        for helper in filtds.origin.helperFilters:
+            fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
+            attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
+            f, g, ph, gd = helper.tf.getBode()
+            z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
 
+            tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
+            timp, impres = signal.impulse(helper.tf.tf_object, N=5000)
+            gaincanvas.ax.plot(f, 20 * np.log10(np.abs(np.array(g))), label = str(helper))
+            magcanvas.ax.plot(f, 20 * np.log10(np.abs(np.array(g))), label = str(helper))
+            phasecanvas.ax.plot(f, ph, label = str(helper))
+            groupdelaycanvas.ax.plot(f, gd, label = str(helper))
+            stepcanvas.ax.plot(tstep, stepres, label = str(helper))
+            impulsecanvas.ax.plot(timp, impres, label = str(helper))
+            pzcanvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper))
+        pzcanvas.ax.set_prop_cycle(None)
+        poles = pzcanvas.ax.scatter(px, py, marker='x', label = str(filtds.origin))
+        cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
+        for helper in filtds.origin.helperFilters:
+            z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
+            pzcanvas.ax.scatter(p.real, p.imag, marker='x', label = str(helper))
+
+        if(len(filtds.origin.helperFilters) > 0):
+            attcanvas.ax.legend()
+            gaincanvas.ax.legend()
+            magcanvas.ax.legend()
+            phasecanvas.ax.legend()
+            groupdelaycanvas.ax.legend()
+            pzcanvas.ax.legend()
+            stepcanvas.ax.legend()
+            impulsecanvas.ax.legend()
         attcanvas.draw()
         gaincanvas.draw()
         magcanvas.draw()
@@ -851,6 +881,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         selected_poles_idx.sort(reverse=True)
         selected_zeros_idx.sort(reverse=True)
 
+        print(selected_zeros_idx)
         if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, SHOW_PZ_IN_HZ):
             for z in selected_zeros_idx:
                 self.zeros_list.item(z).setFlags(Qt.ItemFlag.NoItemFlags)
@@ -897,6 +928,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             qlwt.setText(stage_to_str(stage))
             self.stages_list.addItem(qlwt)
         self.stages_list.setCurrentRow(index + 1)
+
+    def orderStagesBySos(self):
+        self.selected_dataset_data.origin.orderStagesBySos()
+        self.stages_list.clear()
+        for stage in self.selected_dataset_data.origin.stages:
+            qlwt = QListWidgetItem()
+            qlwt.setData(Qt.UserRole, Dataset(origin=stage))
+            qlwt.setText(stage_to_str(stage))
+            self.stages_list.addItem(qlwt)
+        self.updateStagePlots()
 
     def removeFilterStage(self):
         i = self.stages_list.currentRow()
@@ -975,8 +1016,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         fpzcanvas.ax.set_xlim(left=-maxt*1.2, right=maxt*1.2)
         fpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
 
-        polcol = [POLE_COLOR if pole in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F else POLE_SEL_COLOR for pole in pf]
-        zercol = [ZERO_COLOR if zero in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F else ZERO_SEL_COLOR for zero in zf]
+        polcol = []
+        zercol = []
+        rps = np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F
+        rzs = np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F
+        for fp in pf:
+            found = False
+            for rp in rps:
+                if(np.isclose(fp, rp)):
+                    found = True
+                    break
+            polcol.append(POLE_COLOR if found else POLE_SEL_COLOR)
+        for fz in zf:
+            found = False
+            for rz in rzs:
+                if(np.isclose(fz, rz)): 
+                    found = True
+            zercol.append(ZERO_COLOR if found else ZERO_SEL_COLOR)
+
+
+        # polcol = [POLE_COLOR if pole in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F else POLE_SEL_COLOR for pole in pf]
+        # zercol = [ZERO_COLOR if zero in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F else ZERO_SEL_COLOR for zero in zf]
         zeroes_f = fpzcanvas.ax.scatter(zf.real, zf.imag, c=zercol, marker='o')
         poles_f = fpzcanvas.ax.scatter(pf.real, pf.imag, c=polcol, marker='x')
         self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
@@ -1172,24 +1232,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             self.fp_box.setValue(0)
             self.fa_box.setValue(0)
-            
-            if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
-                fa = []
-                fp = []
-                if(self.selected_dataset_data.origin.filter_type == Filter.BAND_PASS):
-                    fp = [w * W_TO_F for w in self.selected_dataset_data.origin.wp]
-                    fa = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwa]
-                else:
-                    fp = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwp]
-                    fa = [w * W_TO_F for w in self.selected_dataset_data.origin.wa]
-                self.fa_min_box.setValue(fa[0])
-                self.fa_max_box.setValue(fa[1])
-                self.fp_min_box.setValue(fp[0])
-                self.fp_max_box.setValue(fp[1])
+            fa = []
+            fp = []
+            if(self.selected_dataset_data.origin.filter_type == Filter.BAND_PASS):
+                fp = [w * W_TO_F for w in self.selected_dataset_data.origin.wp]
+                fa = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwa]
             else:
-                self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1])
-                self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0])
-                self.f0_box.setValue(self.selected_dataset_data.origin.w0 * W_TO_F)
+                fp = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwp]
+                fa = [w * W_TO_F for w in self.selected_dataset_data.origin.wa]
+            self.fa_min_box.setValue(fa[0])
+            self.fa_max_box.setValue(fa[1])
+            self.fp_min_box.setValue(fp[0])
+            self.fp_max_box.setValue(fp[1])
+            self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1] * W_TO_F)
+            self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0] * W_TO_F)
+            self.f0_box.setValue(self.selected_dataset_data.origin.w0 * W_TO_F)
         elif self.selected_dataset_data.origin.filter_type in [Filter.LOW_PASS, Filter.HIGH_PASS]:
             self.fp_box.setValue(self.selected_dataset_data.origin.wp * W_TO_F)
             self.fa_box.setValue(self.selected_dataset_data.origin.wa * W_TO_F)

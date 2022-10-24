@@ -7,7 +7,6 @@ from numpy.polynomial import Polynomial
 from numpy.polynomial import Legendre
 import sympy as sym
 from src.package.Parser import ExprParser
-
 pi = np.pi
 
 MAX_ORDER = 50
@@ -149,10 +148,12 @@ class AnalogFilter():
                     self.bw[1] = self.wa[1] - self.wa[0]
                 elif self.define_with == F0_BW:
                     assert self.bw[0] < self.bw[1]
-                    self.wp[0] = 0.5 * (-self.bw[0] + np.sqrt(self.bw[0]**2 + 4*(self.w0**2))) #defino las frecuencias centrales a partir del ancho de banda
-                    self.wp[1] = self.wp[0] + self.bw[0]
-                    self.wa[0] = 0.5 * (-self.bw[1] + np.sqrt(self.bw[1]**2 + 4*(self.w0**2))) #defino las frecuencias de afuera tal que haya simetría geométrica
-                    self.wa[1] = self.wa[0] + self.bw[1]
+                    Qp = self.w0 / self.bw[0]
+                    Qa = self.w0 / self.bw[1]
+                    self.wp[0] = self.w0 * (np.sqrt(1 + 1 / (4 * (Qp**2))) - 1 / (2 * Qp))
+                    self.wp[1] = self.w0 * (np.sqrt(1 + 1 / (4 * (Qp**2))) + 1 / (2 * Qp))
+                    self.wa[0] = self.w0 * (np.sqrt(1 + 1 / (4 * (Qa**2))) - 1 / (2 * Qa))
+                    self.wa[1] = self.w0 * (np.sqrt(1 + 1 / (4 * (Qa**2))) + 1 / (2 * Qa))
 
             if self.filter_type == BAND_REJECT:
                 self.reqwp = self.wp[:]
@@ -346,15 +347,15 @@ class AnalogFilter():
             zeros, poles = self.tf_norm.getZP()
             for z in zeros:                
                 b = z*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/z
-                z1 = b/2 + np.sqrt(np.power(b/2,2) - c)
-                z2 = b/2 - np.sqrt(np.power(b/2,2) - c)
+                z1 = b/2 + np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
+                z2 = b/2 - np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
                 denorm_z += [z1, z2]
                 zprod *= z
                 zprod2 *= z1 * z2
             for p in poles:
                 b = p*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/p
-                p1 = b/2 + np.sqrt(np.power(b/2,2) - c)
-                p2 = b/2 - np.sqrt(np.power(b/2,2) - c)
+                p1 = b/2 + np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
+                p2 = b/2 - np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
                 denorm_p += [p1, p2]
                 pprod *= p
                 pprod2 *= p1 * p2
@@ -430,10 +431,18 @@ class AnalogFilter():
         self.implemented_tf.removeStage(self.stages[i])
         self.stages[i].denormalize()
         self.remainingGain *= np.real(self.stages[i].k)
-        for z in self.stages[i].z:
-            self.remainingZeros.append(z)
-        for p in self.stages[i].p:
-            self.remainingPoles.append(p)
+        for sz in self.stages[i].z:
+            add_list = []
+            for z in self.tf.z:
+                if(np.isclose(sz, z)):
+                    add_list.append(z)
+            self.remainingZeros += add_list
+        for sp in self.stages[i].p:
+            add_list = []
+            for p in self.tf.p:
+                if(np.isclose(sp, p)):
+                    add_list.append(p)
+            self.remainingPoles += add_list
         self.stages.pop(i)
 
     def addHelperFilters(self):
@@ -474,3 +483,39 @@ class AnalogFilter():
         temp = self.stages[index0]
         self.stages[index0] = self.stages[index1]
         self.stages[index1] = temp
+    
+    def orderStagesBySos(self):
+        sos = signal.zpk2sos(self.tf.z, self.tf.p, self.tf.k, pairing='minimal', analog=True)
+        for sosSection in sos:
+            z_arr, p_arr, gain = signal.tf2zpk(sosSection[0:3], sosSection[3:6])
+            newRemainingZeros = len(self.remainingZeros) - len(z_arr)
+            newRemainingPoles = len(self.remainingPoles) - len(p_arr)
+
+            if newRemainingZeros > newRemainingPoles:
+                return False
+
+            append_gain = self.remainingGain if newRemainingPoles == 0 else gain
+
+            newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=True)
+
+            self.stages.append(newStage_tf)
+            self.implemented_tf.appendStage(newStage_tf)
+            self.remainingGain /= append_gain
+            
+            for z in z_arr:
+                del_list = []
+                for rz in self.remainingZeros:
+                    if(np.isclose(z, rz)):
+                        del_list.append(rz)
+                for d in del_list:
+                    self.remainingZeros.remove(d)
+            for p in p_arr:
+                del_list = []
+                for rp in self.remainingPoles:
+                    if(np.isclose(p, rp)):
+                        del_list.append(rp)
+                for d in del_list:
+                    self.remainingPoles.remove(d)
+        return True
+
+
