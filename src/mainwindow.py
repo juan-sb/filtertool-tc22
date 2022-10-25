@@ -62,7 +62,7 @@ def stage_to_str(stage):
         stage_str += str(p)
         stage_str += ', '
     stage_str += '} , K='
-    stage_str+= str(stage.k)
+    stage_str+= str(stage.gain)
     return stage_str
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -329,7 +329,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif expression == 'delta':
             delta = lambda t, eps: (1 / (np.sqrt(np.pi) *eps)) * np.exp(-(t/eps)**2) #para plotear la delta
             x = delta(t, (t[1] - t[0]))
-            _, response = signal.delta(self.selected_dataset_data.tf.tf_object, T=t)
+            _, response = signal.impulse(self.selected_dataset_data.tf.tf_object, T=t)
         else:
             x = eval(expression)
             response = signal.lsim(self.selected_dataset_data.tf.tf_object , U = x , T = t)[1]
@@ -342,7 +342,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selected_dataset_data.fields.append(title)
         self.selected_dataset_data.fields.append(ans_title)
         
-        self.updateSelectedDataset()
+        self.populateSelectedDatasetDetails(self.selected_dataset_widget, None)
         self.updateSelectedDataline()
 
     def buildFilterFromParams(self):
@@ -1728,7 +1728,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
         elif(sel_impl == CellCalculator.TOWTHOMAS):
             pass
-        elif(sel_impl == CellCalculator.ACKBERG):
+        elif(sel_impl == CellCalculator.ACKERBERG):
             pass
         elif(sel_impl == CellCalculator.FLEISCHERTOW):
             pass

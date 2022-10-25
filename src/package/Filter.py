@@ -352,15 +352,15 @@ class AnalogFilter():
                 z1 = b/2 + np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
                 z2 = b/2 - np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
                 denorm_z += [z1, z2]
-                zprod *= z
-                zprod2 *= z1 * z2
+                zprod = zprod * z #Sospecho de problemas con el *= y /= para complejos
+                zprod2 = zprod * z1 * z2
             for p in poles:
                 b = p*self.bw[0] if self.filter_type==BAND_PASS else self.bw[1]/p
                 p1 = b/2 + np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
                 p2 = b/2 - np.sqrt(np.power(b/2,2) - c, dtype=np.complex128)
                 denorm_p += [p1, p2]
-                pprod *= p
-                pprod2 *= p1 * p2
+                pprod = pprod * p
+                pprod2 = pprod2 * p1 * p2
             orddiff = len(poles) - len(zeros)
             assert orddiff >= 0
             
@@ -432,7 +432,7 @@ class AnalogFilter():
     def removeStage(self, i):
         self.implemented_tf.removeStage(self.stages[i])
         self.stages[i].denormalize()
-        self.remainingGain *= np.real(self.stages[i].k)
+        self.remainingGain = self.remainingGain * np.real(self.stages[i].gain)
         for sz in self.stages[i].z:
             add_list = []
             for z in self.tf.z:
