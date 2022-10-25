@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -101,8 +101,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>187</width>
-                <height>538</height>
+                <width>193</width>
+                <height>451</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -665,8 +665,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>192</width>
-                <height>575</height>
+                <width>200</width>
+                <height>492</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1333,8 +1333,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>217</width>
-                <height>363</height>
+                <width>240</width>
+                <height>386</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1722,8 +1722,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>193</width>
-                   <height>513</height>
+                   <width>203</width>
+                   <height>431</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -2126,7 +2126,7 @@
         <item row="0" column="1">
          <widget class="QTabWidget" name="tabWidget_2">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab_8">
            <attribute name="title">
@@ -2135,16 +2135,6 @@
            <layout class="QGridLayout" name="gridLayout_20">
             <item row="0" column="1">
              <widget class="MplWidget" name="fplot_att" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_18">
-           <attribute name="title">
-            <string>Gain</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_30">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="fplot_gain" native="true"/>
             </item>
            </layout>
           </widget>
@@ -2588,7 +2578,7 @@
      <x>0</x>
      <y>0</y>
      <width>1031</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">

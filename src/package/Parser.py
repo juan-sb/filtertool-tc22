@@ -46,5 +46,8 @@ class ExprParser():
       D = sym.Poly(self.fractionEx[1]).all_coeffs() if (s in self.fractionEx[1].free_symbols) else [self.fractionEx[1].evalf()]
       return N, D
 
-    def getLatex(self):
-      return sym.latex(sym.parsing.sympy_parser.parse_expr(self.txt, transformations = 'all'))
+    def getLatex(self, txt=None):
+      if not txt:
+        return sym.latex(sym.parsing.sympy_parser.parse_expr(self.txt, transformations = 'all'))
+      else:
+        return sym.latex(sym.parsing.sympy_parser.parse_expr(txt, transformations = 'all'))

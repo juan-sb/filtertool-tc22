@@ -169,7 +169,7 @@ class TFunction():
         self.setZPK([i for i in self.z if i not in tf.z], [i for i in self.p if i not in tf.p], self.k/tf.k)
         
     def getLatex(self, txt):
-        return self.eparser.getLatex()
+        return self.eparser.getLatex(txt=txt)
         
     def getSOFilterType(self):
         zp_ord = [len(self.z), len(self.p)]

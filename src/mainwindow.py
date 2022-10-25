@@ -616,7 +616,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def updateFilterPlots(self):
         if(not isinstance(self.selected_dataset_data, Dataset)): return
         attcanvas = self.fplot_att.canvas
-        gaincanvas = self.fplot_gain.canvas
         magcanvas = self.fplot_mag.canvas
         phasecanvas = self.fplot_phase.canvas
         groupdelaycanvas = self.fplot_gd.canvas
@@ -624,7 +623,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         stepcanvas = self.fplot_step.canvas
         impulsecanvas = self.fplot_impulse.canvas
         self.condition_canvas(attcanvas, 'Frecuencia [Hz]', 'Atenuación [dB]')
-        self.condition_canvas(gaincanvas, 'Frecuencia [Hz]', 'Ganancia [dB]')
         self.condition_canvas(magcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
         self.condition_canvas(phasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
         phasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[1.8,2.25,4.5,9]))
@@ -643,7 +641,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         gd = np.array(filtds.data[0]['gd'])
         z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
 
-        gaincanvas.ax.plot(f, g, label = str(filtds.origin))
         magcanvas.ax.plot(f, g, label = str(filtds.origin))
         phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
         groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin))
@@ -749,7 +746,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
             timp, impres = signal.impulse(helper.tf.tf_object, N=5000)
-            gaincanvas.ax.plot(f, 20 * np.log10(np.abs(np.array(g))), label = str(helper))
             magcanvas.ax.plot(f, 20 * np.log10(np.abs(np.array(g))), label = str(helper))
             phasecanvas.ax.plot(f, ph, label = str(helper))
             groupdelaycanvas.ax.plot(f, gd, label = str(helper))
@@ -767,22 +763,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if(len(filtds.origin.helperFilters) > 0):
             attcanvas.ax.legend()
-            gaincanvas.ax.legend()
             magcanvas.ax.legend()
             phasecanvas.ax.legend()
             groupdelaycanvas.ax.legend()
             pzcanvas.ax.legend()
             stepcanvas.ax.legend()
             impulsecanvas.ax.legend()
-
-        # attcanvas.draw()
-        # gaincanvas.draw()
-        # magcanvas.draw()
-        # phasecanvas.draw()
-        # groupdelaycanvas.draw()
-        # pzcanvas.draw()
-        # stepcanvas.draw()
-        # impulsecanvas.draw()
+        attcanvas.draw()
+        magcanvas.draw()
+        phasecanvas.draw()
+        groupdelaycanvas.draw()
+        pzcanvas.draw()
+        stepcanvas.draw()
+        impulsecanvas.draw()
+        
         self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
         self.redrawFilterPlotsArr[self.tabWidget_2.currentIndex()] = False
         self.filterPlots[self.tabWidget_2.currentIndex()].canvas.draw()
