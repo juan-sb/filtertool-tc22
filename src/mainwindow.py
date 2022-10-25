@@ -62,7 +62,7 @@ def stage_to_str(stage):
         stage_str += str(p)
         stage_str += ', '
     stage_str += '} , K='
-    stage_str+= str(stage.k)
+    stage_str+= str(stage.gain)
     return stage_str
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -1705,7 +1705,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
         elif(sel_impl == CellCalculator.TOWTHOMAS):
             pass
-        elif(sel_impl == CellCalculator.ACKBERG):
+        elif(sel_impl == CellCalculator.ACKERBERG):
             pass
         elif(sel_impl == CellCalculator.FLEISCHERTOW):
             pass

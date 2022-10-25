@@ -90,9 +90,16 @@ class SallenKey(Cell):
     def transferFromComponents(self):
         pass
     def calculateLP(self):
-        self.K = 3 - 1 / self.Q 
+        #self.K = 3 - 1 / self.Q 
+        self.R1 = self.R2 = 1000 #valor arbitrario
+        self.C1 = 1/(self.w0*self.R1)
+        self.C2 = self.C1
+        alfa = 3 - 1 / self.Q #Ra/Rb
+        self.Rb = 100
+        self.Ra = alfa*self.Rb
         pass
     def calculateHP(self):
+        self.calculateLP() #Misma fórmula, cambia el orden espacial de componentes
         pass
 
 
@@ -106,6 +113,13 @@ class Rauch(Cell):
         pass
     def transferFromComponents(self):
         pass
+    def calculateLP(self): #sacado del Pablombo
+        assert self.gain < 0 #es inversor
+        self.R1 = 1000
+        self.R2 = -2*self.gain*self.R1 # H(j*w0) = -R2/(2*R1)
+        self.R3 = self.R1 / (((2*self.Q)**2 * (self.R1/self.R2)) -1)
+    def calculateHP(self):
+        self.calculateLP()
 
 class Sedra(Cell):
     def __init__(self):
@@ -124,6 +138,21 @@ class Sedra(Cell):
     def calculateHP(self):
         pass
 
+class DoubleT(Cell):
+    def __init__(self):
+        super().__init__()
+
+    def calculateComponentsZPK(self, z, p, k):
+        pass
+    def calculateComponentsND(self, Ncoeff, Dcoeff):
+        pass
+    def transferFromComponents(self):
+        pass
+
+    def calculateLP(self):
+        pass
+    def calculateHP(self):
+        pass
 
 class FleischerTow(Cell):
     def __init__(self, C1=1e-9, C2=1e-9, R8=1e3, k1=1, k2=1):

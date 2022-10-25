@@ -23,7 +23,8 @@ class TFunction():
 
         self.p = []
         self.z = []
-        self.k = 1
+        self.k = 1 #ganancia de fórmula
+        self.gain = 1 #ganancia verdadera
         self.N = []
         self.D = []
         self.dN = []
@@ -89,17 +90,22 @@ class TFunction():
         self.computedDerivatives = True
 
     def normalize(self):
-        a = 1 #lo voy a usar para normalizar, los zpk que da numpy no vienen normalizados
+        self.gain = self.k
+        a = 1+0j #lo voy a usar para normalizar, los zpk que da numpy no vienen normalizados
         for zero in self.z:
-            a *= -zero
+            if abs(np.real(zero)) + abs(np.imag(zero)) < 1e-32:
+                continue
+            a = -a*zero
         for pole in self.p:
-            a /= -pole
+            if abs(np.real(pole)) + abs(np.imag(pole)) < 1e-32:
+                continue
+            a = -a/pole
         self.k = self.k/a
         self.N = self.N/a
         self.computedDerivatives = False
     
     def denormalize(self):
-        a = 1
+        a = 1+0j
         for zero in self.z:
             a *= -zero
         for pole in self.p:
