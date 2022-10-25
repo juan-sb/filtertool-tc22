@@ -7,6 +7,7 @@ from numpy.polynomial import Polynomial
 from numpy.polynomial import Legendre
 import sympy as sym
 from src.package.Parser import ExprParser
+import traceback
 pi = np.pi
 
 MAX_ORDER = 50
@@ -187,7 +188,7 @@ class AnalogFilter():
                 assert self.gamma > 0 and self.gamma < 100
                 assert self.tau0 > 0
                 assert self.wrg > 0
-
+            # traceback.print_stack(limit=4)
             self.compute_normalized_parameters(init=True)
             self.tf = None
             self.tf_norm = None
@@ -197,6 +198,7 @@ class AnalogFilter():
             self.resetStages()
             if(not self.is_helper):
                 self.addHelperFilters()
+            # traceback.print_stack(limit=4)
             
         except:
             a, err, tb = sys.exc_info()
