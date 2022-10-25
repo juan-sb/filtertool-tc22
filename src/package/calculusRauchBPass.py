@@ -43,7 +43,6 @@ gain *= np.sqrt(10)         # Se agregan 10dB
 
 print("Ganancia total: ", gain)
 
-
 # Variables~parámetros para cálculo de cada celda
 wcero, qsim, alpha, qreal, K, H, HB, C, R2, R1, R1a, R1b, a, Rpot, RpotH, RpotL = symbols(
     'wcero, qsim, alpha, qreal, K, H, HB, C, R2, R1, R1a, R1b, a, Rpot, RpotH, RpotL')
@@ -80,11 +79,6 @@ print(".param R1a_1 ", solution[10],
       "\n.param C_1 ", solution[7],
       "\n.param RpotH_1 ", solution[14],
       "\n.param RpotL_1 ", solution[15])
-
-
-
-
-
 
 # Valores independientes de la celda
 eq3 = Eq(qsim, 1.5)

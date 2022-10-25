@@ -517,5 +517,3 @@ class AnalogFilter():
                 for d in del_list:
                     self.remainingPoles.remove(d)
         return True
-
-

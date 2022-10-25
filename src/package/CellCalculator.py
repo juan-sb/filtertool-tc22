@@ -13,9 +13,15 @@ from abc import ABC, abstractmethod
 E12 = [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2]
 E24 = [1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.3, 3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1]
 MIN_RES = 1e+0
+MIN_RES_EXP = 0
+MAX_RES_EXP = 5
 MAX_RES = 1e+6
 MIN_CAP = 47e-12
+MIN_CAP_EXP = -12
+MAX_CAP_EXP = -3
 MAX_CAP = 470e-6
+IMPL_COUNT = 11
+PASSIVERC, PASSIVERLC, INTEGDERIV, SALLENKEY, RAUCH, DOUBLET, SEDRA, KHN, TOWTHOMAS, ACKERBERG, FLEISCHERTOW = range(IMPL_COUNT)
 
 class Cell(ABC):
     def __init__(self):
@@ -32,6 +38,46 @@ class Cell(ABC):
     def transferFromComponents(self):
         pass
 
+class Passive(Cell):
+    def __init__(self, R=-1, C=-1):
+        super().__init__()
+        self.R = R
+        self.C = C
+
+    def calculateComponentsZPK(self, z, p, k):
+        pass
+    def calculateComponentsND(self, Ncoeff, Dcoeff):
+        pass
+    def transferFromComponents(self):
+        pass
+    def calculateLP(self):
+        # RC simple
+        if(self.R < 0 and self.C > 0 and self.wc > 0):
+            self.R = 1 / (self.wc * self.C)
+        elif(self.R > 0 and self.C < 0 and self.wc > 0):
+            self.C = 1 / (self.wc * self.R)
+        elif (self.R > 0 and self.C > 0 and self.wc < 0):
+            self.wc = 1 / (self.R * self.C)
+        
+        # for RE12 in E12:
+        #     for i in range(MIN_RES_EXP, MAX_RES_EXP + 1):
+        #         R = RE12 * (10 ** i)
+        #         for CE12 in E12:
+        #             for i in range(MIN_CAP_EXP, MAX_CAP_EXP + 1):
+        #                 C = CE12 * (10 ** i)
+        #                 valarr.append([1/(R*C), R, C])
+        #                 print([1/np.sqrt(R*C), R, C])
+        # return sorted(valarr, key = lambda v: np.abs(v[0]-wc))
+        # return valarr
+
+    def calculateHP(self):
+        # CR simple
+        pass
+    def calculateBP(self):
+        # RCRC
+        pass
+    def calculateBR(self):
+        pass
 
 class SallenKey(Cell):
     def __init__(self):
@@ -125,7 +171,6 @@ class FleischerTow(Cell):
 
         self.tf = signal.TransferFunction([m, c, d], [1, a, b])
 
-        
 ft = FleischerTow(C1=47e-9, C2=47e-9, R8=1.5e3)
 
 da = 1100

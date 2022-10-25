@@ -7,6 +7,8 @@ from PyQt5.QtCore import Qt
 from src.ui.mainwindow import Ui_MainWindow
 from src.package.Dataset import Dataset
 import src.package.Filter as Filter
+import src.package.CellCalculator as CellCalculator
+import src.package.transfer_function as TF
 from src.package.Filter import AnalogFilter
 from src.widgets.exprwidget import MplCanvas
 from src.widgets.tf_dialog import TFDialog
@@ -170,6 +172,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.prevFilterType = Filter.LOW_PASS
         self.compareapprox_cb.setCurrentIndexes([])
+
+        self.si_calc_btn.clicked.connect(self.openImplementationDialog)
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -1096,11 +1100,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             cursor(zeroes_f).connect("add", self.formatZeroAnnotation)
             cursor(poles_f).connect("add", self.formatPoleAnnotation)
+            self.si_info.setText(accumulated_ds.origin.getSOFilterType()[1])
+            self.updatePossibleImplementations()
         spzcanvas.draw()
         sgaincanvas.draw()
         sphasecanvas.draw()
-
-
 
     def clearCanvas(self, canvas):
         canvas.ax.clear()
@@ -1609,3 +1613,99 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             multiplier = 1e9
             prefix = 'G'
         return (multiplier, prefix)
+
+    def updatePossibleImplementations(self):
+        if(not self.stages_list.currentItem()):
+            return
+        stage_ds = self.stages_list.currentItem().data(Qt.UserRole)
+        stagetype, text = stage_ds.origin.getSOFilterType()
+        arr = [False] * CellCalculator.IMPL_COUNT
+
+        if(stagetype in [TF.LP1, TF.HP1]):
+            arr[CellCalculator.PASSIVERC] = True
+            arr[CellCalculator.PASSIVERLC] = False
+            arr[CellCalculator.INTEGDERIV] = True
+            arr[CellCalculator.SALLENKEY] = False
+            arr[CellCalculator.RAUCH] = False
+            arr[CellCalculator.DOUBLET] = False
+            arr[CellCalculator.SEDRA] = False
+            arr[CellCalculator.ACKERBERG] = False
+            arr[CellCalculator.TOWTHOMAS] = False
+        else:
+            arr[CellCalculator.INTEGDERIV] = False
+            arr[CellCalculator.FLEISCHERTOW] = True
+            if(stagetype in [TF.LP2, TF.HP2]):
+                arr[CellCalculator.PASSIVERC] = True
+                arr[CellCalculator.PASSIVERLC] = True
+                arr[CellCalculator.SALLENKEY] = True
+                arr[CellCalculator.RAUCH] = True
+                arr[CellCalculator.DOUBLET] = True
+                arr[CellCalculator.SEDRA] = True
+                arr[CellCalculator.ACKERBERG] = stagetype == TF.LP2
+                arr[CellCalculator.KHN] = True
+                arr[CellCalculator.TOWTHOMAS] = stagetype == TF.LP2
+            elif(stagetype == TF.BP):
+                arr[CellCalculator.PASSIVERC] = True # hay que ver el Q!
+                arr[CellCalculator.PASSIVERLC] = True
+                arr[CellCalculator.SALLENKEY] = False
+                arr[CellCalculator.RAUCH] = True
+                arr[CellCalculator.DOUBLET] = False
+                arr[CellCalculator.SEDRA] = False
+                arr[CellCalculator.ACKERBERG] = True
+                arr[CellCalculator.KHN] = True
+                arr[CellCalculator.TOWTHOMAS] = True
+            elif(stagetype in [TF.BR, TF.HPN, TF.LPN]):
+                arr[CellCalculator.PASSIVERC] = True # hay que ver el Q!
+                arr[CellCalculator.PASSIVERLC] = True
+                arr[CellCalculator.SALLENKEY] = False
+                arr[CellCalculator.RAUCH] = False
+                arr[CellCalculator.DOUBLET] = False
+                arr[CellCalculator.SEDRA] = False
+                arr[CellCalculator.ACKERBERG] = False
+                arr[CellCalculator.KHN] = False # Por ahora!
+                arr[CellCalculator.TOWTHOMAS] = False
+        for i in range(CellCalculator.IMPL_COUNT):
+            self.si_type_cb.model().item(i).setEnabled(arr[i])
+        # f = accumulated_ds.data[0]['f']
+        # g = accumulated_ds.data[0]['g']
+        # ph = accumulated_ds.data[0]['ph']
+        # z, p = accumulated_ds.origin.getZP(SHOW_PZ_IN_HZ)
+
+        # gline, = sgaincanvas.ax.plot(f, g)
+        # phline, = sphasecanvas.ax.plot(f, ph)
+
+        # (min, max) = self.getRelevantFrequencies(z, p)
+        # spzcanvas.ax.axis('equal')
+        # spzcanvas.ax.axhline(0, color="black", alpha=0.1)
+        # spzcanvas.ax.axvline(0, color="black", alpha=0.1)
+        # spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
+        # spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+
+        # zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
+        # poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
+
+        # cursor(zeroes_f).connect("add", self.formatZeroAnnotation)
+        # cursor(poles_f).connect("add", self.formatPoleAnnotation)
+
+    def openImplementationDialog(self):
+        sel_impl = self.si_type_cb.currentIndex()
+        if(sel_impl == CellCalculator.PASSIVERC):
+            pass
+        elif(sel_impl == CellCalculator.PASSIVERLC):
+            pass
+        elif(sel_impl == CellCalculator.SALLENKEY):
+            pass
+        elif(sel_impl == CellCalculator.RAUCH):
+            pass
+        elif(sel_impl == CellCalculator.DOUBLET):
+            pass
+        elif(sel_impl == CellCalculator.SEDRA):
+            pass
+        elif(sel_impl == CellCalculator.KHN):
+            pass
+        elif(sel_impl == CellCalculator.TOWTHOMAS):
+            pass
+        elif(sel_impl == CellCalculator.ACKBERG):
+            pass
+        elif(sel_impl == CellCalculator.FLEISCHERTOW):
+            pass
