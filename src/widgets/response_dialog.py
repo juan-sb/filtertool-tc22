@@ -6,6 +6,7 @@ from PyQt5 import QtWidgets
 from src.ui.response_window import Ui_ResponseDialog
 
 import ast
+import numpy as np
 import scipy.signal as signal
 
 class ResponseDialog(QtWidgets.QDialog, Ui_ResponseDialog):
