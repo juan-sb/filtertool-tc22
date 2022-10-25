@@ -174,6 +174,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.compareapprox_cb.setCurrentIndexes([])
 
         self.si_calc_btn.clicked.connect(self.openImplementationDialog)
+        self.tabWidget_2.currentChanged.connect(self.redrawFilterPlots)
+        self.tabWidget_3.currentChanged.connect(self.redrawStagePlots)
+        self.filterPlots = [self.fplot_att, self.fplot_gain, self.fplot_mag, self.fplot_phase, self.fplot_gd, self.fplot_pz, self.fplot_step, self.fplot_impulse]
+        self.stagePlots = [self.splot_fpz, self.splot_tpz, self.splot_tgain, self.splot_tphase, self.splot_pz, self.splot_sgain, self.splot_sphase]
+        self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
+        self.redrawStagePlotsArr = [True] * len(self.stagePlots)
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -608,6 +614,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             label.set_fontsize(self.plt_ticksize_sb.value())
 
     def updateFilterPlots(self):
+        if(not isinstance(self.selected_dataset_data, Dataset)): return
         attcanvas = self.fplot_att.canvas
         gaincanvas = self.fplot_gain.canvas
         magcanvas = self.fplot_mag.canvas
@@ -616,7 +623,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas = self.fplot_pz.canvas
         stepcanvas = self.fplot_step.canvas
         impulsecanvas = self.fplot_impulse.canvas
-
         self.condition_canvas(attcanvas, 'Frecuencia [Hz]', 'Atenuación [dB]')
         self.condition_canvas(gaincanvas, 'Frecuencia [Hz]', 'Ganancia [dB]')
         self.condition_canvas(magcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
@@ -626,24 +632,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(pzcanvas, '', '')
         self.condition_canvas(stepcanvas, 'Tiempo [s]', 'Respuesta [V]')
         self.condition_canvas(impulsecanvas, 'Tiempo [s]', 'Respuesta [V]')
-        
         filtds = self.selected_dataset_data
-        
+
         tstep, stepres = signal.step(filtds.tf.tf_object, N=5000)
         timp, impres = signal.impulse(filtds.tf.tf_object, N=5000)
-        
+
         f = np.array(filtds.data[0]['f'])
         g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
         ph = np.array(filtds.data[0]['ph'])
         gd = np.array(filtds.data[0]['gd'])
         z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
 
-        gainline, = gaincanvas.ax.plot(f, g, label = str(filtds.origin))
-        magline, = magcanvas.ax.plot(f, g, label = str(filtds.origin))
-        phaseline, = phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
-        gdline, = groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin))
-        stepline, = stepcanvas.ax.plot(tstep, stepres, label = str(filtds.origin))
-        impulseline, = impulsecanvas.ax.plot(timp, impres, label = str(filtds.origin))
+        gaincanvas.ax.plot(f, g, label = str(filtds.origin))
+        magcanvas.ax.plot(f, g, label = str(filtds.origin))
+        phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
+        groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin))
+        stepcanvas.ax.plot(tstep, stepres, label = str(filtds.origin))
+        impulsecanvas.ax.plot(timp, impres, label = str(filtds.origin))
 
         ap = filtds.origin.ap_dB
         aa = filtds.origin.aa_dB
@@ -717,7 +722,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             frg = filtds.origin.wrg * W_TO_F
             xmax = 2 * frg
             xmin = 0
-
         attcanvas.ax.set_xlim(xmin, xmax)
         fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
         attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
@@ -736,7 +740,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
         pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         cursor(zeroes, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
-        
+
         for helper in filtds.origin.helperFilters:
             fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
             attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
@@ -752,9 +756,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             stepcanvas.ax.plot(tstep, stepres, label = str(helper))
             impulsecanvas.ax.plot(timp, impres, label = str(helper))
             pzcanvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper))
+
         pzcanvas.ax.set_prop_cycle(None)
         poles = pzcanvas.ax.scatter(px, py, marker='x', label = str(filtds.origin))
         cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
+
         for helper in filtds.origin.helperFilters:
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
             pzcanvas.ax.scatter(p.real, p.imag, marker='x', label = str(helper))
@@ -768,16 +774,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pzcanvas.ax.legend()
             stepcanvas.ax.legend()
             impulsecanvas.ax.legend()
-        attcanvas.draw()
-        gaincanvas.draw()
-        magcanvas.draw()
-        phasecanvas.draw()
-        groupdelaycanvas.draw()
-        pzcanvas.draw()
-        stepcanvas.draw()
-        impulsecanvas.draw()
 
-        self.updateStagePlots()
+        # attcanvas.draw()
+        # gaincanvas.draw()
+        # magcanvas.draw()
+        # phasecanvas.draw()
+        # groupdelaycanvas.draw()
+        # pzcanvas.draw()
+        # stepcanvas.draw()
+        # impulsecanvas.draw()
+        self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
+        self.redrawFilterPlotsArr[self.tabWidget_2.currentIndex()] = False
+        self.filterPlots[self.tabWidget_2.currentIndex()].canvas.draw()
+    
+    def redrawFilterPlots(self, index):
+        if(self.redrawFilterPlotsArr[index]):
+            self.redrawFilterPlotsArr[index] = False
+            self.filterPlots[index].canvas.draw()
+    def redrawStagePlots(self, index):
+        if(self.redrawStagePlotsArr[index]):
+            self.redrawStagePlotsArr[index] = False
+            self.stagePlots[index].canvas.draw()
+        
 
     def updateFilterStages(self):
         self.stages_list.clear()
@@ -885,7 +903,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         selected_poles_idx.sort(reverse=True)
         selected_zeros_idx.sort(reverse=True)
 
-        print(selected_zeros_idx)
         if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, SHOW_PZ_IN_HZ):
             for z in selected_zeros_idx:
                 self.zeros_list.item(z).setFlags(Qt.ItemFlag.NoItemFlags)
@@ -995,6 +1012,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return np.abs(sing)/(- 2 * sing.real)
 
     def updateStagePlots(self):
+        if(not isinstance(self.selected_dataset_data, Dataset)): return
+        self.redrawStagePlots = False
         spzcanvas = self.splot_pz.canvas
         sgaincanvas = self.splot_sgain.canvas
         sphasecanvas = self.splot_sphase.canvas
@@ -1072,10 +1091,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         cursor(zeroes_t, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
         cursor(poles_t, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
 
-        fpzcanvas.draw()
-        tpzcanvas.draw()
-        tgaincanvas.draw()
-        tphasecanvas.draw()
+        # fpzcanvas.draw()
+        # tpzcanvas.draw()
+        # tgaincanvas.draw()
+        # tphasecanvas.draw()
 
         if(self.stages_list.currentItem()):
             accumulated_ds = self.stages_list.currentItem().data(Qt.UserRole)
@@ -1101,10 +1120,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             cursor(zeroes_f).connect("add", self.formatZeroAnnotation)
             cursor(poles_f).connect("add", self.formatPoleAnnotation)
             self.si_info.setText(accumulated_ds.origin.getSOFilterType()[1])
-            self.updatePossibleImplementations()
-        spzcanvas.draw()
-        sgaincanvas.draw()
-        sphasecanvas.draw()
+        #     self.updatePossibleImplementations()
+        # spzcanvas.draw()
+        # sgaincanvas.draw()
+        # sphasecanvas.draw()
+        self.redrawStagePlotsArr = [True] * len(self.stagePlots)
+        self.redrawStagePlotsArr[self.tabWidget_3.currentIndex()] = False
+        self.stagePlots[self.tabWidget_3.currentIndex()].canvas.draw()
 
     def clearCanvas(self, canvas):
         canvas.ax.clear()
@@ -1267,6 +1289,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fp_max_box.setValue(0)
         self.updateFilterStages()
         self.updateFilterPlots()
+        self.updateStagePlots()
         self.updateFilterParametersAvailable()
 
     def updateSelectedDatasetName(self):
