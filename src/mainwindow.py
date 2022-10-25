@@ -176,7 +176,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.si_calc_btn.clicked.connect(self.openImplementationDialog)
         self.tabWidget_2.currentChanged.connect(self.redrawFilterPlots)
         self.tabWidget_3.currentChanged.connect(self.redrawStagePlots)
-        self.filterPlots = [self.fplot_att, self.fplot_gain, self.fplot_mag, self.fplot_phase, self.fplot_gd, self.fplot_pz, self.fplot_step, self.fplot_impulse]
+        self.filterPlots = [self.fplot_att, self.fplot_mag, self.fplot_phase, self.fplot_gd, self.fplot_pz, self.fplot_step, self.fplot_impulse]
         self.stagePlots = [self.splot_fpz, self.splot_tpz, self.splot_tgain, self.splot_tphase, self.splot_pz, self.splot_sgain, self.splot_sphase]
         self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
         self.redrawStagePlotsArr = [True] * len(self.stagePlots)
@@ -776,7 +776,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas.draw()
         stepcanvas.draw()
         impulsecanvas.draw()
-        
+
         self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
         self.redrawFilterPlotsArr[self.tabWidget_2.currentIndex()] = False
         self.filterPlots[self.tabWidget_2.currentIndex()].canvas.draw()
