@@ -219,7 +219,8 @@ class AnalogFilter():
             if self.N < self.N_min:
                 self.N = self.N_min
             N, D = signal.butter(self.N, self.wc, analog=True, output='ba')
-            self.tf_norm = TFunction(N, D)
+            z, p, k = signal.butter(self.N, self.wc, analog=True, output='zpk')
+            self.tf_norm = TFunction(z, p, k, N, D)
 
         elif self.approx_type == CHEBYSHEV:
             self.N, self.wc = signal.cheb1ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
@@ -228,7 +229,8 @@ class AnalogFilter():
             if self.N < self.N_min:
                 self.N = self.N_min
             N, D = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='ba')
-            self.tf_norm = TFunction(N, D)
+            z, p, k = signal.cheby1(self.N, self.ap_dB, self.wc, analog=True, output='zpk')
+            self.tf_norm = TFunction(z, p, k, N, D)
 
         elif self.approx_type == CHEBYSHEV2:
             self.N, self.wc = signal.cheb2ord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
@@ -237,7 +239,8 @@ class AnalogFilter():
             if self.N < self.N_min:
                 self.N = self.N_min
             N, D = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='ba')
-            self.tf_norm = TFunction(N, D)
+            z, p, k = signal.cheby2(self.N, self.aa_dB, self.wc, analog=True, output='zpk')
+            self.tf_norm = TFunction(z, p, k, N, D)
         
         elif self.approx_type == CAUER:
             self.N, self.wc = signal.ellipord(1, self.wan, self.ap_dB, self.aa_dB, analog=True)
@@ -246,7 +249,8 @@ class AnalogFilter():
             if self.N < self.N_min:
                 self.N = self.N_min
             N, D = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='ba')
-            self.tf_norm = TFunction(N, D)
+            z, p, k = signal.ellip(self.N, self.ap_dB, self.aa_dB, self.wc, analog=True, output='zpk')
+            self.tf_norm = TFunction(z, p, k, N, D)
         
         elif self.approx_type == LEGENDRE:
             self.N = self.N_min
@@ -269,9 +273,10 @@ class AnalogFilter():
             self.N = self.N_min
             while True:
                 N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
-                tf2 = TFunction(N, D)
+                z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay')
+                tf2 = TFunction(z, p, k, N, D)
                 if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
-                    self.tf_norm = TFunction(N, D)
+                    self.tf_norm = TFunction(z, p, k, N, D)
                     break
                 self.N += 1
 
@@ -415,7 +420,7 @@ class AnalogFilter():
         if newRemainingZeros > newRemainingPoles:
             return False
 
-        append_gain = self.remainingGain if newRemainingPoles == 0 else gain
+        append_gain = gain # self.remainingGain if newRemainingPoles == 0 else gain
 
         newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=True)
 
@@ -519,3 +524,24 @@ class AnalogFilter():
                 for d in del_list:
                     self.remainingPoles.remove(d)
         return True
+
+    def getBandpassRange(self):
+        fakezero = 1e-10
+        if self.filter_type == LOW_PASS:
+            return False, [fakezero, self.wp]
+        elif self.filter_type == HIGH_PASS:
+            return False, [self.wp, 100*self.wp]
+        elif self.filter_type == BAND_PASS:
+            return False, self.wp
+        elif self.filter_type == BAND_REJECT:
+            return True, [[fakezero, self.wp[0]], [self.wp[1], 100*self.wp[1]]]
+        elif self.filter_type == GROUP_DELAY:
+            return False, [1e-10, self.wrg]
+
+    def getDynamicRangeLoss(self, db=True):
+        minGain, maxGain = self.getEdgeGainsInBP(db=db)
+        return maxGain - minGain
+    
+    def getEdgeGainsInBP(self, db=True):
+        isReject, bp = self.getBandpassRange()
+        return self.tf.getEdgeGainsInRange(isReject, np.array(bp) / (2 * np.pi), db=db)

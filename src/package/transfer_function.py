@@ -36,6 +36,8 @@ class TFunction():
             self.setND(args[0], args[1], normalize=normalize)
         if(len(args) == 3):
             self.setZPK(args[0], args[1], args[2], normalize=normalize)
+        if(len(args) == 5):
+            self.setZPKND(args[0], args[1], args[2], args[3], args[4])
 
     def setExpression(self, txt, normalize=False):
         try:
@@ -63,8 +65,7 @@ class TFunction():
 
     #Nota: signal NO normaliza la transferencia, por lo que k multiplica pero no es la ganancia en s=0
     def setZPK(self, z, p, k, normalize=False):
-        self.z, self.p, self.k = np.array(z, dtype=np.complex128), np.array(p, dtype=np.complex128), self.k
-        self.k = k
+        self.z, self.p, self.k = np.array(z, dtype=np.complex128), np.array(p, dtype=np.complex128), k
         N, D = signal.zpk2tf(self.z, self.p, self.k)
         if not hasattr(N, '__iter__'):
             N = [N]
@@ -75,6 +76,17 @@ class TFunction():
             self.normalize()
         self.computedDerivatives = False
         self.tf_object = signal.ZerosPolesGain(self.z, self.p, self.k)
+
+    
+    def setZPKND(self, z, p, k, N, D):
+        if not hasattr(N, '__iter__'):
+            N = [N]
+        if not hasattr(D, '__iter__'):
+            D = [D]
+        self.N, self.D = np.array(N, dtype=np.float64), np.array(D, dtype=np.float64)
+        self.z, self.p, self.k = z, p, k      
+        self.tf_object = signal.ZerosPolesGain(self.z, self.p, self.k)
+        self.computedDerivatives = False
 
     def getZPK(self, in_hz=False):
         if(in_hz):
@@ -135,7 +147,7 @@ class TFunction():
         else:
             return self.z, self.p
 
-    def getBode(self, linear=False, start=-2, stop=6, num=10000):
+    def getBode(self, linear=False, start=-2, stop=6, num=10000, db=False):
         if linear:
             ws = np.linspace(start, stop, num) * 2 * np.pi
         else:
@@ -144,7 +156,7 @@ class TFunction():
         w, g, ph = signal.bode(self.tf_object, w=ws)
         gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
         f = ws / (2 * np.pi)
-        return f, 10**(g/20), ph, gd
+        return f, g if db else 10**(g/20), ph, gd
 
     #No funciona (y no lo necesitamos) actualmente
     def optimize(self, start, stop, maximize = False):
@@ -204,3 +216,13 @@ class TFunction():
         elif(zp_ord == [0, 0]):
             return "Cable"
         return "Invalid"
+
+    def getEdgeGainsInRange(self, isReject, bpw, db=True):
+        if isReject:
+            f1, g1, ph1, gd1 = self.getBode(linear=True, start=bpw[0][0], stop=bpw[0][1], num=1000, db=db)
+            f2, g2, ph2, gd2 = self.getBode(linear=True, start=bpw[1][0], stop=bpw[1][1], num=1000, db=db)
+            minGain, maxGain = min(g1 + g2), max(g1 + g2)
+        else:
+            f, g, ph, gd = self.getBode(linear=True, start=bpw[0], stop=bpw[1], num=1000, db=db)
+            minGain, maxGain = min(g), max(g)
+        return minGain, maxGain

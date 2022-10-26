@@ -155,7 +155,7 @@ class DoubleT(Cell):
         pass
 
 class FleischerTow(Cell):
-    def __init__(self, C1=1e-9, C2=1e-9, R8=1e3, k1=1, k2=1):
+    def __init__(self, C1=1e-9, C2=1e-9, R8=1e3, k1=1e0, k2=1e0):
         self.C1 = C1
         self.C2 = C2
         self.R8 = R8
@@ -178,7 +178,9 @@ class FleischerTow(Cell):
 
         self.wz = np.sqrt(d / m)
         self.wp = np.sqrt(b)
-        self.Q = np.sqrt(b) / a
+        Q = np.sqrt(b) / a
+        fp = self.wp / (2*np.pi)
+        bw = fp / Q
 
         self.R1 = 1 / (a * self.C1)
         self.R2 = self.k1 / (np.sqrt(b) * self.C2)
@@ -218,7 +220,7 @@ n, Wn= signal.cheb2ord([wpMin,wpMax], [waMin,waMax], Ap, Aa, analog=True)
 z, p, k = signal.cheby2(n, Aa, Wn, 'stop', analog=True, output = 'zpk')
 sos = signal.cheby2(n, Aa, Wn, 'stop', analog=True, output = 'sos')
 
-ft.calculateComponentsND(sos[0][0:3], sos[0][3:6])
+ft.calculateComponentsND(sos[1][0:3], sos[1][3:6])
 print('R1:', ft.R1)
 print('R2:', ft.R2)
 print('R3:', ft.R3)

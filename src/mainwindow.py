@@ -11,6 +11,7 @@ import src.package.CellCalculator as CellCalculator
 import src.package.transfer_function as TF
 from src.package.Filter import AnalogFilter
 from src.widgets.exprwidget import MplCanvas
+from src.widgets.fleischer_tow_window import FleischerTowDialog
 from src.widgets.tf_dialog import TFDialog
 from src.widgets.case_window import CaseDialog
 from src.widgets.zp_window import ZPWindow
@@ -180,6 +181,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stagePlots = [self.splot_fpz, self.splot_tpz, self.splot_tgain, self.splot_tphase, self.splot_pz, self.splot_sgain, self.splot_sphase]
         self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
         self.redrawStagePlotsArr = [True] * len(self.stagePlots)
+        
+        self.ftd = FleischerTowDialog()
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -796,6 +799,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.zeros_list.clear()
         self.poles_list.clear()
         self.remaining_gain_text.clear()
+        self.total_filtgain_label.clear()
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
@@ -814,12 +818,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.zeros_list.addItem(qlwt)
+            total_gain = 0
             for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, Dataset(origin=implemented_stage))
                 qlwt.setText(stage_to_str(implemented_stage))
                 self.stages_list.addItem(qlwt)
+                total_gain *= implemented_stage.gain
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
+            self.total_filtgain_label.setText(str(total_gain))
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
         else:  
             self.new_stage_btn.setEnabled(False)
@@ -911,6 +918,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stages_list.addItem(qlwt)
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
+            total_gain = np.prod([stage.gain for stage in self.selected_dataset_data.origin.stages])
+            self.total_filtgain_label.setText(str(total_gain))
         
             self.stages_list.setCurrentRow(self.stages_list.count() - 1)
             
@@ -1248,6 +1257,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)
         Qs = [self.calcQ(p) for p in self.selected_dataset_data.origin.tf.getZP()[1]]
         self.max_Q_label.setText("{:.2f}".format(max(Qs)))
+        self.drloss_label.setText("{:.2f} dB".format(self.selected_dataset_data.origin.getDynamicRangeLoss()))
         self.define_with_box.setCurrentIndex(self.selected_dataset_data.origin.define_with)
         if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             self.fp_box.setValue(0)
@@ -1706,6 +1716,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def openImplementationDialog(self):
         sel_impl = self.si_type_cb.currentIndex()
+        stage = self.stages_list.currentItem().data(Qt.UserRole).origin
+        if(not stage): return
         if(sel_impl == CellCalculator.PASSIVERC):
             pass
         elif(sel_impl == CellCalculator.PASSIVERLC):
@@ -1725,4 +1737,5 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif(sel_impl == CellCalculator.ACKERBERG):
             pass
         elif(sel_impl == CellCalculator.FLEISCHERTOW):
-            pass
+            self.ftd.open()
+            self.ftd.populate(stage)
