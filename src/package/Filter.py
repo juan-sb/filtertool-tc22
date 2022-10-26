@@ -1,3 +1,4 @@
+from inspect import trace
 import sys
 import traceback
 from src.package.transfer_function import TFunction
@@ -545,3 +546,8 @@ class AnalogFilter():
     def getEdgeGainsInBP(self, db=True):
         isReject, bp = self.getBandpassRange()
         return self.tf.getEdgeGainsInRange(isReject, np.array(bp) / (2 * np.pi), db=db)
+
+    def __eq__(self, other):
+        if(isinstance(other, str)):
+            return False
+        return self.__dict__ == other.__dict__

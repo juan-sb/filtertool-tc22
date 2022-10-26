@@ -451,7 +451,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ds.datalines = temp_datalines
         ds.title = self.filtername_box.text()
         self.selected_dataset_widget.setText(self.filtername_box.text())
+        self.selfil_cb.setItemData(self.selfil_cb.currentIndex(), ds)
         self.selfil_cb.setItemText(self.selfil_cb.currentIndex(), ds.title)
+        self.stages_selfil_cb.setItemData(self.stages_selfil_cb.currentIndex(), ds)
         self.stages_selfil_cb.setItemText(self.selfil_cb.currentIndex(), ds.title)
         self.selected_dataset_widget.setData(Qt.UserRole, ds)
         self.filters[self.selfil_cb.currentIndex()] = ds
