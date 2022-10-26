@@ -48,6 +48,6 @@ class ExprParser():
 
     def getLatex(self, txt=None):
       if not txt:
-        return sym.latex(sym.parsing.sympy_parser.parse_expr(self.txt, transformations = 'all'))
+        return sym.latex(sym.sympify(self.txt))
       else:
-        return sym.latex(sym.parsing.sympy_parser.parse_expr(txt, transformations = 'all'))
+        return sym.latex(sym.sympify(txt))

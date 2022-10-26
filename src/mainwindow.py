@@ -1,7 +1,7 @@
 # PyQt5 modules
 from math import inf
 from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QColorDialog, QFileDialog, QDialog, QStyle
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QCoreApplication
 
 # Project modules
 from src.ui.mainwindow import Ui_MainWindow
@@ -184,6 +184,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.ftd = FleischerTowDialog()
 
+        self.fgetHhuman_btn.clicked.connect(self.copyFilterHhuman)
+        self.fgetHlatex_btn.clicked.connect(self.copyFilterHlatex)
+        self.sgetHhuman_btn.clicked.connect(self.copyStageHhuman)
+        self.sgetHlatex_btn.clicked.connect(self.copyStageHlatex)
+
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
         qlwt.setData(Qt.UserRole, ds)
@@ -218,6 +223,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stages_selfil_cb.removeItem(fi)
             if(self.selfil_cb.count() == 0):
                 self.chg_filter_btn.setEnabled(False)
+                self.fgetHhuman_btn.setEnabled(False)
+                self.fgetHlatex_btn.setEnabled(False)
+                self.sgetHhuman_btn.setEnabled(False)
+                self.sgetHlatex_btn.setEnabled(False)
         self.dataset_list.takeItem(i)
         self.updatePlots()
 
@@ -400,6 +409,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.selfil_cb.blockSignals(False)
         self.stages_selfil_cb.blockSignals(False)
         self.chg_filter_btn.setEnabled(True)
+        self.fgetHhuman_btn.setEnabled(True)
+        self.fgetHlatex_btn.setEnabled(True)
+        self.sgetHhuman_btn.setEnabled(True)
+        self.sgetHlatex_btn.setEnabled(True)
         self.addDataset(ds)
     
     def makeFilterTemplateSymmetric(self):
@@ -802,6 +815,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.poles_list.clear()
         self.remaining_gain_text.clear()
         self.total_filtgain_label.clear()
+        self.total_filtdrloss_label.clear()
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
@@ -829,6 +843,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 total_gain *= implemented_stage.gain
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
             self.total_filtgain_label.setText(str(total_gain))
+            self.total_filtdrloss_label.setText(str(self.selected_dataset_data.origin.getStagesDynamicRangeLoss()))
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
         else:  
             self.new_stage_btn.setEnabled(False)
@@ -922,7 +937,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
             total_gain = np.prod([stage.gain for stage in self.selected_dataset_data.origin.stages])
             self.total_filtgain_label.setText(str(total_gain))
-        
+            self.total_filtdrloss_label.setText(str(self.selected_dataset_data.origin.getStagesDynamicRangeLoss()))
             self.stages_list.setCurrentRow(self.stages_list.count() - 1)
             
             self.updateStagePlots()
@@ -994,6 +1009,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
         self.stages_list.setCurrentRow(self.stages_list.count() - 1)
 
+        self.updateFilterStages()
+
     def formatPoleAnnotation(self, sel):
         sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, sel.target[0], sel.target[1], self.calcQ(sel.target)))
 
@@ -1020,7 +1037,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if(not isinstance(self.selected_dataset_data, Dataset)): return
         self.redrawStagePlots = False
         spzcanvas = self.splot_pz.canvas
-        sgaincanvas = self.splot_sgain.canvas
+        smagcanvas = self.splot_sgain.canvas
         sphasecanvas = self.splot_sphase.canvas
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
@@ -1030,7 +1047,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(spzcanvas, PZ_XLABEL, PZ_YLABEL)
         self.condition_canvas(fpzcanvas, PZ_XLABEL, PZ_YLABEL)
         self.condition_canvas(tpzcanvas, PZ_XLABEL, PZ_YLABEL)
-        self.condition_canvas(sgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
+        self.condition_canvas(smagcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
         self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
         self.condition_canvas(tgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
         self.condition_canvas(tphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
@@ -1079,7 +1096,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         accumulated_ds = Dataset(origin=self.selected_dataset_data.origin.implemented_tf)
 
         f = accumulated_ds.data[0]['f']
-        g = accumulated_ds.data[0]['g']
+        g = 20 * np.log10(np.abs(np.array(accumulated_ds.data[0]['g'])))
         ph = accumulated_ds.data[0]['ph']
         tgaincanvas.ax.plot(f, g)
         tphasecanvas.ax.plot(f, ph)
@@ -1105,12 +1122,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             accumulated_ds = self.stages_list.currentItem().data(Qt.UserRole)
 
             f = accumulated_ds.data[0]['f']
-            g = accumulated_ds.data[0]['g']
+            g = 20 * np.log10(np.abs(np.array(accumulated_ds.data[0]['g'])))
             ph = accumulated_ds.data[0]['ph']
             z, p = accumulated_ds.origin.getZP(SHOW_PZ_IN_HZ)
 
-            gline, = sgaincanvas.ax.plot(f, g)
-            phline, = sphasecanvas.ax.plot(f, ph)
+            smagcanvas.ax.plot(f, g)
+            sphasecanvas.ax.plot(f, ph)
 
             (min, max) = self.getRelevantFrequencies(z, p)
             spzcanvas.ax.axis('equal')
@@ -1127,7 +1144,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.si_info.setText(accumulated_ds.origin.getSOFilterType()[1])
         #     self.updatePossibleImplementations()
         # spzcanvas.draw()
-        # sgaincanvas.draw()
+        # smagcanvas.draw()
         # sphasecanvas.draw()
         self.redrawStagePlotsArr = [True] * len(self.stagePlots)
         self.redrawStagePlotsArr[self.tabWidget_3.currentIndex()] = False
@@ -1700,7 +1717,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # ph = accumulated_ds.data[0]['ph']
         # z, p = accumulated_ds.origin.getZP(SHOW_PZ_IN_HZ)
 
-        # gline, = sgaincanvas.ax.plot(f, g)
+        # gline, = smagcanvas.ax.plot(f, g)
         # phline, = sphasecanvas.ax.plot(f, ph)
 
         # (min, max) = self.getRelevantFrequencies(z, p)
@@ -1741,3 +1758,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif(sel_impl == CellCalculator.FLEISCHERTOW):
             self.ftd.open()
             self.ftd.populate(stage)
+    
+    def copyFilterHhuman(self):
+        if(self.selected_dataset_data.type == 'filter'):
+            clipboard = QCoreApplication.instance().clipboard()
+            clipboard.setText(self.selected_dataset_data.origin.tf.buildSymbolicText())
+    
+    def copyFilterHlatex(self):
+        if(self.selected_dataset_data.type == 'filter'):
+            clipboard = QCoreApplication.instance().clipboard()
+            s = self.selected_dataset_data.origin.tf.buildSymbolicText()
+            clipboard.setText(self.selected_dataset_data.origin.tf.getLatex(s))
+
+    def copyStageHhuman(self):
+        if(self.stages_list.currentItem()):
+            clipboard = QCoreApplication.instance().clipboard()
+            tf = self.stages_list.currentItem().data(Qt.UserRole).origin
+            clipboard.setText(tf.buildSymbolicText())
+
+    def copyStageHlatex(self):
+        if(self.stages_list.currentItem()):
+            clipboard = QCoreApplication.instance().clipboard()
+            tf = self.stages_list.currentItem().data(Qt.UserRole).origin
+            s = tf.buildSymbolicText()
+            clipboard.setText(tf.getLatex(s))

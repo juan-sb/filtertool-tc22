@@ -182,7 +182,23 @@ class TFunction():
         
     def getLatex(self, txt):
         return self.eparser.getLatex(txt=txt)
-        
+    
+    def buildSymbolicText(self, asterisk=False):
+        txt = "("
+        nmax = len(self.N)
+        dmax = len(self.D)
+        for i, coeff in enumerate(self.N[:1]):
+            txt += str(coeff) + '*s' + ('**' if asterisk else '^') + str(nmax - i - 1)
+            if(i != len(self.N) - 2): txt += '+'
+        txt += '{:+}'.format(self.N[nmax - 1])
+        txt += ')/('
+        for i, coeff in enumerate(self.D[:1]):
+            txt += str(coeff) + '*s' + ('**' if asterisk else '^') + str(dmax - i - 1)
+            if(i != len(self.D) - 2): txt += '+'
+        txt += '{:+}'.format(self.D[dmax - 1])
+        txt += ')'
+        return txt
+
     def getSOFilterType(self):
         zp_ord = [len(self.z), len(self.p)]
         if(zp_ord == [2, 2]):
@@ -226,3 +242,7 @@ class TFunction():
             f, g, ph, gd = self.getBode(linear=True, start=bpw[0], stop=bpw[1], num=1000, db=db)
             minGain, maxGain = min(g), max(g)
         return minGain, maxGain
+
+a = TFunction([1, 0], [1, -1])
+print(a.buildSymbolicText(asterisk=True))
+print(a.getLatex(a.buildSymbolicText()))

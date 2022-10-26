@@ -541,11 +541,21 @@ class AnalogFilter():
 
     def getDynamicRangeLoss(self, db=True):
         minGain, maxGain = self.getEdgeGainsInBP(db=db)
-        return maxGain - minGain
+        if(minGain*maxGain > 0):
+            return np.max(np.abs([maxGain, minGain]))
+        return maxGain - minGain # max es + y min es -
     
     def getEdgeGainsInBP(self, db=True):
         isReject, bp = self.getBandpassRange()
         return self.tf.getEdgeGainsInRange(isReject, np.array(bp) / (2 * np.pi), db=db)
+
+    def getStagesDynamicRangeLoss(self, db=True):
+        isReject, bp = self.getBandpassRange()
+        drl = 0
+        for stage_tf in self.stages:
+            ming, maxg = stage_tf.getEdgeGainsInRange(isReject, np.array(bp) / (2 * np.pi), db=db)
+            drl += np.max(np.abs([ming, maxg])) if ming*maxg > 0 else (maxg - ming) 
+        return drl
 
     def __eq__(self, other):
         if(isinstance(other, str)):
