@@ -493,16 +493,17 @@ class AnalogFilter():
         self.stages[index1] = temp
     
     def orderStagesBySos(self):
-        sos = signal.zpk2sos(self.tf.z, self.tf.p, self.tf.k, pairing='minimal', analog=True)
+        sos = signal.zpk2sos(self.remainingZeros, self.remainingPoles, self.remainingGain, pairing='minimal', analog=True)
         for sosSection in sos:
             z_arr, p_arr, gain = signal.tf2zpk(sosSection[0:3], sosSection[3:6])
+            print(gain)
             newRemainingZeros = len(self.remainingZeros) - len(z_arr)
             newRemainingPoles = len(self.remainingPoles) - len(p_arr)
 
             if newRemainingZeros > newRemainingPoles:
                 return False
 
-            append_gain = self.remainingGain if newRemainingPoles == 0 else gain
+            append_gain = gain
 
             newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=True)
 

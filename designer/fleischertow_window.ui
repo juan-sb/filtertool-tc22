@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>482</width>
-    <height>419</height>
+    <height>502</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -567,6 +567,16 @@
    <header>src.widgets.scientific_spinbox</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>C1_sb</tabstop>
+  <tabstop>C2_sb</tabstop>
+  <tabstop>R8_sb</tabstop>
+  <tabstop>k1_sb</tabstop>
+  <tabstop>k2_sb</tabstop>
+  <tabstop>calc_btn</tabstop>
+  <tabstop>optimize_btn</tabstop>
+  <tabstop>cpyclipboard_btn</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

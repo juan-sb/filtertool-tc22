@@ -956,6 +956,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             qlwt.setText(stage_to_str(stage))
             self.stages_list.addItem(qlwt)
         self.stages_list.setCurrentRow(index - 1)
+        self.updateStagePlots()
 
     def swapStagesDownwards(self):
         index = self.stages_list.currentRow()
@@ -969,6 +970,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             qlwt.setText(stage_to_str(stage))
             self.stages_list.addItem(qlwt)
         self.stages_list.setCurrentRow(index + 1)
+        self.updateStagePlots()
 
     def orderStagesBySos(self):
         self.selected_dataset_data.origin.orderStagesBySos()
@@ -978,6 +980,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             qlwt.setData(Qt.UserRole, Dataset(origin=stage))
             qlwt.setText(stage_to_str(stage))
             self.stages_list.addItem(qlwt)
+        self.updateFilterStages()
         self.updateStagePlots()
 
     def removeFilterStage(self):

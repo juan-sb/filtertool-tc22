@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_fleischertow_dialog(object):
     def setupUi(self, fleischertow_dialog):
         fleischertow_dialog.setObjectName("fleischertow_dialog")
-        fleischertow_dialog.resize(482, 419)
+        fleischertow_dialog.resize(482, 502)
         self.gridLayout_3 = QtWidgets.QGridLayout(fleischertow_dialog)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.groupBox_3 = QtWidgets.QGroupBox(fleischertow_dialog)
@@ -263,6 +263,13 @@ class Ui_fleischertow_dialog(object):
         self.OK_btn.accepted.connect(fleischertow_dialog.accept)
         self.OK_btn.rejected.connect(fleischertow_dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(fleischertow_dialog)
+        fleischertow_dialog.setTabOrder(self.C1_sb, self.C2_sb)
+        fleischertow_dialog.setTabOrder(self.C2_sb, self.R8_sb)
+        fleischertow_dialog.setTabOrder(self.R8_sb, self.k1_sb)
+        fleischertow_dialog.setTabOrder(self.k1_sb, self.k2_sb)
+        fleischertow_dialog.setTabOrder(self.k2_sb, self.calc_btn)
+        fleischertow_dialog.setTabOrder(self.calc_btn, self.optimize_btn)
+        fleischertow_dialog.setTabOrder(self.optimize_btn, self.cpyclipboard_btn)
 
     def retranslateUi(self, fleischertow_dialog):
         _translate = QtCore.QCoreApplication.translate
