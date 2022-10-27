@@ -1,13 +1,5 @@
-from calendar import c
-from ctypes import cdll
-from re import A
-from this import d
 import numpy as np
 from scipy import signal
-import matplotlib.pyplot as plt
-from sympy import symbols, Eq, solve
-from enum import Enum
-
 from abc import ABC, abstractmethod
 
 E12 = [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2]
@@ -181,13 +173,26 @@ class FleischerTow(Cell):
         Q = np.sqrt(b) / a
         fp = self.wp / (2*np.pi)
         bw = fp / Q
+        if(m == 0 and c == 0):
+            self.R4 = np.float64(1)/0
+            self.R5 = self.k1 * np.sqrt(b) / (d * self.C2)
+            self.R6 = np.float64(1)/0
+        elif(m == 0 and d == 0):
+            self.R4 = 1 / (- self.k2 * c * self.C1)
+            self.R5 = np.float64(1)/0
+            self.R6 = np.float64(1)/0
+        elif(c == 0 and d == 0):
+            self.R4 = 1 / (self.k2 * m * a * self.C1)
+            self.R5 = np.float64(1)/0
+            self.R6 = self.R8 / m
+        else:
+            self.R4 = 1 / (self.k2 * (m * a - c) * self.C1)
+            self.R5 = self.k1 * np.sqrt(b) / (d * self.C2)
+            self.R6 = self.R8 / m
 
         self.R1 = 1 / (a * self.C1)
         self.R2 = self.k1 / (np.sqrt(b) * self.C2)
         self.R3 = 1 / (self.k1 * self.k2 * np.sqrt(b) * self.C1)
-        self.R4 = 1 / (self.k2 * (m * a - c) * self.C1)
-        self.R5 = self.k1 * np.sqrt(b) / (d * self.C2)
-        self.R6 = self.R8 / m
         self.R7 = self.k2 * self.R8
 
         self.resistors = [0, self.R1, self.R2, self.R3, self.R4, self.R5, self.R6, self.R7, self.R8]

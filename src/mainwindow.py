@@ -10,7 +10,6 @@ import src.package.Filter as Filter
 import src.package.CellCalculator as CellCalculator
 import src.package.transfer_function as TF
 from src.package.Filter import AnalogFilter
-from src.widgets.exprwidget import MplCanvas
 from src.widgets.fleischer_tow_window import FleischerTowDialog
 from src.widgets.tf_dialog import TFDialog
 from src.widgets.case_window import CaseDialog
@@ -21,10 +20,8 @@ from src.widgets.prompt_dialog import PromptDialog
 from scipy.signal import savgol_filter
 import scipy.signal as signal
 from scipy.interpolate import splrep, splev, splprep
-import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from mplcursors import HoverMode, cursor, Selection
-from matplotlib.patches import Rectangle
+from mplcursors import  cursor, Selection
 
 import numpy as np
 import random
@@ -1666,8 +1663,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def updatePossibleImplementations(self):
         if(not self.stages_list.currentItem()):
             return
-        stage_ds = self.stages_list.currentItem().data(Qt.UserRole)
-        stagetype, text = stage_ds.origin.getSOFilterType()
+        stage_tf = self.stages_list.currentItem().data(Qt.UserRole)
+        stagetype, text = stage_tf.origin.getSOFilterType()
         arr = [False] * CellCalculator.IMPL_COUNT
 
         if(stagetype in [TF.LP1, TF.HP1]):
@@ -1677,9 +1674,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             arr[CellCalculator.SALLENKEY] = False
             arr[CellCalculator.RAUCH] = False
             arr[CellCalculator.DOUBLET] = False
+            arr[CellCalculator.KHN] = False
             arr[CellCalculator.SEDRA] = False
             arr[CellCalculator.ACKERBERG] = False
             arr[CellCalculator.TOWTHOMAS] = False
+            arr[CellCalculator.FLEISCHERTOW] = False
         else:
             arr[CellCalculator.INTEGDERIV] = False
             arr[CellCalculator.FLEISCHERTOW] = True
@@ -1694,7 +1693,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 arr[CellCalculator.KHN] = True
                 arr[CellCalculator.TOWTHOMAS] = stagetype == TF.LP2
             elif(stagetype == TF.BP):
-                arr[CellCalculator.PASSIVERC] = True # hay que ver el Q!
+                arr[CellCalculator.PASSIVERC] = stage_tf.gain <= 1 and stage_tf.getPoleQ() <= 1/3 # hay que ver bien el Q!!!
                 arr[CellCalculator.PASSIVERLC] = True
                 arr[CellCalculator.SALLENKEY] = False
                 arr[CellCalculator.RAUCH] = True
@@ -1704,7 +1703,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 arr[CellCalculator.KHN] = True
                 arr[CellCalculator.TOWTHOMAS] = True
             elif(stagetype in [TF.BR, TF.HPN, TF.LPN]):
-                arr[CellCalculator.PASSIVERC] = True # hay que ver el Q!
+                arr[CellCalculator.PASSIVERC] = stage_tf.gain <= 1 and stage_tf.getPoleQ() < 1/3 # hay que ver bien el Q!!!
                 arr[CellCalculator.PASSIVERLC] = True
                 arr[CellCalculator.SALLENKEY] = False
                 arr[CellCalculator.RAUCH] = False

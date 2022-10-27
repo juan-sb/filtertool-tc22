@@ -243,6 +243,7 @@ class TFunction():
             minGain, maxGain = min(g), max(g)
         return minGain, maxGain
 
-a = TFunction([1, 0], [1, -1])
-print(a.buildSymbolicText(asterisk=True))
-print(a.getLatex(a.buildSymbolicText()))
+    def getPoleQ(self):
+        if(len(self.p) == 2):
+            return np.abs(self.p[0])/(- 2 * self.p[0].real)
+        return 0
