@@ -201,33 +201,3 @@ class FleischerTow(Cell):
         b = self.R8 / (self.R2 * self.R3 * self.C1 * self.C2 * self.R7)
 
         self.tf = signal.TransferFunction([m, c, d], [1, a, b])
-
-ft = FleischerTow(C1=47e-9, C2=47e-9, R8=1.5e3)
-
-da = 1100
-dp = 10e3
-fo = 44.3e3
-Aa = 48
-Ap = 6
-nMax = 2
-
-wpMin = (-dp + np.sqrt(dp**2 + 4*fo**2))*np.pi
-wpMax = (dp + np.sqrt(dp**2 + 4*fo**2))*np.pi
-waMin = (-da + np.sqrt(da**2 + 4*fo**2))*np.pi
-waMax = (da + np.sqrt(da**2 + 4*fo**2))*np.pi
-
-n, Wn= signal.cheb2ord([wpMin,wpMax], [waMin,waMax], Ap, Aa, analog=True)
-z, p, k = signal.cheby2(n, Aa, Wn, 'stop', analog=True, output = 'zpk')
-sos = signal.cheby2(n, Aa, Wn, 'stop', analog=True, output = 'sos')
-
-ft.calculateComponentsND(sos[1][0:3], sos[1][3:6])
-print('R1:', ft.R1)
-print('R2:', ft.R2)
-print('R3:', ft.R3)
-print('R4:', ft.R4)
-print('R5:', ft.R5)
-print('R6:', ft.R6)
-print('R7:', ft.R7)
-print('R8:', ft.R8)
-print('C2:', ft.C1)
-print('C1:', ft.C2)

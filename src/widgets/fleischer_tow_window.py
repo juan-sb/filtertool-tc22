@@ -25,7 +25,9 @@ class FleischerTowDialog(QtWidgets.QDialog, Ui_fleischertow_dialog):
         N.extend(stage_tf.N)
         D = [0] * (3 - len(stage_tf.D))
         D.extend(stage_tf.D)
-        
+        self.N = np.array(N)
+        self.D = np.array(D)
+
         a = D[1] / D[0]
         b = D[2] / D[0]
         wz = np.sqrt(N[2] / N[0]) # la div por D[0] se cancela
@@ -44,7 +46,7 @@ class FleischerTowDialog(QtWidgets.QDialog, Ui_fleischertow_dialog):
 
     def calculateResistors(self):
         self.cell = FleischerTow(self.C1_sb.value(), self.C2_sb.value(), self.R8_sb.value(), self.k1_sb.value(), self.k2_sb.value())
-        self.cell.calculateComponentsND(self.tf.N, self.tf.D)
+        self.cell.calculateComponentsND(self.N, self.D)
         for i, res in enumerate(self.cell.resistors):
             if(i == 0): continue
             self.Rlabels[i].setText(str(res))

@@ -496,7 +496,6 @@ class AnalogFilter():
         sos = signal.zpk2sos(self.remainingZeros, self.remainingPoles, self.remainingGain, pairing='minimal', analog=True)
         for sosSection in sos:
             z_arr, p_arr, gain = signal.tf2zpk(sosSection[0:3], sosSection[3:6])
-            print(gain)
             newRemainingZeros = len(self.remainingZeros) - len(z_arr)
             newRemainingPoles = len(self.remainingPoles) - len(p_arr)
 
