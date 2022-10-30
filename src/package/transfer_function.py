@@ -220,7 +220,7 @@ class TFunction():
         elif(zp_ord == [0, 2]):
             return LP2, "Second order low pass wc={:.2f}".format(np.abs(self.p[0]))
         elif(zp_ord == [1, 1]):
-            if(np.isclose(np.abs(self.z[0])), 0):
+            if(np.isclose(np.abs(self.z[0]), 0)):
                 return HP1, "1st order high pass, wc={:.2f}".format(self.p[0].real)
             else:
                 if(np.abs(self.z[0]) > np.abs(self.p[0])):
