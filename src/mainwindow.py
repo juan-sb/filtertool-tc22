@@ -749,8 +749,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         zeroes = pzcanvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
         pzcanvas.ax.set_xlabel(PZ_XLABEL)
         pzcanvas.ax.set_ylabel(PZ_YLABEL)
-        pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
-        pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
+        # pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
+        # pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         cursor(zeroes, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
 
         for helper in filtds.origin.helperFilters:
