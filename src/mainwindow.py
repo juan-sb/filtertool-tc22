@@ -749,8 +749,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         zeroes = pzcanvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
         pzcanvas.ax.set_xlabel(PZ_XLABEL)
         pzcanvas.ax.set_ylabel(PZ_YLABEL)
-        # pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
-        # pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         cursor(zeroes, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
 
         for helper in filtds.origin.helperFilters:
@@ -758,6 +756,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
             f, g, ph, gd = helper.tf.getBode()
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
+            np.append(p, [minf, maxf])
+            minf, maxf = self.getRelevantFrequencies(z, p)
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
             timp, impres = signal.impulse(helper.tf.tf_object, N=5000)
@@ -768,6 +768,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             impulsecanvas.ax.plot(timp, impres, label = str(helper))
             pzcanvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper))
 
+        pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
+        pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         pzcanvas.ax.set_prop_cycle(None)
         poles = pzcanvas.ax.scatter(px, py, marker='x', label = str(filtds.origin))
         cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
@@ -1629,7 +1631,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     def getRelevantFrequencies(self, zeros, poles):
         singularitiesNorm = np.append(np.abs(zeros), np.abs(poles))
-        singularitiesNormWithoutZeros = singularitiesNorm[singularitiesNorm!=0]
+        singularitiesNormWithoutZeros = singularitiesNorm[singularitiesNorm != 0]
         if(len(singularitiesNormWithoutZeros) == 0):
             return (1, 1)
         return (np.min(singularitiesNormWithoutZeros), np.max(singularitiesNormWithoutZeros))
