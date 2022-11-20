@@ -370,7 +370,7 @@ class AnalogFilter():
             orddiff = len(poles) - len(zeros)
             assert orddiff >= 0
             
-            if(self.filter_type==BAND_PASS):
+            if(self.filter_type == BAND_PASS):
                 denorm_z += [0]*orddiff
                 k = self.bw[0]**orddiff * pprod / zprod
             else:
@@ -378,6 +378,7 @@ class AnalogFilter():
                 k = 1 # (self.w0**2)**-orddiff
             if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
                 k *= np.power(10, -self.ap_dB/20)    
+            k = np.abs(k)
             self.tf = TFunction(denorm_z, denorm_p, k*self.gain)
             self.tf_template = TFunction(denorm_z, denorm_p, k)
             return
