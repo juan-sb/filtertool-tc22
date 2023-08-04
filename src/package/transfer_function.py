@@ -220,7 +220,6 @@ class TFunction():
         if(zp_ord == [2, 2]):
             w0 = np.abs(self.p[0])
             Q = w0 / self.D[1]
-            print(np.abs(self.z[0]), np.abs(self.p[0]))
             if(np.isclose(np.abs(self.z[0]), 0)):
                 return HP2, "Second order high pass wc={:.2f}".format(np.abs(self.p[0]))
             elif(np.isclose(np.abs(self.z[0]), np.abs(self.p[0]))):

@@ -651,18 +651,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         tstep, stepres = signal.step(filtds.tf.tf_object, N=5000)
         timp, impres = signal.impulse(filtds.tf.tf_object, N=5000)
+        
 
-        f = np.array(filtds.data[0]['f'])
-        g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
-        ph = np.array(filtds.data[0]['ph'])
-        gd = np.array(filtds.data[0]['gd'])
+        # f = np.array(filtds.data[0]['f'])
+        # g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
+        # ph = np.array(filtds.data[0]['ph'])
+        # gd = np.array(filtds.data[0]['gd'])
         z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
+        minf, maxf = self.getRelevantFrequencies(z, p)
+        minval = minf/20
+        maxval = maxf*20
+        f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True)
+        
+        zz = [zi for zi in z if zi == 0]
+        if(len(zz) > 4):
+            ph += 360 * (len(zz)//4)
 
         magcanvas.ax.plot(f, g, label = str(filtds.origin))
         phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
         groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin))
         stepcanvas.ax.plot(tstep, stepres, label = str(filtds.origin))
         impulsecanvas.ax.plot(timp, impres, label = str(filtds.origin))
+
+        magcanvas.ax.set_xlim([minval, maxval])
+        phasecanvas.ax.set_xlim([minval, maxval])
 
         ap = filtds.origin.ap_dB
         aa = filtds.origin.aa_dB
@@ -759,10 +771,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for helper in filtds.origin.helperFilters:
             fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
             attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
-            f, g, ph, gd = helper.tf.getBode()
+            f,g,ph,gd = helper.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True)
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
             p = np.append(p, [minf, maxf])
             minf, maxf = self.getRelevantFrequencies(z, p)
+
+            zz = [zi for zi in z if zi == 0]
+            if(len(zz) > 4):
+                ph += 360 * (len(zz)//4)
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
             timp, impres = signal.impulse(helper.tf.tf_object, N=5000)
@@ -776,9 +792,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
         pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         pzcanvas.ax.set_prop_cycle(None)
-        
-        for patch in patches:
-            pzcanvas.ax.add_patch(patch)
+        if(self.cb_frelcirc.isChecked()):
+            for patch in patches:
+                pzcanvas.ax.add_patch(patch)
         poles = pzcanvas.ax.scatter(px, py, marker='x')
         cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
 
@@ -786,7 +802,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
             pzcanvas.ax.scatter(p.real, p.imag, marker='x')
 
-        if(len(filtds.origin.helperFilters) > 0):
+        if(len(filtds.origin.helperFilters) > 0 and self.cb_flegends.isChecked()):
             attcanvas.ax.legend()
             magcanvas.ax.legend()
             phasecanvas.ax.legend()
@@ -1640,7 +1656,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     def getRelevantFrequencies(self, zeros, poles):
         singularitiesNorm = np.append(np.abs(zeros), np.abs(poles))
-        singularitiesNormWithoutZeros = singularitiesNorm[singularitiesNorm != 0]
+        singularitiesNormWithoutZeros = [s for s in singularitiesNorm if s != 0]
         if(len(singularitiesNormWithoutZeros) == 0):
             return (1, 1)
         return (np.min(singularitiesNormWithoutZeros), np.max(singularitiesNormWithoutZeros))
