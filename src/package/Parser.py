@@ -51,3 +51,9 @@ class ExprParser():
         return sym.latex(sym.sympify(self.txt))
       else:
         return sym.latex(sym.sympify(txt))
+      
+    def getSympyfied(self, txt=None):
+      if not txt:
+        return sym.sympify(self.txt)
+      else:
+        return sym.sympify(txt)

@@ -179,22 +179,30 @@ class TFunction():
 
     def removeStage(self, tf):
         self.setZPK([i for i in self.z if i not in tf.z], [i for i in self.p if i not in tf.p], self.k/tf.k)
-        
+    
     def getLatex(self, txt):
         return self.eparser.getLatex(txt=txt)
-    
+
+    def getHuman(self, txt):
+        return self.eparser.getSympyfied(txt=txt)
+
     def buildSymbolicText(self, asterisk=False):
         txt = "("
         nmax = len(self.N)
         dmax = len(self.D)
-        for i, coeff in enumerate(self.N[:1]):
-            txt += str(coeff) + '*s' + ('**' if asterisk else '^') + str(nmax - i - 1)
-            if(i != len(self.N) - 2): txt += '+'
+        print("Hi")
+        print(self.N)
+        print(enumerate(self.N))
+        for i, coeff in enumerate(self.N):
+            print(i, coeff)
+            if(coeff > 0):
+                txt += str(coeff) + '*s' + ('**' if asterisk else '^') + str(nmax - i - 1)
+                if(i != len(self.N) - 1): txt += '+'
         txt += '{:+}'.format(self.N[nmax - 1])
         txt += ')/('
-        for i, coeff in enumerate(self.D[:1]):
+        for i, coeff in enumerate(self.D):
             txt += str(coeff) + '*s' + ('**' if asterisk else '^') + str(dmax - i - 1)
-            if(i != len(self.D) - 2): txt += '+'
+            # if(i != len(self.D) - 2): txt += '+'
         txt += '{:+}'.format(self.D[dmax - 1])
         txt += ')'
         return txt

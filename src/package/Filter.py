@@ -333,6 +333,8 @@ class AnalogFilter():
             assert not np.isnan(wd)
 
             transformation = s * ((1 - self.denorm/100) * self.wan + self.denorm/100 * wd)/self.wan
+            if(self.approx_type == CHEBYSHEV2):
+                transformation = s * ((1 - self.denorm/100) * wd + self.denorm/100 * self.wan)/wd
             self.eparser.transform(transformation)
             N, D = self.eparser.getND()
             self.tf_norm = TFunction(N, D)

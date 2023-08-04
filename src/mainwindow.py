@@ -21,6 +21,8 @@ from scipy.signal import savgol_filter
 import scipy.signal as signal
 from scipy.interpolate import splrep, splev, splprep
 import matplotlib.ticker as ticker
+from matplotlib.pyplot import Circle
+import matplotlib.patches as mpatches
 from mplcursors import  cursor, Selection
 
 import numpy as np
@@ -669,6 +671,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         xmax = 0
         xmin = 0
         ymax = aa*2
+        patches = []
         if filtds.origin.filter_type == Filter.LOW_PASS:
             fp = filtds.origin.wp * W_TO_F
             fa = filtds.origin.wa * W_TO_F
@@ -678,6 +681,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([xmin, fp], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
+            patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
             fp = filtds.origin.wp * W_TO_F
@@ -688,6 +692,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
+            patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w * W_TO_F for w in filtds.origin.wp]
@@ -756,7 +761,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
             f, g, ph, gd = helper.tf.getBode()
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
-            np.append(p, [minf, maxf])
+            p = np.append(p, [minf, maxf])
             minf, maxf = self.getRelevantFrequencies(z, p)
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
@@ -771,12 +776,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
         pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
         pzcanvas.ax.set_prop_cycle(None)
-        poles = pzcanvas.ax.scatter(px, py, marker='x', label = str(filtds.origin))
+        
+        for patch in patches:
+            pzcanvas.ax.add_patch(patch)
+        poles = pzcanvas.ax.scatter(px, py, marker='x')
         cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
 
         for helper in filtds.origin.helperFilters:
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
-            pzcanvas.ax.scatter(p.real, p.imag, marker='x', label = str(helper))
+            pzcanvas.ax.scatter(p.real, p.imag, marker='x')
 
         if(len(filtds.origin.helperFilters) > 0):
             attcanvas.ax.legend()
@@ -790,6 +798,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         magcanvas.draw()
         phasecanvas.draw()
         groupdelaycanvas.draw()
+        
         pzcanvas.draw()
         stepcanvas.draw()
         impulsecanvas.draw()
@@ -1014,7 +1023,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.updateFilterStages()
 
     def formatPoleAnnotation(self, sel):
-        sel.annotation.set_text('Pole {:d}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, sel.target[0], sel.target[1], self.calcQ(sel.target)))
+        sel.annotation.set_text('Pole {:d}\nFreq {:.2f}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, np.sqrt(sel.target[0]**2 + sel.target[1]**2), sel.target[0], sel.target[1], self.calcQ(sel.target)))
 
     def formatZeroAnnotation(self, sel):
         if(True or sel.target[0] == 0 and sel.target[1] == 0):
