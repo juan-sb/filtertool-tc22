@@ -190,20 +190,28 @@ class TFunction():
         txt = "("
         nmax = len(self.N)
         dmax = len(self.D)
-        print("Hi")
-        print(self.N)
-        print(enumerate(self.N))
-        for i, coeff in enumerate(self.N):
-            print(i, coeff)
+        numcoeffs = []
+        for i, coeff in list(enumerate(self.N)):
             if(coeff > 0):
-                txt += str(coeff) + '*s' + ('**' if asterisk else '^') + str(nmax - i - 1)
-                if(i != len(self.N) - 1): txt += '+'
-        txt += '{:+}'.format(self.N[nmax - 1])
+                numcoeffs.append([nmax - i - 1, coeff])
+        for i, coeffarr in enumerate(numcoeffs):
+            if(coeffarr[0] != 0):
+                txt += str(coeffarr[1]) + '*s' + ('**' if asterisk else '^') + str(coeffarr[0])
+            else:
+                txt += str(coeffarr[1])
+            if(i != len(numcoeffs) - 1): txt += '+'
+
         txt += ')/('
-        for i, coeff in enumerate(self.D):
-            txt += str(coeff) + '*s' + ('**' if asterisk else '^') + str(dmax - i - 1)
-            # if(i != len(self.D) - 2): txt += '+'
-        txt += '{:+}'.format(self.D[dmax - 1])
+        dencoeffs = []
+        for i, coeff in list(enumerate(self.D)):
+            if(coeff > 0):
+                dencoeffs.append([dmax - i - 1, coeff])
+        for i, coeffarr in enumerate(dencoeffs):
+            if(coeffarr[0] != 0):
+                txt += str(coeffarr[1]) + '*s' + ('**' if asterisk else '^') + str(coeffarr[0])
+            else:
+                txt += str(coeffarr[1])
+            if(i != len(dencoeffs) - 1): txt += '+'
         txt += ')'
         return txt
 
