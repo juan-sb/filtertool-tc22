@@ -323,7 +323,7 @@ class AnalogFilter():
 
         #Primera desnormalización: la elegida en las opciones
         if self.filter_type != GROUP_DELAY:
-            f, g, p, gd = self.tf_norm.getBode(linear=True, start=1/(2*pi), stop=1.5*self.wan/(2*pi), num=10000)
+            f, g, p, gd = self.tf_norm.getBode(linear=True, start=0.01/(2*pi), stop=100*self.wan/(2*pi), num=10000)
             w = 2* pi * f
             wd = np.nan
             for wi in reversed(w):
@@ -334,14 +334,14 @@ class AnalogFilter():
             
             denor = self.denorm/100
             transformation = s * ((1 - denor) * self.wan + denor * wd)/self.wan
-            if(self.approx_type == CHEBYSHEV2):
+            if(self.approx_type == CHEBYSHEV2 and self.filter_type in [LOW_PASS, HIGH_PASS]):
                 wp = np.nan
                 for wi in reversed(w):
                     if abs(self.tf_norm.at(1j*wi)) >= self.gp:
                         wp = wi
                         break
                 assert not np.isnan(wd)
-                transformation = s * (wd / self.wan) * (denor + (1-denor)*wp)
+                # transformation = s * (wd / self.wan) * (denor + (1-denor)*wp)
 
             self.eparser.transform(transformation)
             N, D = self.eparser.getND()
