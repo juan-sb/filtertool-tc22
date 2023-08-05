@@ -331,10 +331,18 @@ class AnalogFilter():
                     wd = wi
                     break
             assert not np.isnan(wd)
+            
+            denor = self.denorm/100
+            transformation = s * ((1 - denor) * self.wan + denor * wd)/self.wan
+            if(self.approx_type == CHEBYSHEV2):
+                wp = np.nan
+                for wi in reversed(w):
+                    if abs(self.tf_norm.at(1j*wi)) >= self.gp:
+                        wp = wi
+                        break
+                assert not np.isnan(wd)
+                transformation = s * (wd / self.wan) * (denor + (1-denor)*wp)
 
-            transformation = s * ((1 - self.denorm/100) * self.wan + self.denorm/100 * wd)/self.wan
-            # if(self.approx_type == CHEBYSHEV2):
-            #     transformation = s * ((1 - self.denorm/100) * wd + self.denorm/100 * self.wan)/wd
             self.eparser.transform(transformation)
             N, D = self.eparser.getND()
             self.tf_norm = TFunction(N, D)
