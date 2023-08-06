@@ -782,7 +782,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
             timp, impres = signal.impulse(helper.tf.tf_object, N=5000)
-            magcanvas.ax.plot(f, 20 * np.log10(np.abs(np.array(g))), label = str(helper))
+            magcanvas.ax.plot(f, g, label = str(helper))
             phasecanvas.ax.plot(f, ph, label = str(helper))
             groupdelaycanvas.ax.plot(f, gd, label = str(helper))
             stepcanvas.ax.plot(tstep, stepres, label = str(helper))
