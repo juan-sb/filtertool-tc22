@@ -664,7 +664,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True)
         
         zz = [zi for zi in z if zi == 0]
-        if(len(zz) > 4):
+        if(len(zz) >= 4):
             ph += 360 * (len(zz)//4)
 
         magcanvas.ax.plot(f, g, label = str(filtds.origin))
@@ -777,7 +777,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             minf, maxf = self.getRelevantFrequencies(z, p)
 
             zz = [zi for zi in z if zi == 0]
-            if(len(zz) > 4):
+            if(len(zz) >= 4):
                 ph += 360 * (len(zz)//4)
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
