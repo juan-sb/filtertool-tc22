@@ -659,8 +659,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # gd = np.array(filtds.data[0]['gd'])
         z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
         minf, maxf = self.getRelevantFrequencies(z, p)
-        minval = minf/20
-        maxval = maxf*20
+        minval = minf/100
+        maxval = maxf*100
         f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True)
         
         zz = [zi for zi in z if zi == 0]
@@ -693,7 +693,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([xmin, fp], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
-            patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
+            if(filtds.origin.denorm == 0):
+                patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
+            elif(filtds.origin.denorm == 100):
+                patches.append(Circle((0, 0), fa, fill=False, alpha=0.2))
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
             fp = filtds.origin.wp * W_TO_F
@@ -704,11 +707,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
-            patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
+            if(filtds.origin.denorm == 0):
+                patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
+            elif(filtds.origin.denorm == 100):
+                patches.append(Circle((0, 0), fa, fill=False, alpha=0.2))
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w * W_TO_F for w in filtds.origin.wp]
             fa = [w * W_TO_F for w in filtds.origin.wa]
+            f0 = W_TO_F * filtds.origin.w0
             reqfa = [w * W_TO_F for w in filtds.origin.reqwa] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fa
             deltaf = (fa[1] - fa[0])/2
             xmax = fa[1] + deltaf
@@ -726,11 +733,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     print("WTF1")
             attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
+            
+            if(filtds.origin.denorm == 0):
+                patches.append(Circle((0, 0), f0, fill=False, alpha=0.2))
+                patches.append(Circle((0, f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
+                patches.append(Circle((0, -f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
+            # elif(filtds.origin.denorm == 100):
+            #     patches.append(Circle((0, 0), fa, fill=False, alpha=0.2))
+
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
             fp = [w * W_TO_F for w in filtds.origin.wp]
             reqfp = [w * W_TO_F for w in filtds.origin.reqwp] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fp
             fa = [w * W_TO_F for w in filtds.origin.wa]
+            f0 = W_TO_F * filtds.origin.w0
             deltaf = (fp[1] - fp[0])/2
             xmax = fp[1] + deltaf
             xmin = max([0, fp[0] - deltaf])
@@ -746,6 +762,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     print("WTF")
             attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
+            
+            if(filtds.origin.denorm == 0):
+                patches.append(Circle((0, 0), f0, fill=False, alpha=0.2))
+                patches.append(Circle((0, f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
+                patches.append(Circle((0, -f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
         
         elif filtds.origin.filter_type == Filter.GROUP_DELAY:
             frg = filtds.origin.wrg * W_TO_F
