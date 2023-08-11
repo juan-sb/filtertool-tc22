@@ -694,9 +694,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
             if(filtds.origin.denorm == 0):
-                patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
+                patches.append(Circle((0, 0), fp, fill=False, linestyle=':', alpha=0.15))
             elif(filtds.origin.denorm == 100):
-                patches.append(Circle((0, 0), fa, fill=False, alpha=0.2))
+                patches.append(Circle((0, 0), fa, fill=False, linestyle=':', alpha=0.15))
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
             fp = filtds.origin.wp * W_TO_F
@@ -708,9 +708,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
             if(filtds.origin.denorm == 0):
-                patches.append(Circle((0, 0), fp, fill=False, alpha=0.2))
+                patches.append(Circle((0, 0), fp, fill=False, linestyle=':', alpha=0.15))
             elif(filtds.origin.denorm == 100):
-                patches.append(Circle((0, 0), fa, fill=False, alpha=0.2))
+                patches.append(Circle((0, 0), fa, fill=False, linestyle=':', alpha=0.15))
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
             fp = [w * W_TO_F for w in filtds.origin.wp]
@@ -735,11 +735,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.set_ylim([0, ymax])
             
             if(filtds.origin.denorm == 0):
-                patches.append(Circle((0, 0), f0, fill=False, alpha=0.2))
-                patches.append(Circle((0, f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
-                patches.append(Circle((0, -f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
-            # elif(filtds.origin.denorm == 100):
-            #     patches.append(Circle((0, 0), fa, fill=False, alpha=0.2))
+                mintransband = np.min([fp[0]-fa[0], fa[1]-fp[1]])
+                deltafp = fp[1]-fp[0]
+                bpmeritfig = deltafp/mintransband
+                if(bpmeritfig <= 3):
+                    patches.append(Circle((0, 0), f0, fill=False, linestyle=':', alpha=0.15))
+                    patches.append(Circle((0, f0), np.abs(fp[0] - fp[1])/2, fill=False, linestyle=':', alpha=0.15))
+                    patches.append(Circle((0, -f0), np.abs(fp[0] - fp[1])/2, fill=False, linestyle=':', alpha=0.15))
+                else:
+                    patches.append(Circle((0, 0), fp[0], fill=False, linestyle=':', alpha=0.15))
+                    patches.append(Circle((0, 0), fp[1], fill=False, linestyle=':', alpha=0.15))
+
 
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
@@ -764,9 +770,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             attcanvas.ax.set_ylim([0, ymax])
             
             if(filtds.origin.denorm == 0):
-                patches.append(Circle((0, 0), f0, fill=False, alpha=0.2))
-                patches.append(Circle((0, f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
-                patches.append(Circle((0, -f0), np.abs(fp[0] - fp[1])/2, fill=False, alpha=0.2))
+                mintransband = np.min([fa[0]-fp[0], fp[1]-fa[1]])
+                deltafa = fa[1]-fa[0]
+                brmeritfig = deltafa/mintransband
+                if(brmeritfig <= 3):
+                    patches.append(Circle((0, 0), f0, fill=False, linestyle=':', alpha=0.15))
+                    patches.append(Circle((0, f0), np.abs(fp[0] - fp[1])/2, fill=False, linestyle=':', alpha=0.15))
+                    patches.append(Circle((0, -f0), np.abs(fp[0] - fp[1])/2, fill=False, linestyle=':', alpha=0.15))
+                else:
+                    patches.append(Circle((0, 0), fp[0], fill=False, linestyle=':', alpha=0.15))
+                    patches.append(Circle((0, 0), fp[1], fill=False, linestyle=':', alpha=0.15))
         
         elif filtds.origin.filter_type == Filter.GROUP_DELAY:
             frg = filtds.origin.wrg * W_TO_F
