@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1014</width>
-    <height>757</height>
+    <width>874</width>
+    <height>744</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -100,9 +100,9 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>0</y>
-                <width>98</width>
-                <height>451</height>
+                <y>-260</y>
+                <width>217</width>
+                <height>538</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -625,7 +625,7 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>140</width>
+            <width>200</width>
             <height>0</height>
            </size>
           </property>
@@ -671,8 +671,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
-                <height>492</height>
+                <width>192</width>
+                <height>575</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -702,6 +702,12 @@
                  <property name="enabled">
                   <bool>true</bool>
                  </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>70</width>
+                   <height>0</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>180</width>
@@ -721,6 +727,12 @@
                   </item>
                   <item row="1" column="1">
                    <widget class="QComboBox" name="dl_render_cb">
+                    <property name="minimumSize">
+                     <size>
+                      <width>50</width>
+                      <height>0</height>
+                     </size>
+                    </property>
                     <item>
                      <property name="text">
                       <string>Plot 1</string>
@@ -1175,7 +1187,14 @@
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QLineEdit" name="dl_name_edit"/>
+                   <widget class="QLineEdit" name="dl_name_edit">
+                    <property name="minimumSize">
+                     <size>
+                      <width>50</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                   </widget>
                   </item>
                   <item row="3" column="1">
                    <widget class="QComboBox" name="dl_transform_cb">
@@ -1241,6 +1260,12 @@
             <widget class="QPushButton" name="resp_btn">
              <property name="enabled">
               <bool>false</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>60</width>
+               <height>0</height>
+              </size>
              </property>
              <property name="text">
               <string>Respuesta</string>
@@ -1333,8 +1358,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>203</width>
-                   <height>431</height>
+                   <width>193</width>
+                   <height>513</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -1762,8 +1787,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>240</width>
-                <height>353</height>
+                <width>217</width>
+                <height>413</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -2376,8 +2401,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>98</width>
-             <height>617</height>
+             <width>239</width>
+             <height>719</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -2855,8 +2880,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1014</width>
-     <height>21</height>
+     <width>874</width>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">

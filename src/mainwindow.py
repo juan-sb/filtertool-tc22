@@ -1588,7 +1588,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         except ValueError:
                             self.statusbar.showMessage('Wrong data source matching', 2000)
             if(self.plt_legendpos.currentText() == 'None'):
-                canvas.ax.get_legend().remove()
+                if(canvas.ax.get_legend()):
+                    canvas.ax.get_legend().remove()
             else:
                 canvas.ax.legend(handles=plotlist, fontsize=self.plt_legendsize_sb.value(), loc=self.plt_legendpos.currentIndex())
             if(self.plt_grid.isChecked()):
@@ -1598,7 +1599,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             try:
                 canvas.draw()
-            except ParseSyntaxException or ValueError:
+            except ValueError:
                 pass
 
     def showZPWindow(self):
