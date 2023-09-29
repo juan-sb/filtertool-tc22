@@ -730,7 +730,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 elif(fa[1] != reqfa[1]):
                     attcanvas.ax.fill_between([reqfa[1], fa[1] ], [aa, aa], 0, facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
                 else:
-                    print("WTF1")
+                    pass
             attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
             
