@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>874</width>
+    <width>1002</width>
     <height>744</height>
    </rect>
   </property>
@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -100,7 +100,7 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>-260</y>
+                <y>0</y>
                 <width>217</width>
                 <height>538</height>
                </rect>
@@ -1452,11 +1452,14 @@
                     <property name="suffix">
                      <string>Hz</string>
                     </property>
+                    <property name="decimals">
+                     <number>2</number>
+                    </property>
                     <property name="maximum">
                      <double>1000000000.000000000000000</double>
                     </property>
                     <property name="value">
-                     <double>1.000000000000000</double>
+                     <double>5.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -1467,6 +1470,9 @@
                     </property>
                     <property name="suffix">
                      <string>Hz</string>
+                    </property>
+                    <property name="decimals">
+                     <number>2</number>
                     </property>
                     <property name="maximum">
                      <double>1000000000.000000000000000</double>
@@ -1538,6 +1544,9 @@
                     </property>
                     <property name="suffix">
                      <string> dB</string>
+                    </property>
+                    <property name="decimals">
+                     <number>1</number>
                     </property>
                     <property name="minimum">
                      <double>0.000000000000000</double>
@@ -1611,6 +1620,9 @@
                     </property>
                     <property name="suffix">
                      <string> dB</string>
+                    </property>
+                    <property name="decimals">
+                     <number>1</number>
                     </property>
                     <property name="minimum">
                      <double>0.000000000000000</double>
@@ -2880,7 +2892,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>874</width>
+     <width>1002</width>
      <height>26</height>
     </rect>
    </property>

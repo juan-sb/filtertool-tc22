@@ -52,6 +52,8 @@ W_TO_F = 1/F_TO_W
 SING_B_TO_F = W_TO_F if SHOW_PZ_IN_HZ else 1
 SING_F_TO_B = F_TO_W if SHOW_PZ_IN_HZ else 1
 
+PZ_LIM_SCALING = 1.35
+
 def stage_to_str(stage):
     stage_str = 'Z={'
     for z in stage.z:
@@ -867,8 +869,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         actualmax = max([maxf, maxf2])
         pzcanvas.ax.set_prop_cycle(None)
-        pzcanvas.ax.set_xlim(left=-actualmax*1.2, right=actualmax*1.2)
-        pzcanvas.ax.set_ylim(bottom=-actualmax*1.2, top=actualmax*1.2)
+        pzcanvas.ax.set_xlim(left=-actualmax*PZ_LIM_SCALING, right=actualmax*PZ_LIM_SCALING)
+        pzcanvas.ax.set_ylim(bottom=-actualmax*PZ_LIM_SCALING, top=actualmax*PZ_LIM_SCALING)
         pzcanvas.ax.axis('equal')
 
         if(len(filtds.origin.helperFilters) > 0 and self.cb_flegends.isChecked()):
@@ -1181,8 +1183,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         fpzcanvas.ax.axis('equal')
         fpzcanvas.ax.axhline(0, color="black", alpha=0.1)
         fpzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        fpzcanvas.ax.set_xlim(left=-maxt*1.2, right=maxt*1.2)
-        fpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
+        fpzcanvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
+        fpzcanvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
 
         polcol = []
         zercol = []
@@ -1227,8 +1229,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tpzcanvas.ax.axis('equal')
         tpzcanvas.ax.axhline(0, color="black", alpha=0.1)
         tpzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        tpzcanvas.ax.set_xlim(left=-maxt*1.2, right=maxt*1.2)
-        tpzcanvas.ax.set_ylim(bottom=-maxt*1.2, top=maxt*1.2)
+        tpzcanvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
+        tpzcanvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
         zt, pt = self.selected_dataset_data.origin.implemented_tf.getZP(SHOW_PZ_IN_HZ)
         
         zeroes_t = tpzcanvas.ax.scatter(zt.real, zt.imag, c='#0000FF', marker='o')
@@ -1258,8 +1260,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             spzcanvas.ax.axis('equal')
             spzcanvas.ax.axhline(0, color="black", alpha=0.1)
             spzcanvas.ax.axvline(0, color="black", alpha=0.1)
-            spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
-            spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+            spzcanvas.ax.set_xlim(left=-max*PZ_LIM_SCALING, right=max*PZ_LIM_SCALING)
+            spzcanvas.ax.set_ylim(bottom=-max*PZ_LIM_SCALING, top=max*PZ_LIM_SCALING)
 
             zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
             poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
@@ -1854,8 +1856,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # spzcanvas.ax.axis('equal')
         # spzcanvas.ax.axhline(0, color="black", alpha=0.1)
         # spzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        # spzcanvas.ax.set_xlim(left=-max*1.2, right=max*1.2)
-        # spzcanvas.ax.set_ylim(bottom=-max*1.2, top=max*1.2)
+        # spzcanvas.ax.set_xlim(left=-max*PZ_LIM_SCALING, right=max*PZ_LIM_SCALING)
+        # spzcanvas.ax.set_ylim(bottom=-max*PZ_LIM_SCALING, top=max*PZ_LIM_SCALING)
 
         # zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
         # poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
