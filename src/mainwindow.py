@@ -187,6 +187,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.fgetHlatex_btn.clicked.connect(self.copyFilterHlatex)
         self.sgetHhuman_btn.clicked.connect(self.copyStageHhuman)
         self.sgetHlatex_btn.clicked.connect(self.copyStageHlatex)
+        
+        self.filterPoleCursor = None
+        self.filterZerCursor = None
+        self.totalStagesZeroCursor = None
+        self.totalStagesPoleCursor = None
+        self.stageLoneZeroCursor = None
+        self.stageLonePoleCursor = None
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -632,6 +639,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def updateFilterPlots(self):
         if(not isinstance(self.selected_dataset_data, Dataset)): return
+        
+        if(self.filterZerCursor):
+            for sel in self.filterZerCursor.selections:
+                self.filterZerCursor.remove_selection(sel)
+
+        if self.filterPoleCursor :
+            for sel in self.filterPoleCursor.selections:
+                self.filterPoleCursor.remove_selection(sel)
+
         attcanvas = self.fplot_att.canvas
         magcanvas = self.fplot_mag.canvas
         phasecanvas = self.fplot_phase.canvas
@@ -795,11 +811,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             frg = filtds.origin.wrg * W_TO_F
             xmax = 2 * frg
             xmin = 0
+            groupdelaycanvas.ax.fill_between([0,  frg], [filtds.origin.tau0, filtds.origin.tau0], filtds.origin.tau0*(1 - filtds.origin.gamma/100), facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
         attcanvas.ax.set_xlim(xmin, xmax)
         fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
-        attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
+        with np.errstate(divide='ignore'): 
+            attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
 
-        pzcanvas.ax.axis('equal')
         pzcanvas.ax.axhline(0, color="black", alpha=0.1)
         pzcanvas.ax.axvline(0, color="black", alpha=0.1)
         minf, maxf = self.getRelevantFrequencies(z, p)
@@ -810,15 +827,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         zeroes = pzcanvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
         pzcanvas.ax.set_xlabel(PZ_XLABEL)
         pzcanvas.ax.set_ylabel(PZ_YLABEL)
-        cursor(zeroes, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
-
+        
+        self.filterZerCursor = cursor(zeroes, multiple=True, highlight=True)
+        self.filterZerCursor.connect("add", self.formatZeroAnnotation)
+        maxf2 = 0
         for helper in filtds.origin.helperFilters:
             fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
             attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
             f,g,ph,gd = helper.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True)
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
             p = np.append(p, [minf, maxf])
-            minf, maxf = self.getRelevantFrequencies(z, p)
+            minf2, maxf2 = self.getRelevantFrequencies(z, p)
 
             zz = [zi for zi in z if zi == 0]
             if(len(zz) >= 4):
@@ -833,18 +852,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             impulsecanvas.ax.plot(timp, impres, label = str(helper))
             pzcanvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper))
 
-        pzcanvas.ax.set_xlim(left=-maxf*1.2, right=maxf*1.2)
-        pzcanvas.ax.set_ylim(bottom=-maxf*1.2, top=maxf*1.2)
-        pzcanvas.ax.set_prop_cycle(None)
         if(self.cb_frelcirc.isChecked()):
             for patch in patches:
                 pzcanvas.ax.add_patch(patch)
         poles = pzcanvas.ax.scatter(px, py, marker='x')
-        cursor(poles, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
+        
+        self.filterPoleCursor = cursor(poles, multiple=True, highlight=True)
+        self.filterPoleCursor.connect("add", self.formatPoleAnnotation)
 
         for helper in filtds.origin.helperFilters:
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
             pzcanvas.ax.scatter(p.real, p.imag, marker='x')
+
+
+        actualmax = max([maxf, maxf2])
+        pzcanvas.ax.set_prop_cycle(None)
+        pzcanvas.ax.set_xlim(left=-actualmax*1.2, right=actualmax*1.2)
+        pzcanvas.ax.set_ylim(bottom=-actualmax*1.2, top=actualmax*1.2)
+        pzcanvas.ax.axis('equal')
 
         if(len(filtds.origin.helperFilters) > 0 and self.cb_flegends.isChecked()):
             attcanvas.ax.legend()
@@ -967,15 +992,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def updateSelectedPolesFromPlot(self, s):
         self.poles_list.blockSignals(True)
         selected_pole_indexes = [sel.index for sel in self.stageCursorPol.selections]
+        dont_add_to_list = False
+        if(s.index in [sel.index for sel in self.stageCursorPol.selections if self.poles_list.item(sel.index).flags() == Qt.ItemFlag.NoItemFlags]):
+            self.stageCursorPol.remove_selection(s)
+            dont_add_to_list = True
         for x in range(self.poles_list.count()):
-            self.poles_list.item(x).setSelected(x in selected_pole_indexes)
+            if(not (x == s.index and dont_add_to_list)):
+                self.poles_list.item(x).setSelected(x in selected_pole_indexes)
         self.poles_list.blockSignals(False)
 
     def updateSelectedZerosFromPlot(self, s):
         self.zeros_list.blockSignals(True)
         selected_zero_indexes = [sel.index for sel in self.stageCursorZer.selections]
+        dont_add_to_list = False
+        if(s.index in [sel.index for sel in self.stageCursorZer.selections if self.zeros_list.item(sel.index).flags() == Qt.ItemFlag.NoItemFlags]):
+            self.stageCursorZer.remove_selection(s)
+            dont_add_to_list = True
         for x in range(self.zeros_list.count()):
-            self.zeros_list.item(x).setSelected(x in selected_zero_indexes)
+            if(not (x == s.index and dont_add_to_list)):
+                self.zeros_list.item(x).setSelected(x in selected_zero_indexes)
         self.zeros_list.blockSignals(False)
 
 
@@ -1106,6 +1141,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def updateStagePlots(self):
         if(not isinstance(self.selected_dataset_data, Dataset)): return
+    
+        if(self.totalStagesZeroCursor):
+            for sel in self.totalStagesZeroCursor.selections:
+                self.totalStagesZeroCursor.remove_selection(sel)
+
+        if(self.totalStagesPoleCursor):
+            for sel in self.totalStagesPoleCursor.selections:
+                self.totalStagesPoleCursor.remove_selection(sel)
+
+        if(self.stageLonePoleCursor):
+            for sel in self.stageLonePoleCursor.selections:
+                self.stageLonePoleCursor.remove_selection(sel)
+
+        if(self.stageLoneZeroCursor):
+            for sel in self.stageLoneZeroCursor.selections:
+                self.stageLoneZeroCursor.remove_selection(sel)
+
         self.redrawStagePlots = False
         spzcanvas = self.splot_pz.canvas
         smagcanvas = self.splot_sgain.canvas
@@ -1181,8 +1233,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         zeroes_t = tpzcanvas.ax.scatter(zt.real, zt.imag, c='#0000FF', marker='o')
         poles_t = tpzcanvas.ax.scatter(pt.real, pt.imag, c='#FF0000', marker='x')
-        cursor(zeroes_t, multiple=True, highlight=True).connect("add", self.formatZeroAnnotation)
-        cursor(poles_t, multiple=True, highlight=True).connect("add", self.formatPoleAnnotation)
+        self.totalStagesZeroCursor = cursor(zeroes_t, multiple=True, highlight=True)
+        self.totalStagesZeroCursor.connect("add", self.formatZeroAnnotation)
+        self.totalStagesPoleCursor = cursor(poles_t, multiple=True, highlight=True)
+        self.totalStagesPoleCursor.connect("add", self.formatPoleAnnotation)
 
         # fpzcanvas.draw()
         # tpzcanvas.draw()
@@ -1210,8 +1264,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
             poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
 
-            cursor(zeroes_f).connect("add", self.formatZeroAnnotation)
-            cursor(poles_f).connect("add", self.formatPoleAnnotation)
+            self.stageLoneZeroCursor = cursor(zeroes_f)
+            self.stageLoneZeroCursor.connect("add", self.formatZeroAnnotation)
+            self.stageLonePoleCursor = cursor(poles_f)
+            self.stageLonePoleCursor.connect("add", self.formatPoleAnnotation)
             self.si_info.setText(accumulated_ds.origin.getSOFilterType()[1])
         #     self.updatePossibleImplementations()
         # spzcanvas.draw()

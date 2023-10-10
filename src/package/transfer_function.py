@@ -71,7 +71,7 @@ class TFunction():
             N = [N]
         if not hasattr(D, '__iter__'):
             D = [D]
-        self.N, self.D = np.array(N, dtype=np.float64), np.array(D, dtype=np.float64)
+        self.N, self.D = np.array(np.real(N), dtype=np.float64), np.array(np.real(D), dtype=np.float64)
         if normalize:
             self.normalize()
         self.computedDerivatives = False
@@ -139,7 +139,8 @@ class TFunction():
     def gd_at(self, w0):
         if not self.computedDerivatives:
             self.getDerivatives()
-        return -np.imag(1j*(poly_at(self.dN, 1j*w0)/poly_at(self.N, 1j*w0) - poly_at(self.dD, 1j*w0)/poly_at(self.D, 1j*w0))) #'1j*..' --> regla de la cadena
+        with np.errstate(divide='ignore'): 
+            return -np.imag(1j*(poly_at(self.dN, 1j*w0)/poly_at(self.N, 1j*w0) - poly_at(self.dD, 1j*w0)/poly_at(self.D, 1j*w0))) #'1j*..' --> regla de la cadena
         
     def getZP(self, in_hz=False):
         if(in_hz):
