@@ -678,10 +678,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ap = filtds.origin.ap_dB
         aa = filtds.origin.aa_dB
-
+        
+        minp, maxp = self.getRelevantFrequencies(z, p)
         xmin = 0
         xmax = 0
-        xmin = 0
         ymax = aa*2
         patches = []
         if filtds.origin.filter_type == Filter.LOW_PASS:
@@ -689,9 +689,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             fa = filtds.origin.wa * W_TO_F
             deltaf = (fa - fp)/2
             xmax = fa + deltaf
+            xmax = max([maxp, fa])*1.4
             xmin = max([0, fp - deltaf])
-            attcanvas.ax.fill_between([xmin, fp], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fa, xmax], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            xmin = 0
+
+            attcanvas.ax.fill_between([0, fp], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([fa, maxp*100], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
             if(filtds.origin.denorm == 0):
                 patches.append(Circle((0, 0), fp, fill=False, linestyle=':', alpha=0.15))
@@ -703,9 +706,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             fa = filtds.origin.wa * W_TO_F
             deltaf = (fp - fa)/2
             xmax = fp + deltaf
+            xmax = max([fp, maxp])*1.4
             xmin = max([0, fa - deltaf])
-            attcanvas.ax.fill_between([fp, xmax], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([xmin, fa], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            xmin = 0
+
+            attcanvas.ax.fill_between([fp, maxp*100], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([0, fa], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             attcanvas.ax.set_ylim([0, ymax])
             if(filtds.origin.denorm == 0):
                 patches.append(Circle((0, 0), fp, fill=False, linestyle=':', alpha=0.15))
@@ -719,10 +725,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             reqfa = [w * W_TO_F for w in filtds.origin.reqwa] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fa
             deltaf = (fa[1] - fa[0])/2
             xmax = fa[1] + deltaf
+            xmax = max(xmax, maxp)*1.4
             xmin = max([0, fa[0] - deltaf])
+            xmin = 0
             
-            attcanvas.ax.fill_between([xmin,  reqfa[0]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([reqfa[1], xmax ], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([0,  reqfa[0]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([reqfa[1], maxp*100 ], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             
             if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
                 if(fa[0] != reqfa[0]):
@@ -755,10 +763,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f0 = W_TO_F * filtds.origin.w0
             deltaf = (fp[1] - fp[0])/2
             xmax = fp[1] + deltaf
+            xmax = max(xmax, maxp)*1.4
             xmin = max([0, fp[0] - deltaf])
+            xmin = 0
             
-            attcanvas.ax.fill_between([xmin,  reqfp[0]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([reqfp[1], xmax ], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([0,  reqfp[0]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([reqfp[1], maxp*100 ], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
                 if(fp[0] != reqfp[0]):
                     attcanvas.ax.fill_between([fp[0], reqfp[0]], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
