@@ -326,13 +326,19 @@ class AnalogFilter():
         #Primera desnormalización: la elegida en las opciones
         if self.filter_type != GROUP_DELAY:
             
-            f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(0.5/(2*pi)), stop=np.log10(2*self.wan/(2*pi)), num=10000)
+            f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=500)
             w = 2* pi * f
             wd = np.nan
             for wi in reversed(w):
                 if abs(self.tf_norm.at(1j*wi)) >= self.ga:
-                    wd = wi
-                    break
+                    f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(wi*0.9), stop=np.log10(wi*1.1), num=500)
+                    wint = 2* pi * f
+                    for wi2 in reversed(wint):
+                        if abs(self.tf_norm.at(1j*wi2)) >= self.ga:
+                            wd = wi2
+                            break
+                    if(not np.isnan(wd)):
+                        break
             assert not np.isnan(wd)
             
             denor = self.denorm/100
@@ -341,8 +347,14 @@ class AnalogFilter():
                 wp = np.nan
                 for wi in reversed(w):
                     if abs(self.tf_norm.at(1j*wi)) >= self.gp:
-                        wp = wi
-                        break
+                        f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(wi*0.9), stop=np.log10(wi*1.1), num=500)
+                        wint = 2* pi * f
+                        for wi2 in reversed(wint):
+                            if abs(self.tf_norm.at(1j*wi2)) >= self.gp:
+                                wp = wi2
+                                break
+                        if(not np.isnan(wp)):
+                            break
                 assert not np.isnan(wd)
                 transformation *= (denor + (1-denor)*wp)
                 # transformation *= self.wan

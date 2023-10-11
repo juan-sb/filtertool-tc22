@@ -641,7 +641,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def updateFilterPlots(self):
         if(not isinstance(self.selected_dataset_data, Dataset)): return
-        
         if(self.filterZerCursor):
             for sel in self.filterZerCursor.selections:
                 self.filterZerCursor.remove_selection(sel)
@@ -649,12 +648,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.filterPoleCursor :
             for sel in self.filterPoleCursor.selections:
                 self.filterPoleCursor.remove_selection(sel)
+        self.poles_acum = []
+        self.zeros_acum = []
 
         attcanvas = self.fplot_att.canvas
         magcanvas = self.fplot_mag.canvas
         phasecanvas = self.fplot_phase.canvas
         groupdelaycanvas = self.fplot_gd.canvas
-        pzcanvas = self.fplot_pz.canvas
         stepcanvas = self.fplot_step.canvas
         impulsecanvas = self.fplot_impulse.canvas
         self.condition_canvas(attcanvas, 'Frecuencia [Hz]', 'Atenuación [dB]')
@@ -662,7 +662,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(phasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
         phasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[1.8,2.25,4.5,9]))
         self.condition_canvas(groupdelaycanvas, 'Frecuencia [Hz]', 'Retardo de grupo [s]', 'log')
-        self.condition_canvas(pzcanvas, '', '')
+        self.condition_canvas(self.fplot_pz.canvas, '', '')
         self.condition_canvas(stepcanvas, 'Tiempo [s]', 'Respuesta [V]')
         self.condition_canvas(impulsecanvas, 'Tiempo [s]', 'Respuesta [V]')
         filtds = self.selected_dataset_data
@@ -670,11 +670,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tstep, stepres = signal.step(filtds.tf.tf_object, N=5000)
         timp, impres = signal.impulse(filtds.tf.tf_object, N=5000)
         
-
-        # f = np.array(filtds.data[0]['f'])
-        # g = 20 * np.log10(np.abs(np.array(filtds.data[0]['g'])))
-        # ph = np.array(filtds.data[0]['ph'])
-        # gd = np.array(filtds.data[0]['gd'])
         z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
         minf, maxf = self.getRelevantFrequencies(z, p)
         minval = minf/100
@@ -819,19 +814,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         with np.errstate(divide='ignore'): 
             attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
 
-        pzcanvas.ax.axhline(0, color="black", alpha=0.1)
-        pzcanvas.ax.axvline(0, color="black", alpha=0.1)
+        self.fplot_pz.canvas.ax.axhline(0, color="black", alpha=0.1)
+        self.fplot_pz.canvas.ax.axvline(0, color="black", alpha=0.1)
         minf, maxf = self.getRelevantFrequencies(z, p)
         zx = z.real
         zy = z.imag
         px = p.real
         py = p.imag
-        zeroes = pzcanvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
-        pzcanvas.ax.set_xlabel(PZ_XLABEL)
-        pzcanvas.ax.set_ylabel(PZ_YLABEL)
-        
-        self.filterZerCursor = cursor(zeroes, multiple=True, highlight=True)
-        self.filterZerCursor.connect("add", self.formatZeroAnnotation)
+        zeroes = self.fplot_pz.canvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
+        self.fplot_pz.canvas.ax.set_xlabel(PZ_XLABEL)
+        self.fplot_pz.canvas.ax.set_ylabel(PZ_YLABEL)
+        self.zeros_acum = np.append(self.zeros_acum, zeroes)
+
         maxf2 = 0
         for helper in filtds.origin.helperFilters:
             fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
@@ -852,33 +846,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             groupdelaycanvas.ax.plot(f, gd, label = str(helper))
             stepcanvas.ax.plot(tstep, stepres, label = str(helper))
             impulsecanvas.ax.plot(timp, impres, label = str(helper))
-            pzcanvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper))
+            zeroes = self.fplot_pz.canvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper))
+            self.zeros_acum = np.append(self.zeros_acum, zeroes)
 
+        self.fplot_pz.canvas.ax.set_prop_cycle(None) # reset colors
         if(self.cb_frelcirc.isChecked()):
             for patch in patches:
-                pzcanvas.ax.add_patch(patch)
-        poles = pzcanvas.ax.scatter(px, py, marker='x')
+                self.fplot_pz.canvas.ax.add_patch(patch)
+        poles = self.fplot_pz.canvas.ax.scatter(px, py, marker='x')
+        self.poles_acum = np.append(self.poles_acum, poles)
         
-        self.filterPoleCursor = cursor(poles, multiple=True, highlight=True)
-        self.filterPoleCursor.connect("add", self.formatPoleAnnotation)
-
         for helper in filtds.origin.helperFilters:
             z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
-            pzcanvas.ax.scatter(p.real, p.imag, marker='x')
+            poles = self.fplot_pz.canvas.ax.scatter(p.real, p.imag, marker='x')
+            self.poles_acum = np.append(self.poles_acum, poles)    
+        self.filterPoleCursor = cursor(self.poles_acum, multiple=True, highlight=True)
+        self.filterPoleCursor.connect("add", self.formatPoleAnnotation)
+        self.filterZerCursor = cursor(self.zeros_acum, multiple=True, highlight=True)
+        self.filterZerCursor.connect("add", self.formatZeroAnnotation)
 
 
         actualmax = max([maxf, maxf2])
-        pzcanvas.ax.set_prop_cycle(None)
-        pzcanvas.ax.set_xlim(left=-actualmax*PZ_LIM_SCALING, right=actualmax*PZ_LIM_SCALING)
-        pzcanvas.ax.set_ylim(bottom=-actualmax*PZ_LIM_SCALING, top=actualmax*PZ_LIM_SCALING)
-        pzcanvas.ax.axis('equal')
+        self.fplot_pz.canvas.ax.set_xlim(left=-actualmax*PZ_LIM_SCALING, right=actualmax*PZ_LIM_SCALING)
+        self.fplot_pz.canvas.ax.set_ylim(bottom=-actualmax*PZ_LIM_SCALING, top=actualmax*PZ_LIM_SCALING)
+        self.fplot_pz.canvas.ax.axis('equal')
 
         if(len(filtds.origin.helperFilters) > 0 and self.cb_flegends.isChecked()):
             attcanvas.ax.legend()
             magcanvas.ax.legend()
             phasecanvas.ax.legend()
             groupdelaycanvas.ax.legend()
-            pzcanvas.ax.legend()
+            self.fplot_pz.canvas.ax.legend()
             stepcanvas.ax.legend()
             impulsecanvas.ax.legend()
         attcanvas.draw()
@@ -886,7 +884,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         phasecanvas.draw()
         groupdelaycanvas.draw()
         
-        pzcanvas.draw()
+        self.fplot_pz.canvas.draw()
         stepcanvas.draw()
         impulsecanvas.draw()
 
@@ -1161,17 +1159,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.stageLoneZeroCursor.remove_selection(sel)
 
         self.redrawStagePlots = False
-        spzcanvas = self.splot_pz.canvas
         smagcanvas = self.splot_sgain.canvas
         sphasecanvas = self.splot_sphase.canvas
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
-        tpzcanvas = self.splot_tpz.canvas
-        fpzcanvas = self.splot_fpz.canvas
 
-        self.condition_canvas(spzcanvas, PZ_XLABEL, PZ_YLABEL)
-        self.condition_canvas(fpzcanvas, PZ_XLABEL, PZ_YLABEL)
-        self.condition_canvas(tpzcanvas, PZ_XLABEL, PZ_YLABEL)
+        self.condition_canvas(self.splot_pz.canvas, PZ_XLABEL, PZ_YLABEL)
+        self.condition_canvas(self.splot_fpz.canvas, PZ_XLABEL, PZ_YLABEL)
+        self.condition_canvas(self.splot_tpz.canvas, PZ_XLABEL, PZ_YLABEL)
         self.condition_canvas(smagcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
         self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
         self.condition_canvas(tgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
@@ -1180,11 +1175,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         zf, pf = self.selected_dataset_data.origin.tf.getZP(SHOW_PZ_IN_HZ)
         mint, maxt = self.getRelevantFrequencies(zf, pf)
 
-        fpzcanvas.ax.axis('equal')
-        fpzcanvas.ax.axhline(0, color="black", alpha=0.1)
-        fpzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        fpzcanvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
-        fpzcanvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
+        self.splot_fpz.canvas.ax.axis('equal')
+        self.splot_fpz.canvas.ax.axhline(0, color="black", alpha=0.1)
+        self.splot_fpz.canvas.ax.axvline(0, color="black", alpha=0.1)
+        self.splot_fpz.canvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
+        self.splot_fpz.canvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
 
         polcol = []
         zercol = []
@@ -1207,8 +1202,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # polcol = [POLE_COLOR if pole in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F else POLE_SEL_COLOR for pole in pf]
         # zercol = [ZERO_COLOR if zero in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F else ZERO_SEL_COLOR for zero in zf]
-        zeroes_f = fpzcanvas.ax.scatter(zf.real, zf.imag, c=zercol, marker='o')
-        poles_f = fpzcanvas.ax.scatter(pf.real, pf.imag, c=polcol, marker='x')
+        zeroes_f = self.splot_fpz.canvas.ax.scatter(zf.real, zf.imag, c=zercol, marker='o')
+        poles_f = self.splot_fpz.canvas.ax.scatter(pf.real, pf.imag, c=polcol, marker='x')
         self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
         self.stageCursorZer.connect("add", self.formatZeroAnnotation)
         self.stageCursorZer.connect("add", self.updateSelectedZerosFromPlot)
@@ -1226,22 +1221,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tgaincanvas.ax.plot(f, g)
         tphasecanvas.ax.plot(f, ph)
         
-        tpzcanvas.ax.axis('equal')
-        tpzcanvas.ax.axhline(0, color="black", alpha=0.1)
-        tpzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        tpzcanvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
-        tpzcanvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
+        self.splot_tpz.canvas.ax.axis('equal')
+        self.splot_tpz.canvas.ax.axhline(0, color="black", alpha=0.1)
+        self.splot_tpz.canvas.ax.axvline(0, color="black", alpha=0.1)
+        self.splot_tpz.canvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
+        self.splot_tpz.canvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
         zt, pt = self.selected_dataset_data.origin.implemented_tf.getZP(SHOW_PZ_IN_HZ)
         
-        zeroes_t = tpzcanvas.ax.scatter(zt.real, zt.imag, c='#0000FF', marker='o')
-        poles_t = tpzcanvas.ax.scatter(pt.real, pt.imag, c='#FF0000', marker='x')
+        zeroes_t = self.splot_tpz.canvas.ax.scatter(zt.real, zt.imag, c='#0000FF', marker='o')
+        poles_t = self.splot_tpz.canvas.ax.scatter(pt.real, pt.imag, c='#FF0000', marker='x')
         self.totalStagesZeroCursor = cursor(zeroes_t, multiple=True, highlight=True)
         self.totalStagesZeroCursor.connect("add", self.formatZeroAnnotation)
         self.totalStagesPoleCursor = cursor(poles_t, multiple=True, highlight=True)
         self.totalStagesPoleCursor.connect("add", self.formatPoleAnnotation)
 
-        # fpzcanvas.draw()
-        # tpzcanvas.draw()
+        # self.splot_fpz.canvas.draw()
+        # self.splot_tpz.canvas.draw()
         # tgaincanvas.draw()
         # tphasecanvas.draw()
 
@@ -1257,14 +1252,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             sphasecanvas.ax.plot(f, ph)
 
             (min, max) = self.getRelevantFrequencies(z, p)
-            spzcanvas.ax.axis('equal')
-            spzcanvas.ax.axhline(0, color="black", alpha=0.1)
-            spzcanvas.ax.axvline(0, color="black", alpha=0.1)
-            spzcanvas.ax.set_xlim(left=-max*PZ_LIM_SCALING, right=max*PZ_LIM_SCALING)
-            spzcanvas.ax.set_ylim(bottom=-max*PZ_LIM_SCALING, top=max*PZ_LIM_SCALING)
+            self.splot_pz.canvas.ax.axis('equal')
+            self.splot_pz.canvas.ax.axhline(0, color="black", alpha=0.1)
+            self.splot_pz.canvas.ax.axvline(0, color="black", alpha=0.1)
+            self.splot_pz.canvas.ax.set_xlim(left=-max*PZ_LIM_SCALING, right=max*PZ_LIM_SCALING)
+            self.splot_pz.canvas.ax.set_ylim(bottom=-max*PZ_LIM_SCALING, top=max*PZ_LIM_SCALING)
 
-            zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
-            poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
+            zeroes_f = self.splot_pz.canvas.ax.scatter(z.real, z.imag, marker='o')
+            poles_f = self.splot_pz.canvas.ax.scatter(p.real, p.imag, marker='x')
 
             self.stageLoneZeroCursor = cursor(zeroes_f)
             self.stageLoneZeroCursor.connect("add", self.formatZeroAnnotation)
@@ -1272,7 +1267,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stageLonePoleCursor.connect("add", self.formatPoleAnnotation)
             self.si_info.setText(accumulated_ds.origin.getSOFilterType()[1])
         #     self.updatePossibleImplementations()
-        # spzcanvas.draw()
+        # self.splot_pz.canvas.draw()
         # smagcanvas.draw()
         # sphasecanvas.draw()
         self.redrawStagePlotsArr = [True] * len(self.stagePlots)
@@ -1404,7 +1399,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.N_min_box.setValue(self.selected_dataset_data.origin.N_min)
         self.N_max_box.setValue(self.selected_dataset_data.origin.N_max)
         Qs = [self.calcQ(p) for p in self.selected_dataset_data.origin.tf.getZP()[1]]
-        self.max_Q_label.setText("{:.2f}".format(max(Qs)))
+        if(len(Qs) > 0):
+            self.max_Q_label.setText("{:.2f}".format(max(Qs)))
         self.drloss_label.setText("{:.2f} dB".format(self.selected_dataset_data.origin.getDynamicRangeLoss()))
         self.define_with_box.setCurrentIndex(self.selected_dataset_data.origin.define_with)
         if self.selected_dataset_data.origin.filter_type in [Filter.BAND_PASS, Filter.BAND_REJECT]:
@@ -1853,14 +1849,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # phline, = sphasecanvas.ax.plot(f, ph)
 
         # (min, max) = self.getRelevantFrequencies(z, p)
-        # spzcanvas.ax.axis('equal')
-        # spzcanvas.ax.axhline(0, color="black", alpha=0.1)
-        # spzcanvas.ax.axvline(0, color="black", alpha=0.1)
-        # spzcanvas.ax.set_xlim(left=-max*PZ_LIM_SCALING, right=max*PZ_LIM_SCALING)
-        # spzcanvas.ax.set_ylim(bottom=-max*PZ_LIM_SCALING, top=max*PZ_LIM_SCALING)
+        # self.splot_pz.canvas.ax.axis('equal')
+        # self.splot_pz.canvas.ax.axhline(0, color="black", alpha=0.1)
+        # self.splot_pz.canvas.ax.axvline(0, color="black", alpha=0.1)
+        # self.splot_pz.canvas.ax.set_xlim(left=-max*PZ_LIM_SCALING, right=max*PZ_LIM_SCALING)
+        # self.splot_pz.canvas.ax.set_ylim(bottom=-max*PZ_LIM_SCALING, top=max*PZ_LIM_SCALING)
 
-        # zeroes_f = spzcanvas.ax.scatter(z.real, z.imag, marker='o')
-        # poles_f = spzcanvas.ax.scatter(p.real, p.imag, marker='x')
+        # zeroes_f = self.splot_pz.canvas.ax.scatter(z.real, z.imag, marker='o')
+        # poles_f = self.splot_pz.canvas.ax.scatter(p.real, p.imag, marker='x')
 
         # cursor(zeroes_f).connect("add", self.formatZeroAnnotation)
         # cursor(poles_f).connect("add", self.formatPoleAnnotation)
