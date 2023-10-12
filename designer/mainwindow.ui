@@ -101,8 +101,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>217</width>
-                <height>538</height>
+                <width>223</width>
+                <height>451</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -671,8 +671,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>192</width>
-                <height>575</height>
+                <width>200</width>
+                <height>492</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1358,8 +1358,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>193</width>
-                   <height>513</height>
+                   <width>203</width>
+                   <height>431</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -1799,8 +1799,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>217</width>
-                <height>413</height>
+                <width>223</width>
+                <height>352</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -2413,8 +2413,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>239</width>
-             <height>719</height>
+             <width>260</width>
+             <height>641</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -2893,7 +2893,7 @@
      <x>0</x>
      <y>0</y>
      <width>1002</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">
@@ -2909,7 +2909,21 @@
     </property>
     <addaction name="actionSet_size"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <widget class="QMenu" name="menuFrequency_units">
+     <property name="title">
+      <string>Frequency units</string>
+     </property>
+     <addaction name="actionUse_Hz"/>
+     <addaction name="actionUse_rad_s"/>
+    </widget>
+    <addaction name="menuFrequency_units"/>
+   </widget>
    <addaction name="menuProject"/>
+   <addaction name="menuSettings"/>
    <addaction name="menuWindow"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -2936,6 +2950,25 @@
   <action name="actionSet_size">
    <property name="text">
     <string>Set size</string>
+   </property>
+  </action>
+  <action name="actionUse_Hz">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Use Hz</string>
+   </property>
+  </action>
+  <action name="actionUse_rad_s">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Use rad/s</string>
    </property>
   </action>
  </widget>

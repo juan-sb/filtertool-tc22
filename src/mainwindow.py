@@ -44,25 +44,22 @@ TEMPLATE_EDGE_COLOR = '#ef9a9a'
 ADD_TEMPLATE_FACE_COLOR = '#c8e6c9'
 ADD_TEMPLATE_EDGE_COLOR = '#a5d6a7'
 
-SHOW_PZ_IN_HZ = True
-PZ_XLABEL = f'$\sigma$ [1/s]' if SHOW_PZ_IN_HZ else '$\sigma$ ($rad/s$)'
-PZ_YLABEL = f'$jf$ [Hz]' if SHOW_PZ_IN_HZ else '$j\omega$ ($rad/s$)'
 F_TO_W = 2*np.pi
 W_TO_F = 1/F_TO_W
-SING_B_TO_F = W_TO_F if SHOW_PZ_IN_HZ else 1
-SING_F_TO_B = F_TO_W if SHOW_PZ_IN_HZ else 1
 
 PZ_LIM_SCALING = 1.35
 
 def stage_to_str(stage):
     stage_str = 'Z={'
     for z in stage.z:
-        stage_str += str(z)
+        stage_str += "{0:.3}j".format(np.imag(z))
         stage_str += ', '
+    stage_str = stage_str[0:-2]
     stage_str += '} , P={'
     for p in stage.p:
-        stage_str += str(p)
+        stage_str += "{0:.3g}".format(p)
         stage_str += ', '
+    stage_str = stage_str[0:-2]
     stage_str += '} , K='
     stage_str+= str(stage.gain)
     return stage_str
@@ -196,6 +193,72 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.totalStagesPoleCursor = None
         self.stageLoneZeroCursor = None
         self.stageLonePoleCursor = None
+
+        self.actionUse_Hz.triggered.connect(self.selectUseHz)
+        self.actionUse_rad_s.triggered.connect(self.selectUseRadians)
+        
+        
+        self.use_hz = True
+        self.SING_B_TO_F = W_TO_F if self.use_hz else 1
+        self.SING_F_TO_B = F_TO_W if self.use_hz else 1
+        self.PZ_XLABEL = f'$\sigma$ [1/s]' if self.use_hz else '$\sigma$ ($rad/s$)'
+        self.PZ_YLABEL = f'$jf$ [Hz]' if self.use_hz else '$j\omega$ ($rad/s$)'
+        self.FREQ_LABEL = f'Frecuencia [Hz]' if self.use_hz else 'Frecuencia angular ($rad/s$)'
+    
+    def selectUseHz(self):
+        if(self.actionUse_Hz.isChecked()):
+            self.actionUse_rad_s.setChecked(False)
+            self.updateFequencySettings(True)
+        else:
+            self.actionUse_rad_s.setChecked(True)
+            self.selectUseRadians()
+
+    def selectUseRadians(self):
+        if(self.actionUse_rad_s.isChecked()):
+            self.actionUse_Hz.setChecked(False)
+            self.updateFequencySettings(False)
+        else:
+            self.actionUse_Hz.setChecked(True)
+            self.selectUseHz()
+
+    def updateFequencySettings(self, useHz):
+        self.use_hz = useHz
+        suffix = 'Hz' if useHz else 'rad/s'
+        self.label_fpmin.setText('fp min' if useHz else 'ωp min')
+        self.label_famin.setText('fa min' if useHz else 'ωa min')
+        self.label_fp.setText('fp' if useHz else 'ωp')
+        self.label_fa.setText('fa' if useHz else 'ωa')
+        self.label_f0.setText('f0' if useHz else 'ω0')
+        self.label_fRG.setText('fRG' if useHz else 'ωRG')
+
+        self.fp_box.setSuffix(suffix)
+        self.fa_box.setSuffix(suffix)
+        self.fp_min_box.setSuffix(suffix)
+        self.fa_min_box.setSuffix(suffix)
+        self.bw_max_box.setSuffix(suffix)
+        self.bw_min_box.setSuffix(suffix)
+        self.frg_box.setSuffix(suffix)
+        self.f0_box.setSuffix(suffix)
+
+        self.fp_box.setValue(self.fp_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.fa_box.setValue(self.fa_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.fp_min_box.setValue(self.fp_min_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.fa_min_box.setValue(self.fa_min_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.bw_max_box.setValue(self.bw_max_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.bw_min_box.setValue(self.bw_min_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.frg_box.setValue(self.frg_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.f0_box.setValue(self.f0_box.value()*(W_TO_F if useHz else F_TO_W))
+        self.define_with_box.setItemText(0, 'fa, fp' if useHz else 'ωa, ωp')
+        self.define_with_box.setItemText(1, 'f0, Bw' if useHz else 'ω0, Bw')
+
+        self.SING_B_TO_F = W_TO_F if self.use_hz else 1
+        self.SING_F_TO_B = F_TO_W if self.use_hz else 1
+        self.PZ_XLABEL = f'$\sigma$ [1/s]' if self.use_hz else '$\sigma$ ($rad/s$)'
+        self.PZ_YLABEL = f'$jf$ [Hz]' if self.use_hz else '$j\omega$ ($rad/s$)'
+        self.FREQ_LABEL = f'Frecuencia [Hz]' if self.use_hz else 'Frecuencia angular ($rad/s$)'
+
+        self.updateFilterPlots()
+        self.updateStagePlots()
 
     def addDataset(self, ds):
         qlwt = QListWidgetItem()
@@ -370,11 +433,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.compareapprox_cb.setCurrentIndexes([])
         self.prevFilterType = self.tipo_box.currentIndex()
         if self.tipo_box.currentIndex() in [Filter.BAND_PASS, Filter.BAND_REJECT]:
-            wa = [F_TO_W * self.fa_min_box.value(), F_TO_W * self.fa_max_box.value()]
-            wp = [F_TO_W * self.fp_min_box.value(), F_TO_W * self.fp_max_box.value()]
+            wa = [self.SING_F_TO_B * self.fa_min_box.value(), self.SING_F_TO_B * self.fa_max_box.value()]
+            wp = [self.SING_F_TO_B * self.fp_min_box.value(), self.SING_F_TO_B * self.fp_max_box.value()]
         else:
-            wa = F_TO_W * self.fa_box.value()
-            wp = F_TO_W * self.fp_box.value()
+            wa = self.SING_F_TO_B * self.fa_box.value()
+            wp = self.SING_F_TO_B * self.fp_box.value()
             
         params = {
             "name": self.filtername_box.text(),
@@ -392,11 +455,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "ap_dB": self.ap_box.value(),
             "wa": wa,
             "wp": wp,
-            "w0": F_TO_W * self.f0_box.value(),
-            "bw": [F_TO_W * self.bw_min_box.value(), F_TO_W * self.bw_max_box.value()],
+            "w0": self.SING_F_TO_B * self.f0_box.value(),
+            "bw": [self.SING_F_TO_B * self.bw_min_box.value(), self.SING_F_TO_B * self.bw_max_box.value()],
             "gamma": self.tol_box.value(),
             "tau0": self.tau0_box.value(),
-            "wrg": F_TO_W * self.frg_box.value(),
+            "wrg": self.SING_F_TO_B * self.frg_box.value(),
         }
         return AnalogFilter(**params)
     
@@ -657,11 +720,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         groupdelaycanvas = self.fplot_gd.canvas
         stepcanvas = self.fplot_step.canvas
         impulsecanvas = self.fplot_impulse.canvas
-        self.condition_canvas(attcanvas, 'Frecuencia [Hz]', 'Atenuación [dB]')
-        self.condition_canvas(magcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
-        self.condition_canvas(phasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
+        self.condition_canvas(attcanvas, self.FREQ_LABEL, 'Atenuación [dB]')
+        self.condition_canvas(magcanvas, self.FREQ_LABEL, 'Magnitud [dB]', 'log')
+        self.condition_canvas(phasecanvas, self.FREQ_LABEL, 'Fase [$^o$]', 'log')
         phasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[1.8,2.25,4.5,9]))
-        self.condition_canvas(groupdelaycanvas, 'Frecuencia [Hz]', 'Retardo de grupo [s]', 'log')
+        self.condition_canvas(groupdelaycanvas, self.FREQ_LABEL, 'Retardo de grupo [s]', 'log')
         self.condition_canvas(self.fplot_pz.canvas, '', '')
         self.condition_canvas(stepcanvas, 'Tiempo [s]', 'Respuesta [V]')
         self.condition_canvas(impulsecanvas, 'Tiempo [s]', 'Respuesta [V]')
@@ -670,11 +733,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tstep, stepres = signal.step(filtds.tf.tf_object, N=5000)
         timp, impres = signal.impulse(filtds.tf.tf_object, N=5000)
         
-        z, p = filtds.origin.tf.getZP(SHOW_PZ_IN_HZ)
+        z, p = filtds.origin.tf.getZP(self.use_hz)
         minf, maxf = self.getRelevantFrequencies(z, p)
         minval = minf/100
         maxval = maxf*100
-        f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True)
+        f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
         
         zz = [zi for zi in z if zi == 0]
         if(len(zz) >= 4):
@@ -698,8 +761,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ymax = aa*2
         patches = []
         if filtds.origin.filter_type == Filter.LOW_PASS:
-            fp = filtds.origin.wp * W_TO_F
-            fa = filtds.origin.wa * W_TO_F
+            fp = filtds.origin.wp * self.SING_B_TO_F
+            fa = filtds.origin.wa * self.SING_B_TO_F
             deltaf = (fa - fp)/2
             xmax = fa + deltaf
             xmax = max([maxp, fa])*1.4
@@ -715,8 +778,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 patches.append(Circle((0, 0), fa, fill=False, linestyle=':', alpha=0.15))
 
         elif filtds.origin.filter_type == Filter.HIGH_PASS:
-            fp = filtds.origin.wp * W_TO_F
-            fa = filtds.origin.wa * W_TO_F
+            fp = filtds.origin.wp * self.SING_B_TO_F
+            fa = filtds.origin.wa * self.SING_B_TO_F
             deltaf = (fp - fa)/2
             xmax = fp + deltaf
             xmax = max([fp, maxp])*1.4
@@ -732,10 +795,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 patches.append(Circle((0, 0), fa, fill=False, linestyle=':', alpha=0.15))
 
         elif filtds.origin.filter_type == Filter.BAND_PASS:
-            fp = [w * W_TO_F for w in filtds.origin.wp]
-            fa = [w * W_TO_F for w in filtds.origin.wa]
-            f0 = W_TO_F * filtds.origin.w0
-            reqfa = [w * W_TO_F for w in filtds.origin.reqwa] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fa
+            fp = [w * self.SING_B_TO_F for w in filtds.origin.wp]
+            fa = [w * self.SING_B_TO_F for w in filtds.origin.wa]
+            f0 = self.SING_B_TO_F * filtds.origin.w0
+            reqfa = [w * self.SING_B_TO_F for w in filtds.origin.reqwa] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fa
             deltaf = (fa[1] - fa[0])/2
             xmax = fa[1] + deltaf
             xmax = max(xmax, maxp)*1.4
@@ -770,10 +833,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
         elif filtds.origin.filter_type == Filter.BAND_REJECT:
-            fp = [w * W_TO_F for w in filtds.origin.wp]
-            reqfp = [w * W_TO_F for w in filtds.origin.reqwp] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fp
-            fa = [w * W_TO_F for w in filtds.origin.wa]
-            f0 = W_TO_F * filtds.origin.w0
+            fp = [w * self.SING_B_TO_F for w in filtds.origin.wp]
+            reqfp = [w * self.SING_B_TO_F for w in filtds.origin.reqwp] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fp
+            fa = [w * self.SING_B_TO_F for w in filtds.origin.wa]
+            f0 = self.SING_B_TO_F * filtds.origin.w0
             deltaf = (fp[1] - fp[0])/2
             xmax = fp[1] + deltaf
             xmax = max(xmax, maxp)*1.4
@@ -805,12 +868,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     patches.append(Circle((0, 0), fp[1], fill=False, linestyle=':', alpha=0.15))
         
         elif filtds.origin.filter_type == Filter.GROUP_DELAY:
-            frg = filtds.origin.wrg * W_TO_F
+            frg = filtds.origin.wrg * self.SING_B_TO_F
             xmax = 2 * frg
             xmin = 0
             groupdelaycanvas.ax.fill_between([0,  frg], [filtds.origin.tau0, filtds.origin.tau0], filtds.origin.tau0*(1 - filtds.origin.gamma/100), facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
         attcanvas.ax.set_xlim(xmin, xmax)
-        fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
+        fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
         with np.errstate(divide='ignore'): 
             attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
 
@@ -822,16 +885,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         px = p.real
         py = p.imag
         zeroes = self.fplot_pz.canvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
-        self.fplot_pz.canvas.ax.set_xlabel(PZ_XLABEL)
-        self.fplot_pz.canvas.ax.set_ylabel(PZ_YLABEL)
+        self.fplot_pz.canvas.ax.set_xlabel(self.PZ_XLABEL)
+        self.fplot_pz.canvas.ax.set_ylabel(self.PZ_YLABEL)
         self.zeros_acum = np.append(self.zeros_acum, zeroes)
 
         maxf2 = 0
         for helper in filtds.origin.helperFilters:
-            fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000)
+            fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
             attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
-            f,g,ph,gd = helper.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True)
-            z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
+            f,g,ph,gd = helper.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
+            z, p = helper.tf.getZP(self.use_hz)
             p = np.append(p, [minf, maxf])
             minf2, maxf2 = self.getRelevantFrequencies(z, p)
 
@@ -857,7 +920,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.poles_acum = np.append(self.poles_acum, poles)
         
         for helper in filtds.origin.helperFilters:
-            z, p = helper.tf.getZP(SHOW_PZ_IN_HZ)
+            z, p = helper.tf.getZP(self.use_hz)
             poles = self.fplot_pz.canvas.ax.scatter(p.real, p.imag, marker='x')
             self.poles_acum = np.append(self.poles_acum, poles)    
         self.filterPoleCursor = cursor(self.poles_acum, multiple=True, highlight=True)
@@ -867,9 +930,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
         actualmax = max([maxf, maxf2])
-        self.fplot_pz.canvas.ax.set_xlim(left=-actualmax*PZ_LIM_SCALING, right=actualmax*PZ_LIM_SCALING)
-        self.fplot_pz.canvas.ax.set_ylim(bottom=-actualmax*PZ_LIM_SCALING, top=actualmax*PZ_LIM_SCALING)
         self.fplot_pz.canvas.ax.axis('equal')
+        sizes = self.fplot_pz.canvas.ax.figure.get_size_inches()
+        if(sizes[0] > sizes[1]):
+            self.fplot_pz.canvas.ax.set_ylim(bottom=-actualmax*PZ_LIM_SCALING, top=actualmax*PZ_LIM_SCALING)
+        else:
+            self.fplot_pz.canvas.ax.set_xlim(left=-actualmax*PZ_LIM_SCALING, right=actualmax*PZ_LIM_SCALING)
 
         if(len(filtds.origin.helperFilters) > 0 and self.cb_flegends.isChecked()):
             attcanvas.ax.legend()
@@ -912,19 +978,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
-            zeros, poles = self.selected_dataset_data.origin.tf.getZP(SHOW_PZ_IN_HZ)
+            zeros, poles = self.selected_dataset_data.origin.tf.getZP(self.use_hz)
             for p in poles:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, p)
-                qlwt.setText(str(p))
-                if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F):
+                qlwt.setText("{0:.3g}    f0={1:.3g}  Q={2:.2g}".format(p, np.abs(p), self.calcQ(p)))
+                if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*self.SING_B_TO_F):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.poles_list.addItem(qlwt)
             for z in zeros:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, z)
-                qlwt.setText(str(z))
-                if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F):
+                qlwt.setText("{0:.3}j".format(np.imag(z)))
+                if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*self.SING_B_TO_F):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.zeros_list.addItem(qlwt)
             total_gain = 0
@@ -1024,7 +1090,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         selected_poles_idx.sort(reverse=True)
         selected_zeros_idx.sort(reverse=True)
 
-        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, SHOW_PZ_IN_HZ):
+        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, self.use_hz):
             for z in selected_zeros_idx:
                 self.zeros_list.item(z).setFlags(Qt.ItemFlag.NoItemFlags)
             for p in selected_poles_idx:
@@ -1096,19 +1162,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.selected_dataset_data.origin.removeStage(i)
         
-        zeros, poles = self.selected_dataset_data.origin.tf.getZP(SHOW_PZ_IN_HZ)
+        zeros, poles = self.selected_dataset_data.origin.tf.getZP(self.use_hz)
         for p in poles:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, p)
             qlwt.setText(str(p))
-            if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F):
+            if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*self.SING_B_TO_F):
                 qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
             self.poles_list.addItem(qlwt)
         for z in zeros:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, z)
             qlwt.setText(str(z))
-            if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F):
+            if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*self.SING_B_TO_F):
                 qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
             self.zeros_list.addItem(qlwt)
         self.stages_list.takeItem(i)
@@ -1118,13 +1184,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.updateFilterStages()
 
     def formatPoleAnnotation(self, sel):
-        sel.annotation.set_text('Pole {:d}\nFreq {:.2f}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, np.sqrt(sel.target[0]**2 + sel.target[1]**2), sel.target[0], sel.target[1], self.calcQ(sel.target)))
+        forw = 'f' if self.use_hz else 'ω'
+        sel.annotation.set_text('Pole {:d}\n{}={:.2f}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, forw, np.sqrt(sel.target[0]**2 + sel.target[1]**2), sel.target[0], sel.target[1], self.calcQ(sel.target)))
 
     def formatZeroAnnotation(self, sel):
-        if(True or sel.target[0] == 0 and sel.target[1] == 0):
-            sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}'.format(sel.index, sel.target[0], sel.target[1]))
-        else:
-            sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, sel.target[0], sel.target[1], self.calcQ(sel.target)))
+        # if(True or sel.target[0] == 0 and sel.target[1] == 0):
+        sel.annotation.set_text('Zero {:d}\n{:.2f}j'.format(sel.index, sel.target[1]))
+        # else:
+        #     sel.annotation.set_text('Zero {:d}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, sel.target[0], sel.target[1], self.calcQ(sel.target)))
 
     def calcQ(self, singRe, singIm):
         return self.calcQ(singRe + singIm*1j)
@@ -1164,15 +1231,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
 
-        self.condition_canvas(self.splot_pz.canvas, PZ_XLABEL, PZ_YLABEL)
-        self.condition_canvas(self.splot_fpz.canvas, PZ_XLABEL, PZ_YLABEL)
-        self.condition_canvas(self.splot_tpz.canvas, PZ_XLABEL, PZ_YLABEL)
-        self.condition_canvas(smagcanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
-        self.condition_canvas(sphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
-        self.condition_canvas(tgaincanvas, 'Frecuencia [Hz]', 'Magnitud [dB]', 'log')
-        self.condition_canvas(tphasecanvas, 'Frecuencia [Hz]', 'Fase [$^o$]', 'log')
+        self.condition_canvas(self.splot_pz.canvas, self.PZ_XLABEL, self.PZ_YLABEL)
+        self.condition_canvas(self.splot_fpz.canvas, self.PZ_XLABEL, self.PZ_YLABEL)
+        self.condition_canvas(self.splot_tpz.canvas, self.PZ_XLABEL, self.PZ_YLABEL)
+        self.condition_canvas(smagcanvas, self.FREQ_LABEL, 'Magnitud [dB]', 'log')
+        self.condition_canvas(sphasecanvas, self.FREQ_LABEL, 'Fase [$^o$]', 'log')
+        self.condition_canvas(tgaincanvas, self.FREQ_LABEL, 'Magnitud [dB]', 'log')
+        self.condition_canvas(tphasecanvas, self.FREQ_LABEL, 'Fase [$^o$]', 'log')
 
-        zf, pf = self.selected_dataset_data.origin.tf.getZP(SHOW_PZ_IN_HZ)
+        zf, pf = self.selected_dataset_data.origin.tf.getZP(self.use_hz)
         mint, maxt = self.getRelevantFrequencies(zf, pf)
 
         self.splot_fpz.canvas.ax.axis('equal')
@@ -1183,8 +1250,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         polcol = []
         zercol = []
-        rps = np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F
-        rzs = np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F
+        rps = np.array(self.selected_dataset_data.origin.remainingPoles)*self.SING_B_TO_F
+        rzs = np.array(self.selected_dataset_data.origin.remainingZeros)*self.SING_B_TO_F
         for fp in pf:
             found = False
             for rp in rps:
@@ -1200,8 +1267,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             zercol.append(ZERO_COLOR if found else ZERO_SEL_COLOR)
 
 
-        # polcol = [POLE_COLOR if pole in np.array(self.selected_dataset_data.origin.remainingPoles)*SING_B_TO_F else POLE_SEL_COLOR for pole in pf]
-        # zercol = [ZERO_COLOR if zero in np.array(self.selected_dataset_data.origin.remainingZeros)*SING_B_TO_F else ZERO_SEL_COLOR for zero in zf]
+        # polcol = [POLE_COLOR if pole in np.array(self.selected_dataset_data.origin.remainingPoles)*self.SING_B_TO_F else POLE_SEL_COLOR for pole in pf]
+        # zercol = [ZERO_COLOR if zero in np.array(self.selected_dataset_data.origin.remainingZeros)*self.SING_B_TO_F else ZERO_SEL_COLOR for zero in zf]
         zeroes_f = self.splot_fpz.canvas.ax.scatter(zf.real, zf.imag, c=zercol, marker='o')
         poles_f = self.splot_fpz.canvas.ax.scatter(pf.real, pf.imag, c=polcol, marker='x')
         self.stageCursorZer = cursor(zeroes_f, multiple=True, highlight=True)
@@ -1226,7 +1293,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.splot_tpz.canvas.ax.axvline(0, color="black", alpha=0.1)
         self.splot_tpz.canvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
         self.splot_tpz.canvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
-        zt, pt = self.selected_dataset_data.origin.implemented_tf.getZP(SHOW_PZ_IN_HZ)
+        zt, pt = self.selected_dataset_data.origin.implemented_tf.getZP(self.use_hz)
         
         zeroes_t = self.splot_tpz.canvas.ax.scatter(zt.real, zt.imag, c='#0000FF', marker='o')
         poles_t = self.splot_tpz.canvas.ax.scatter(pt.real, pt.imag, c='#FF0000', marker='x')
@@ -1246,7 +1313,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f = accumulated_ds.data[0]['f']
             g = 20 * np.log10(np.abs(np.array(accumulated_ds.data[0]['g'])))
             ph = accumulated_ds.data[0]['ph']
-            z, p = accumulated_ds.origin.getZP(SHOW_PZ_IN_HZ)
+            z, p = accumulated_ds.origin.getZP(self.use_hz)
 
             smagcanvas.ax.plot(f, g)
             sphasecanvas.ax.plot(f, ph)
@@ -1409,21 +1476,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             fa = []
             fp = []
             if(self.selected_dataset_data.origin.filter_type == Filter.BAND_PASS):
-                fp = [w * W_TO_F for w in self.selected_dataset_data.origin.wp]
-                fa = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwa]
+                fp = [w * self.SING_B_TO_F for w in self.selected_dataset_data.origin.wp]
+                fa = [w * self.SING_B_TO_F for w in self.selected_dataset_data.origin.reqwa]
             else:
-                fp = [w * W_TO_F for w in self.selected_dataset_data.origin.reqwp]
-                fa = [w * W_TO_F for w in self.selected_dataset_data.origin.wa]
+                fp = [w * self.SING_B_TO_F for w in self.selected_dataset_data.origin.reqwp]
+                fa = [w * self.SING_B_TO_F for w in self.selected_dataset_data.origin.wa]
             self.fa_min_box.setValue(fa[0])
             self.fa_max_box.setValue(fa[1])
             self.fp_min_box.setValue(fp[0])
             self.fp_max_box.setValue(fp[1])
-            self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1] * W_TO_F)
-            self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0] * W_TO_F)
-            self.f0_box.setValue(self.selected_dataset_data.origin.w0 * W_TO_F)
+            self.bw_max_box.setValue(self.selected_dataset_data.origin.bw[1] * self.SING_B_TO_F)
+            self.bw_min_box.setValue(self.selected_dataset_data.origin.bw[0] * self.SING_B_TO_F)
+            self.f0_box.setValue(self.selected_dataset_data.origin.w0 * self.SING_B_TO_F)
         elif self.selected_dataset_data.origin.filter_type in [Filter.LOW_PASS, Filter.HIGH_PASS]:
-            self.fp_box.setValue(self.selected_dataset_data.origin.wp * W_TO_F)
-            self.fa_box.setValue(self.selected_dataset_data.origin.wa * W_TO_F)
+            self.fp_box.setValue(self.selected_dataset_data.origin.wp * self.SING_B_TO_F)
+            self.fa_box.setValue(self.selected_dataset_data.origin.wa * self.SING_B_TO_F)
             self.fa_min_box.setValue(0)
             self.fa_max_box.setValue(0)
             self.fp_min_box.setValue(0)
@@ -1843,7 +1910,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # f = accumulated_ds.data[0]['f']
         # g = accumulated_ds.data[0]['g']
         # ph = accumulated_ds.data[0]['ph']
-        # z, p = accumulated_ds.origin.getZP(SHOW_PZ_IN_HZ)
+        # z, p = accumulated_ds.origin.getZP(self.use_hz)
 
         # gline, = smagcanvas.ax.plot(f, g)
         # phline, = sphasecanvas.ax.plot(f, ph)

@@ -148,16 +148,16 @@ class TFunction():
         else:
             return self.z, self.p
 
-    def getBode(self, linear=False, start=-2, stop=6, num=10000, db=False):
+    def getBode(self, linear=False, start=-2, stop=6, num=10000, db=False, use_hz=True):
         if linear:
-            ws = np.linspace(start, stop, num) * 2 * np.pi
+            ws = np.linspace(start, stop, num) * (2 * np.pi if use_hz else 1)
         else:
-            ws = np.logspace(start, stop, num) * 2 * np.pi
+            ws = np.logspace(start, stop, num) * (2 * np.pi if use_hz else 1)
         #h = self.at(1j*ws)
         w, g, ph = signal.bode(self.tf_object, w=ws)
         gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
         f = ws / (2 * np.pi)
-        return f, g if db else 10**(g/20), ph, gd
+        return f if use_hz else ws, g if db else 10**(g/20), ph, gd
 
     #No funciona (y no lo necesitamos) actualmente
     def optimize(self, start, stop, maximize = False):
