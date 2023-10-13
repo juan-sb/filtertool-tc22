@@ -933,8 +933,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.fplot_pz.canvas.ax.axis('equal')
         sizes = self.fplot_pz.canvas.ax.figure.get_size_inches()
         if(sizes[0] > sizes[1]):
+            self.fplot_pz.canvas.ax.set_xlim(left=-actualmax*PZ_LIM_SCALING, right=actualmax*PZ_LIM_SCALING)
             self.fplot_pz.canvas.ax.set_ylim(bottom=-actualmax*PZ_LIM_SCALING, top=actualmax*PZ_LIM_SCALING)
         else:
+            self.fplot_pz.canvas.ax.set_ylim(bottom=-actualmax*PZ_LIM_SCALING, top=actualmax*PZ_LIM_SCALING)
             self.fplot_pz.canvas.ax.set_xlim(left=-actualmax*PZ_LIM_SCALING, right=actualmax*PZ_LIM_SCALING)
 
         if(len(filtds.origin.helperFilters) > 0 and self.cb_flegends.isChecked()):
@@ -1238,6 +1240,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(sphasecanvas, self.FREQ_LABEL, 'Fase [$^o$]', 'log')
         self.condition_canvas(tgaincanvas, self.FREQ_LABEL, 'Magnitud [dB]', 'log')
         self.condition_canvas(tphasecanvas, self.FREQ_LABEL, 'Fase [$^o$]', 'log')
+        sphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
+        tphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
 
         zf, pf = self.selected_dataset_data.origin.tf.getZP(self.use_hz)
         mint, maxt = self.getRelevantFrequencies(zf, pf)
