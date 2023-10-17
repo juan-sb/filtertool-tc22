@@ -49,7 +49,7 @@ W_TO_F = 1/F_TO_W
 
 PZ_LIM_SCALING = 1.35
 
-def stage_to_str(stage):
+def stage_to_str(stage, k):
     stage_str = 'Z={'
     for z in stage.z:
         stage_str += "{0:.3}j".format(np.imag(z))
@@ -62,7 +62,6 @@ def stage_to_str(stage):
         stage_str += ', '
     if(len(stage.p) > 0):
         stage_str = stage_str[0:-2]
-    stage_str = stage_str[0:-2]
     stage_str += '} , K='
     stage_str+= str(stage.gain)
     return stage_str
@@ -975,26 +974,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
-            zeros, poles = self.selected_dataset_data.origin.tf.getZP(self.use_hz)
+            zeros, poles = self.selected_dataset_data.origin.tf.getZP(False)
             for p in poles:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, p)
-                qlwt.setText("{0:.3g}    f0={1:.3g}  Q={2:.2g}".format(p, np.abs(p), self.calcQ(p)))
-                if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*self.SING_B_TO_F):
+                qlwt.setText("{0:.3g}\tω0={1:.3g}\tQ={2:.2g}".format(p, np.abs(p), self.calcQ(p)))
+                if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.poles_list.addItem(qlwt)
             for z in zeros:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, z)
                 qlwt.setText("{0:.3}j".format(np.imag(z)))
-                if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*self.SING_B_TO_F):
+                if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.zeros_list.addItem(qlwt)
             total_gain = 0
             for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, Dataset(origin=implemented_stage))
-                qlwt.setText(stage_to_str(implemented_stage))
+                qlwt.setText(stage_to_str(implemented_stage, 1))
                 self.stages_list.addItem(qlwt)
                 total_gain *= implemented_stage.gain
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
@@ -1087,7 +1086,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         selected_poles_idx.sort(reverse=True)
         selected_zeros_idx.sort(reverse=True)
 
-        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, self.use_hz):
+        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, False):
             for z in selected_zeros_idx:
                 self.zeros_list.item(z).setFlags(Qt.ItemFlag.NoItemFlags)
             for p in selected_poles_idx:
@@ -1097,7 +1096,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             [self.stageCursorZer.remove_selection(sel) for sel in self.stageCursorZer.selections]
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=self.selected_dataset_data.origin.stages[-1]))
-            qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1]))
+            qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1], 1))
             self.stages_list.addItem(qlwt)
             self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
             self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
@@ -1119,7 +1118,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for stage in self.selected_dataset_data.origin.stages:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=stage))
-            qlwt.setText(stage_to_str(stage))
+            qlwt.setText(stage_to_str(stage, 1))
             self.stages_list.addItem(qlwt)
         self.stages_list.setCurrentRow(index - 1)
         self.updateStagePlots()
@@ -1144,7 +1143,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for stage in self.selected_dataset_data.origin.stages:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=stage))
-            qlwt.setText(stage_to_str(stage))
+            qlwt.setText(stage_to_str(stage, 1))
             self.stages_list.addItem(qlwt)
         self.updateFilterStages()
         self.updateStagePlots()
@@ -1164,14 +1163,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, p)
             qlwt.setText(str(p))
-            if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)*self.SING_B_TO_F):
+            if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)):
                 qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
             self.poles_list.addItem(qlwt)
         for z in zeros:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, z)
             qlwt.setText(str(z))
-            if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)*self.SING_B_TO_F):
+            if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)):
                 qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
             self.zeros_list.addItem(qlwt)
         self.stages_list.takeItem(i)
@@ -1182,6 +1181,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def formatPoleAnnotation(self, sel):
         forw = 'f' if self.use_hz else 'ω'
+        sel.annotation.set_text('Pole {:d}\n{}={:.2f}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, forw, np.sqrt(sel.target[0]**2 + sel.target[1]**2), sel.target[0], sel.target[1], self.calcQ(sel.target)))
+    def formatPoleAnnotationW(self, sel):
+        forw = 'ω'
         sel.annotation.set_text('Pole {:d}\n{}={:.2f}\n{:.2f}+j{:.2f}\nQ={:.2f}'.format(sel.index, forw, np.sqrt(sel.target[0]**2 + sel.target[1]**2), sel.target[0], sel.target[1], self.calcQ(sel.target)))
 
     def formatZeroAnnotation(self, sel):
@@ -1228,17 +1230,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
 
-        self.condition_canvas(self.splot_pz.canvas, self.PZ_XLABEL, self.PZ_YLABEL)
-        self.condition_canvas(self.splot_fpz.canvas, self.PZ_XLABEL, self.PZ_YLABEL)
-        self.condition_canvas(self.splot_tpz.canvas, self.PZ_XLABEL, self.PZ_YLABEL)
-        self.condition_canvas(smagcanvas, self.FREQ_LABEL, 'Magnitud [dB]', 'log')
-        self.condition_canvas(sphasecanvas, self.FREQ_LABEL, 'Fase [$^o$]', 'log')
-        self.condition_canvas(tgaincanvas, self.FREQ_LABEL, 'Magnitud [dB]', 'log')
-        self.condition_canvas(tphasecanvas, self.FREQ_LABEL, 'Fase [$^o$]', 'log')
+        self.condition_canvas(self.splot_pz.canvas, '$\sigma$ ($rad/s$)', '$j\omega$ ($rad/s$)')
+        self.condition_canvas(self.splot_fpz.canvas, '$\sigma$ ($rad/s$)', '$j\omega$ ($rad/s$)')
+        self.condition_canvas(self.splot_tpz.canvas, '$\sigma$ ($rad/s$)', '$j\omega$ ($rad/s$)')
+        self.condition_canvas(smagcanvas, 'Frecuencia angular ($rad/s$)', 'Magnitud [dB]', 'log')
+        self.condition_canvas(sphasecanvas, 'Frecuencia angular ($rad/s$)', 'Fase [$^o$]', 'log')
+        self.condition_canvas(tgaincanvas, 'Frecuencia angular ($rad/s$)', 'Magnitud [dB]', 'log')
+        self.condition_canvas(tphasecanvas, 'Frecuencia angular ($rad/s$)', 'Fase [$^o$]', 'log')
         sphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
         tphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
 
-        zf, pf = self.selected_dataset_data.origin.tf.getZP(self.use_hz)
+        zf, pf = self.selected_dataset_data.origin.tf.getZP(False)
         mint, maxt = self.getRelevantFrequencies(zf, pf)
 
         self.splot_fpz.canvas.ax.axis('equal')
@@ -1249,8 +1251,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         polcol = []
         zercol = []
-        rps = np.array(self.selected_dataset_data.origin.remainingPoles)*self.SING_B_TO_F
-        rzs = np.array(self.selected_dataset_data.origin.remainingZeros)*self.SING_B_TO_F
+        rps = np.array(self.selected_dataset_data.origin.remainingPoles)
+        rzs = np.array(self.selected_dataset_data.origin.remainingZeros)
         for fp in pf:
             found = False
             for rp in rps:
@@ -1275,7 +1277,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stageCursorZer.connect("add", self.updateSelectedZerosFromPlot)
         self.stageCursorZer.connect("remove", self.updateSelectedZerosFromPlot)
         self.stageCursorPol = cursor(poles_f, multiple=True, highlight=True)
-        self.stageCursorPol.connect("add", self.formatPoleAnnotation)
+        self.stageCursorPol.connect("add", self.formatPoleAnnotationW)
         self.stageCursorPol.connect("add", self.updateSelectedPolesFromPlot)
         self.stageCursorPol.connect("remove", self.updateSelectedPolesFromPlot)
 
@@ -1292,7 +1294,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.splot_tpz.canvas.ax.axvline(0, color="black", alpha=0.1)
         self.splot_tpz.canvas.ax.set_xlim(left=-maxt*PZ_LIM_SCALING, right=maxt*PZ_LIM_SCALING)
         self.splot_tpz.canvas.ax.set_ylim(bottom=-maxt*PZ_LIM_SCALING, top=maxt*PZ_LIM_SCALING)
-        zt, pt = self.selected_dataset_data.origin.implemented_tf.getZP(self.use_hz)
+        zt, pt = self.selected_dataset_data.origin.implemented_tf.getZP(False)
         
         zeroes_t = self.splot_tpz.canvas.ax.scatter(zt.real, zt.imag, c='#0000FF', marker='o')
         poles_t = self.splot_tpz.canvas.ax.scatter(pt.real, pt.imag, c='#FF0000', marker='x')
