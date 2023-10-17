@@ -289,14 +289,15 @@ class AnalogFilter():
             fact_prod = 1
             while True:
                 if self.N >= self.N_min:
-                    z = []
                     p = select_roots(Polynomial(gauss_poly))
                     p0 = np.prod(p)
-                    tf2 = TFunction(z, p, p0)
+                    tf2 = TFunction([], p, p0)
+                    g0 = tf2.gd_at(0)                       
+                    p = [r * g0 for r in p]
+                    tf2 = TFunction([], p, p0)
                     if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
-                        g0 = tf2.gd_at(0)                       
-                        p = [r * g0 for r in p]
-                        self.tf_norm = TFunction(z, p, p0)
+                        p0 = np.prod(p)
+                        self.tf_norm = TFunction([], p, p0)
                         break
                 self.N += 1
                 fact_prod *= self.N
