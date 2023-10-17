@@ -288,13 +288,13 @@ class AnalogFilter():
                     self.eparser.setExpression(sym.Poly(N, s)/sym.Poly(D, s))
                     z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk')
                     tf2 = TFunction(z, p, k, N, D)
-                    w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=100, use_hz=False)
+                    w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(5*self.wan/(2*pi)), num=100, use_hz=False)
                     wd = np.nan
                     wr = w[::-1]
                     gr = g[::-1]
                     for i, wi in enumerate(wr):
                         if (gr[i] > self.gp):
-                            wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                            wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=500, use_hz=False)
                             wrint = wint[::-1]
                             grint = gint[::-1]
                             for ii, wi2 in enumerate(wrint):
@@ -336,13 +336,13 @@ class AnalogFilter():
                             self.tf_norm = TFunction([], p, p0)
                             break
                     else:
-                        w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=100, use_hz=False)
+                        w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(10*self.wan*2*pi)), stop=np.log10(5*self.wan/(2*pi)), num=100, use_hz=False)
                         wd = np.nan
                         wr = w[::-1]
                         gr = g[::-1]
                         for i, wi in enumerate(wr):
                             if (gr[i] > self.gp):
-                                wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                                wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=500, use_hz=False)
                                 wrint = wint[::-1]
                                 grint = gint[::-1]
                                 for ii, wi2 in enumerate(wrint):
