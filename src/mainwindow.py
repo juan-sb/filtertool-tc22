@@ -54,11 +54,14 @@ def stage_to_str(stage):
     for z in stage.z:
         stage_str += "{0:.3}j".format(np.imag(z))
         stage_str += ', '
-    stage_str = stage_str[0:-2]
+    if(len(stage.z) > 0):
+        stage_str = stage_str[0:-2]
     stage_str += '} , P={'
     for p in stage.p:
         stage_str += "{0:.3g}".format(p)
         stage_str += ', '
+    if(len(stage.p) > 0):
+        stage_str = stage_str[0:-2]
     stage_str = stage_str[0:-2]
     stage_str += '} , K='
     stage_str+= str(stage.gain)
