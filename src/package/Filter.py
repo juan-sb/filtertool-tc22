@@ -265,7 +265,7 @@ class AnalogFilter():
                 p0 = np.prod(p) * (1 if self.N % 2 == 0 else -1) #en N tengo N polos y yo quiero obtener el producto de los polos negados para normalizar
                 tf2 = TFunction(z, p, p0)
                 
-                tf2_wmax = abs(tf2.at(self.wan*1j))
+                tf2_wmax = abs(tf2.at(self.wan))
                 # print(self.N, tf2_wmin >= self.gp, tf2_wmax <= self.ga, tf2_wmin, tf2_wmax)
                 if(self.N == self.N_max or tf2_wmax <= self.ga):
                     self.tf_norm = TFunction(z, p, p0)
@@ -273,32 +273,93 @@ class AnalogFilter():
                 self.N += 1
         
         elif self.approx_type == BESSEL:
+            s = sym.symbols('s')
             self.N = self.N_min
             while True:
-                N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
-                z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay')
-                tf2 = TFunction(z, p, k, N, D)
-                if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
-                    self.tf_norm = TFunction(z, p, k, N, D)
-                    break
+                if(self.filter_type == GROUP_DELAY):
+                    N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
+                    z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay')
+                    tf2 = TFunction(z, p, k, N, D)
+                    if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
+                        self.tf_norm = TFunction(z, p, k, N, D)
+                        break
+                else:
+                    N, D = signal.bessel(self.N, 1, analog=True, output='ba') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
+                    self.eparser.setExpression(sym.Poly(N, s)/sym.Poly(D, s))
+                    z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk')
+                    tf2 = TFunction(z, p, k, N, D)
+                    w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=100, use_hz=False)
+                    wd = np.nan
+                    wr = w[::-1]
+                    gr = g[::-1]
+                    for i, wi in enumerate(wr):
+                        if (gr[i] > self.gp):
+                            wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                            wrint = wint[::-1]
+                            grint = gint[::-1]
+                            for ii, wi2 in enumerate(wrint):
+                                if (grint[ii] >= self.gp):
+                                    wd = wi2
+                                    break
+                            if(not np.isnan(wd)):
+                                break
+                    assert not np.isnan(wd)
+                    
+                    transformation = s * wd
+                    self.eparser.transform(transformation)
+                    N, D = self.eparser.getND()
+                    tf3 = TFunction(N, D)
+                    if(self.N == self.N_max or np.abs(tf3.at(self.wan)) <= self.ga):
+                        self.tf_norm = tf3
+                        break
                 self.N += 1
 
         elif self.approx_type == GAUSS:
+            s = sym.symbols('s')
             self.N = 1
+            
             gauss_poly = [1, 0, 1] # producirá un delay de 1 segundo
             fact_prod = 1
+            
             while True:
                 if self.N >= self.N_min:
                     p = select_roots(Polynomial(gauss_poly))
                     p0 = np.prod(p)
                     tf2 = TFunction([], p, p0)
-                    g0 = tf2.gd_at(0)                       
-                    p = [r * g0 for r in p]
-                    tf2 = TFunction([], p, p0)
-                    if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
-                        p0 = np.prod(p)
-                        self.tf_norm = TFunction([], p, p0)
-                        break
+                    
+                    if(self.filter_type == GROUP_DELAY):
+                        g0 = tf2.gd_at(0)                       
+                        p = [r * g0 for r in p]
+                        tf2 = TFunction([], p, p0)
+                        if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
+                            p0 = np.prod(p)
+                            self.tf_norm = TFunction([], p, p0)
+                            break
+                    else:
+                        w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=100, use_hz=False)
+                        wd = np.nan
+                        wr = w[::-1]
+                        gr = g[::-1]
+                        for i, wi in enumerate(wr):
+                            if (gr[i] > self.gp):
+                                wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                                wrint = wint[::-1]
+                                grint = gint[::-1]
+                                for ii, wi2 in enumerate(wrint):
+                                    if (grint[ii] >= self.gp):
+                                        wd = wi2
+                                        break
+                                if(not np.isnan(wd)):
+                                    break
+                        assert not np.isnan(wd)
+                        self.eparser.setExpression(sym.Poly(tf2.N, s)/sym.Poly(tf2.D, s))
+                        transformation = s * wd
+                        self.eparser.transform(transformation)
+                        N, D = self.eparser.getND()
+                        tf3 = TFunction(N, D)
+                        if(self.N == self.N_max or np.abs(tf3.at(self.wan)) <= self.ga):
+                            self.tf_norm = tf3
+                            break
                 self.N += 1
                 fact_prod *= self.N
                 gauss_poly.append(0)
@@ -326,39 +387,38 @@ class AnalogFilter():
 
         #Primera desnormalización: la elegida en las opciones
         if self.filter_type != GROUP_DELAY:
-            
-            f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=500)
-            w = 2* pi * f
+            w, g, ph = self.tf_norm.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=100, use_hz=False)
             wd = np.nan
-            for wi in reversed(w):
-                if abs(self.tf_norm.at(1j*wi)) >= self.ga:
-                    f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(wi*0.9), stop=np.log10(wi*1.1), num=500)
-                    wint = 2* pi * f
-                    for wi2 in reversed(wint):
-                        if abs(self.tf_norm.at(1j*wi2)) >= self.ga:
+            wr = w[::-1]
+            gr = g[::-1]
+            denor = self.denorm/100
+            for i, wi in enumerate(wr):
+                if (gr[i] > self.ga):
+                    wint, gint, ph = self.tf_norm.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                    wrint = wint[::-1]
+                    grint = gint[::-1]
+                    for ii, wi2 in enumerate(wrint):
+                        if (grint[ii] >= self.ga):
                             wd = wi2
                             break
                     if(not np.isnan(wd)):
                         break
             assert not np.isnan(wd)
-            
-            denor = self.denorm/100
             transformation = s * ((1 - denor) * self.wan + denor * wd)/self.wan
             if(self.approx_type == CHEBYSHEV2):
-                wp = np.nan
-                for wi in reversed(w):
-                    if abs(self.tf_norm.at(1j*wi)) >= self.gp:
-                        f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(wi*0.9), stop=np.log10(wi*1.1), num=500)
-                        wint = 2* pi * f
-                        for wi2 in reversed(wint):
-                            if abs(self.tf_norm.at(1j*wi2)) >= self.gp:
+                for i, wi in enumerate(wr):
+                    if (gr[i] > self.gp):
+                        wint, gint, ph = self.tf_norm.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                        wrint = wint[::-1]
+                        grint = gint[::-1]
+                        for ii, wi2 in enumerate(wrint):
+                            if (grint[ii] >= self.gp):
                                 wp = wi2
                                 break
                         if(not np.isnan(wp)):
                             break
-                assert not np.isnan(wd)
+                assert not np.isnan(wp)
                 transformation *= (denor + (1-denor)*wp)
-                # transformation *= self.wan
 
             self.eparser.transform(transformation)
             N, D = self.eparser.getND()

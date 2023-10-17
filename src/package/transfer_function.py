@@ -127,7 +127,11 @@ class TFunction():
         self.computedDerivatives = False
 
     def at(self, s):
-        return poly_at(self.N, s) / poly_at(self.D, s)
+        # return poly_at(self.N, s) / poly_at(self.D, s)
+        arr = np.array([s])
+        # print(signal.freqresp(self.tf_object, arr)[1][0], poly_at(self.N, s) / poly_at(self.D, s))
+        # print(signal.freqresp(self.tf_object, arr)[1])
+        return signal.freqresp(self.tf_object, arr)[1][0]
     
     def minFunctionMod(self, w):
         return abs(self.at(1j*w))
@@ -148,6 +152,15 @@ class TFunction():
         else:
             return self.z, self.p
 
+    def getBodeMagFast(self, linear=False, start=-2, stop=6, num=10000, db=False, use_hz=True):
+        if linear:
+            ws = np.linspace(start, stop, num) * (2 * np.pi if use_hz else 1)
+        else:
+            ws = np.logspace(start, stop, num) * (2 * np.pi if use_hz else 1)
+        w, g, ph = signal.bode(self.tf_object, w=ws)
+        f = ws / (2 * np.pi)
+        return f if use_hz else ws, g if db else 10**(g/20), ph
+
     def getBode(self, linear=False, start=-2, stop=6, num=10000, db=False, use_hz=True):
         if linear:
             ws = np.linspace(start, stop, num) * (2 * np.pi if use_hz else 1)
@@ -155,6 +168,13 @@ class TFunction():
             ws = np.logspace(start, stop, num) * (2 * np.pi if use_hz else 1)
         #h = self.at(1j*ws)
         w, g, ph = signal.bode(self.tf_object, w=ws)
+        for i, wi in enumerate(w):
+            ph[i] = 0
+            for p in self.p:
+                ph[i] -= np.angle(1j*wi - p, True)
+            for z in self.z:
+                ph[i] += np.angle(1j*wi - z, True)
+
         gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
         f = ws / (2 * np.pi)
         return f if use_hz else ws, g if db else 10**(g/20), ph, gd

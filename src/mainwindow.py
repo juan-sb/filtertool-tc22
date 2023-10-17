@@ -552,8 +552,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.aprox_box.model().item(i).setEnabled(True)
                 self.compareapprox_cb.model().item(i).setEnabled(True)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
-                self.aprox_box.model().item(i).setEnabled(False)
-                self.compareapprox_cb.model().item(i).setEnabled(False)
+                self.aprox_box.model().item(i).setEnabled(True)
+                self.compareapprox_cb.model().item(i).setEnabled(True)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
                 self.compareapprox_cb.setCurrentIndex(Filter.BUTTERWORTH)
@@ -594,8 +594,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.aprox_box.model().item(i).setEnabled(True)
                 self.compareapprox_cb.model().item(i).setEnabled(True)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
-                self.aprox_box.model().item(i).setEnabled(False)
-                self.compareapprox_cb.model().item(i).setEnabled(False)
+                self.aprox_box.model().item(i).setEnabled(True)
+                self.compareapprox_cb.model().item(i).setEnabled(True)
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
                 self.compareapprox_cb.setCurrentIndex(Filter.BUTTERWORTH)
@@ -741,10 +741,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         minval = minf/100
         maxval = maxf*100
         f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
-        
-        zz = [zi for zi in z if zi == 0]
-        if(len(zz) >= 4):
-            ph += 360 * (len(zz)//4)
 
         magcanvas.ax.plot(f, g, label = str(filtds.origin))
         phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
@@ -900,10 +896,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             z, p = helper.tf.getZP(self.use_hz)
             p = np.append(p, [minf, maxf])
             minf2, maxf2 = self.getRelevantFrequencies(z, p)
-
-            zz = [zi for zi in z if zi == 0]
-            if(len(zz) >= 4):
-                ph += 360 * (len(zz)//4)
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
             timp, impres = signal.impulse(helper.tf.tf_object, N=5000)
