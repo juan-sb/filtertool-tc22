@@ -1314,7 +1314,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f = accumulated_ds.data[0]['f']
             g = 20 * np.log10(np.abs(np.array(accumulated_ds.data[0]['g'])))
             ph = accumulated_ds.data[0]['ph']
-            z, p = accumulated_ds.origin.getZP(self.use_hz)
+            z, p = accumulated_ds.origin.getZP(False)
 
             smagcanvas.ax.plot(f, g)
             sphasecanvas.ax.plot(f, ph)

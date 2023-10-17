@@ -242,29 +242,29 @@ class TFunction():
             w0 = np.abs(self.p[0])
             Q = w0 / self.D[1]
             if(np.isclose(np.abs(self.z[0]), 0)):
-                return HP2, "Second order high pass wc={:.2f}".format(np.abs(self.p[0]))
+                return HP2, "2nd order HP ωc={:.2f} Q={:.2f}".format(np.abs(self.p[0]), Q)
             elif(np.isclose(np.abs(self.z[0]), np.abs(self.p[0]))):
-                return BR, "Second order band reject w0={:.2f} Q={:.2f}".format(w0, Q)
+                return BR, "2nd order BR ω0={:.2f} Q={:.2f}".format(w0, Q)
             elif(np.abs(self.z[0]) > np.abs(self.p[0])):
-                return LPN, "Second order low pass notch w0={:.2f} Q={:.2f}".format(w0, Q)
+                return LPN, "2nd order LP notch ω0={:.2f} Q={:.2f}".format(w0, Q)
             else:
-                return HPN, "Second order high pass notch w0={:.2f} Q={:.2f}".format(w0, Q)
+                return HPN, "2nd order HP notch ω0={:.2f} Q={:.2f}".format(w0, Q)
         elif(zp_ord == [1, 2]):
             w0 = np.sqrt(self.D[2]/self.D[0])
             Q = w0 / self.D[1]
-            return BP, "Second order band pass w0={:.2f} Q={:.2f}".format(w0, Q)
+            return BP, "2nd order BP ω0={:.2f} Q={:.2f}".format(w0, Q)
         elif(zp_ord == [0, 2]):
-            return LP2, "Second order low pass wc={:.2f}".format(np.abs(self.p[0]))
+            return LP2, "2nd order LP ωc={:.2f} Q={:.2f}".format(np.abs(self.p[0]), Q)
         elif(zp_ord == [1, 1]):
             if(np.isclose(np.abs(self.z[0]), 0)):
-                return HP1, "1st order high pass, wc={:.2f}".format(self.p[0].real)
+                return HP1, "1st order HP ωc={:.2f}".format(self.p[0].real)
             else:
                 if(np.abs(self.z[0]) > np.abs(self.p[0])):
-                    return -1, "Single pole single zero high pass"
+                    return -1, "1 pole 1 zero HP"
                 else:
-                    return -1, "Single pole single zero low pass"
+                    return -1, "1 pole 1 zero LP"
         elif(zp_ord == [0, 1]):
-            return LP1, "1st order low pass"
+            return LP1, "1st order LP ωc={:.2f}".format(self.p[0].real)
         elif(zp_ord == [0, 0]):
             return "Cable"
         return "Invalid"
