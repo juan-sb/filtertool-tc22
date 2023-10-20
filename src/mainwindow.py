@@ -1130,7 +1130,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for stage in self.selected_dataset_data.origin.stages:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=stage))
-            qlwt.setText(stage_to_str(stage))
+            qlwt.setText(stage_to_str(stage, 1))
             self.stages_list.addItem(qlwt)
         self.stages_list.setCurrentRow(index + 1)
         self.updateStagePlots()
@@ -1308,7 +1308,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         for i, stage in enumerate(self.selected_dataset_data.origin.stages):
             sw,sg, sph = stage.getBodeMagFast(start=np.log10(w[0]), stop=np.log10(w[-1]), num=5000, db=True, use_hz=False)
-            sstamagcanvas.ax.plot(sw, sg, label="Stage " + str(i), alpha=0.8)
+            sstamagcanvas.ax.plot(sw, sg, label="Etapa " + str(i), alpha=0.8)
         sstamagcanvas.ax.legend()
 
         if(self.stages_list.currentItem()):

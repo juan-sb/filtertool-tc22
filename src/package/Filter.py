@@ -554,7 +554,7 @@ class AnalogFilter():
 
         if(self.filter_type == BAND_PASS):
             self.kbandpasscurr /= newStage_tf.k
-        newStage_tf.gain = gain
+        # newStage_tf.gain = gain
         self.stages.append(newStage_tf)
         self.implemented_tf.appendStage(newStage_tf)
         self.remainingGain /= gain
@@ -685,11 +685,24 @@ class AnalogFilter():
 
     def getStagesDynamicRangeLoss(self, db=True):
         isReject, bp = self.getBandpassRange()
+        drl_acc = 0
+        max_drl = 0
         drl = 0
-        for stage_tf in self.stages:
+        for i, stage_tf in enumerate(self.stages):
             ming, maxg = stage_tf.getEdgeGainsInRange(isReject, bp, db=db)
-            drl += np.max(np.abs([ming, maxg])) if ming*maxg > 0 else (maxg - ming) 
-        return drl
+            if(ming*maxg < 0):
+                if(maxg > -ming):
+                    drl_acc += maxg
+                else:
+                    drl_acc += ming
+            else:
+                if(maxg > 0):
+                    drl_acc += maxg
+                else:
+                    drl_acc += ming
+            if(np.abs(drl_acc) > max_drl):
+                max_drl = np.abs(drl_acc)
+        return max_drl
 
     def __eq__(self, other):
         if(isinstance(other, str)):
