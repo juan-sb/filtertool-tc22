@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1002</width>
-    <height>744</height>
+    <height>741</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -1309,6 +1309,54 @@
            <property name="rightMargin">
             <number>9</number>
            </property>
+           <item row="2" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QPushButton" name="fgetHhuman_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Copy H(s) (human)</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="fgetHlatex_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Copy H(s) (LaTeX)</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="3" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
+             <item>
+              <widget class="QPushButton" name="new_filter_btn">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>New filter</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="chg_filter_btn">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Change filter</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
            <item row="1" column="0">
             <widget class="QGroupBox" name="groupBox_6">
              <property name="sizePolicy">
@@ -1433,7 +1481,7 @@
                      <string>Hz</string>
                     </property>
                     <property name="maximum">
-                     <double>999999999.000000000000000</double>
+                     <double>1000000000.000000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -1552,7 +1600,7 @@
                      <double>0.000000000000000</double>
                     </property>
                     <property name="maximum">
-                     <double>1000000.000000000000000</double>
+                     <double>1000.000000000000000</double>
                     </property>
                     <property name="value">
                      <double>3.000000000000000</double>
@@ -1628,7 +1676,7 @@
                      <double>0.000000000000000</double>
                     </property>
                     <property name="maximum">
-                     <double>1000000.000000000000000</double>
+                     <double>1000.000000000000000</double>
                     </property>
                     <property name="value">
                      <double>20.000000000000000</double>
@@ -1644,7 +1692,7 @@
                      <string>Hz</string>
                     </property>
                     <property name="maximum">
-                     <double>1000000000.000000000000000</double>
+                     <double>100000000.000000000000000</double>
                     </property>
                     <property name="singleStep">
                      <double>1.000000000000000</double>
@@ -1686,6 +1734,9 @@
                     </property>
                     <property name="suffix">
                      <string>s</string>
+                    </property>
+                    <property name="maximum">
+                     <double>100.000000000000000</double>
                     </property>
                     <property name="singleStep">
                      <double>1.000000000000000</double>
@@ -1887,17 +1938,20 @@
                </item>
                <item row="11" column="1">
                 <widget class="QDoubleSpinBox" name="gain_box">
+                 <property name="suffix">
+                  <string> dB</string>
+                 </property>
                  <property name="minimum">
-                  <double>0.010000000000000</double>
+                  <double>-1000.000000000000000</double>
                  </property>
                  <property name="maximum">
-                  <double>1000000.000000000000000</double>
+                  <double>1000.000000000000000</double>
                  </property>
                  <property name="singleStep">
                   <double>0.010000000000000</double>
                  </property>
                  <property name="value">
-                  <double>1.000000000000000</double>
+                  <double>0.000000000000000</double>
                  </property>
                 </widget>
                </item>
@@ -2173,54 +2227,6 @@
              </widget>
             </widget>
            </item>
-           <item row="3" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_5">
-             <item>
-              <widget class="QPushButton" name="new_filter_btn">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="text">
-                <string>New filter</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="chg_filter_btn">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Change filter</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="2" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_7">
-             <item>
-              <widget class="QPushButton" name="fgetHhuman_btn">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Copy H(s) (human)</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="fgetHlatex_btn">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Copy H(s) (LaTeX)</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
           </layout>
          </widget>
         </item>
@@ -2353,6 +2359,16 @@
             </item>
            </layout>
           </widget>
+          <widget class="QWidget" name="tab_18">
+           <attribute name="title">
+            <string>Stages magnitude</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_37">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_stagesmag" native="true"/>
+            </item>
+           </layout>
+          </widget>
           <widget class="QWidget" name="tab_15">
            <attribute name="title">
             <string>Stage PZ map</string>
@@ -2395,7 +2411,7 @@
           </property>
           <property name="maximumSize">
            <size>
-            <width>260</width>
+            <width>300</width>
             <height>16777215</height>
            </size>
           </property>
@@ -2413,8 +2429,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>260</width>
-             <height>641</height>
+             <width>300</width>
+             <height>638</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -2431,7 +2447,7 @@
            </property>
            <property name="maximumSize">
             <size>
-             <width>260</width>
+             <width>300</width>
              <height>16777215</height>
             </size>
            </property>
@@ -2452,7 +2468,7 @@
              <number>7</number>
             </property>
             <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_12" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0">
+             <layout class="QGridLayout" name="gridLayout_12" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0">
               <property name="leftMargin">
                <number>6</number>
               </property>
@@ -2471,33 +2487,23 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
-              <item row="16" column="0">
-               <widget class="QPushButton" name="sswapdown_btn">
-                <property name="text">
-                 <string/>
+              <item row="10" column="0" colspan="2">
+               <widget class="Line" name="line">
+                <property name="maximumSize">
+                 <size>
+                  <width>2165116</width>
+                  <height>10</height>
+                 </size>
                 </property>
-                <property name="icon">
-                 <iconset theme="SP_TitleBarUnshadeButton">
-                  <normaloff>.</normaloff>.</iconset>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
-               <widget class="QComboBox" name="stages_selfil_cb"/>
-              </item>
-              <item row="19" column="1">
-               <widget class="QPushButton" name="sgetHlatex_btn">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_31">
                 <property name="text">
-                 <string>Cpy H(s) (LaTeX)</string>
+                 <string>Selected filter</string>
                 </property>
                </widget>
               </item>
@@ -2514,58 +2520,7 @@
                 </property>
                </widget>
               </item>
-              <item row="10" column="0">
-               <spacer name="verticalSpacer_3">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="13" column="0" colspan="2">
-               <widget class="QListWidget" name="stages_list">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_91">
-                <property name="text">
-                 <string>Remaining gain</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_31">
-                <property name="text">
-                 <string>Selected filter</string>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
-               <widget class="QLabel" name="label_38">
-                <property name="text">
-                 <string>Total DR loss</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="1">
-               <widget class="QLabel" name="total_filtgain_label">
-                <property name="text">
-                 <string>?</string>
-                </property>
-               </widget>
-              </item>
-              <item row="20" column="0" colspan="2">
+              <item row="19" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,1">
                 <item>
                  <widget class="QLabel" name="label_37">
@@ -2641,72 +2596,6 @@
                 </item>
                </layout>
               </item>
-              <item row="9" column="0">
-               <widget class="QPushButton" name="new_stage_btn">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>New stage</string>
-                </property>
-               </widget>
-              </item>
-              <item row="18" column="0" colspan="2">
-               <widget class="QLabel" name="si_info">
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>20</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>?</string>
-                </property>
-               </widget>
-              </item>
-              <item row="19" column="0">
-               <widget class="QPushButton" name="sgetHhuman_btn">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Cpy H(s) (human)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="1">
-               <widget class="QLabel" name="total_filtdrloss_label">
-                <property name="text">
-                 <string>?</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_90">
-                <property name="text">
-                 <string>Stage gain</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="0">
-               <widget class="QLabel" name="label_34">
-                <property name="text">
-                 <string>Total filter gain</string>
-                </property>
-               </widget>
-              </item>
               <item row="6" column="1">
                <widget class="QLabel" name="remaining_gain_text">
                 <property name="text">
@@ -2714,7 +2603,18 @@
                 </property>
                </widget>
               </item>
-              <item row="12" column="0" colspan="2">
+              <item row="15" column="0">
+               <widget class="QPushButton" name="sswapdown_btn">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset theme="SP_TitleBarUnshadeButton">
+                  <normaloff>.</normaloff>.</iconset>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0" colspan="2">
                <widget class="QLabel" name="label_87">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -2733,47 +2633,11 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QListWidget" name="zeros_list">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+              <item row="8" column="0">
+               <widget class="QPushButton" name="new_stage_btn">
+                <property name="enabled">
+                 <bool>false</bool>
                 </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>125</height>
-                 </size>
-                </property>
-                <property name="selectionMode">
-                 <enum>QAbstractItemView::MultiSelection</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="2">
-               <widget class="QLabel" name="label_88">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Zeroes</string>
-                </property>
-               </widget>
-              </item>
-              <item row="21" column="0" colspan="2">
-               <widget class="QPushButton" name="si_calc_btn">
-                <property name="text">
-                 <string>Calculate values</string>
-                </property>
-               </widget>
-              </item>
-              <item row="16" column="1">
-               <widget class="QPushButton" name="sswapup_btn">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -2781,7 +2645,17 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string/>
+                 <string>New stage</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="0" colspan="2">
+               <widget class="QListWidget" name="stages_list">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
                 </property>
                </widget>
               </item>
@@ -2810,6 +2684,9 @@
                 </property>
                </widget>
               </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="stages_selfil_cb"/>
+              </item>
               <item row="5" column="1">
                <widget class="QDoubleSpinBox" name="stage_gain_box">
                 <property name="sizePolicy">
@@ -2818,19 +2695,147 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="suffix">
+                 <string> dB</string>
+                </property>
                 <property name="decimals">
-                 <number>8</number>
+                 <number>2</number>
+                </property>
+                <property name="minimum">
+                 <double>-1000000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>100000000.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.010000000000000</double>
                 </property>
                </widget>
               </item>
-              <item row="17" column="0">
+              <item row="16" column="0">
                <widget class="QPushButton" name="autoselectstagessp_btn">
                 <property name="text">
                  <string>Auto select (scipy)</string>
                 </property>
                </widget>
               </item>
-              <item row="17" column="1">
+              <item row="15" column="1">
+               <widget class="QPushButton" name="sswapup_btn">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_91">
+                <property name="text">
+                 <string>Remaining gain</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="QLabel" name="total_filtdrloss_label">
+                <property name="text">
+                 <string>?</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <widget class="QLabel" name="label_88">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Zeroes</string>
+                </property>
+               </widget>
+              </item>
+              <item row="18" column="1">
+               <widget class="QPushButton" name="sgetHlatex_btn">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Cpy H(s) (LaTeX)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <spacer name="verticalSpacer_3">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="label_38">
+                <property name="text">
+                 <string>Total DR loss</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_90">
+                <property name="text">
+                 <string>Stage gain</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QPushButton" name="updatestage_btn">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Update stage</string>
+                </property>
+               </widget>
+              </item>
+              <item row="18" column="0">
+               <widget class="QPushButton" name="sgetHhuman_btn">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Cpy H(s) (human)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="20" column="0" colspan="2">
+               <widget class="QPushButton" name="si_calc_btn">
+                <property name="text">
+                 <string>Calculate values</string>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="1">
                <widget class="QPushButton" name="remove_stage_btn">
                 <property name="enabled">
                  <bool>false</bool>
@@ -2852,26 +2857,35 @@
                 </property>
                </widget>
               </item>
-              <item row="9" column="1">
-               <widget class="QPushButton" name="updatestage_btn">
-                <property name="enabled">
-                 <bool>false</bool>
+              <item row="17" column="0" colspan="2">
+               <widget class="QLabel" name="si_info">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>20</height>
+                 </size>
                 </property>
                 <property name="text">
-                 <string>Update stage</string>
+                 <string>?</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="0" colspan="2">
-               <widget class="Line" name="line">
+              <item row="2" column="0" colspan="2">
+               <widget class="QListWidget" name="zeros_list">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
-                  <width>2165116</width>
-                  <height>10</height>
+                  <width>16777215</width>
+                  <height>125</height>
                  </size>
                 </property>
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                <property name="selectionMode">
+                 <enum>QAbstractItemView::MultiSelection</enum>
                 </property>
                </widget>
               </item>

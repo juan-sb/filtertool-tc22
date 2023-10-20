@@ -62,8 +62,7 @@ def stage_to_str(stage, k):
         stage_str += ', '
     if(len(stage.p) > 0):
         stage_str = stage_str[0:-2]
-    stage_str += '} , K='
-    stage_str+= str(stage.gain)
+    stage_str += '}} , K={0:.2g} dB'.format(20*np.log10(stage.gain))
     return stage_str
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -178,7 +177,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tabWidget_2.currentChanged.connect(self.redrawFilterPlots)
         self.tabWidget_3.currentChanged.connect(self.redrawStagePlots)
         self.filterPlots = [self.fplot_att, self.fplot_mag, self.fplot_phase, self.fplot_gd, self.fplot_pz, self.fplot_step, self.fplot_impulse]
-        self.stagePlots = [self.splot_fpz, self.splot_tpz, self.splot_tgain, self.splot_tphase, self.splot_pz, self.splot_sgain, self.splot_sphase]
+        self.stagePlots = [self.splot_fpz, self.splot_tpz, self.splot_tgain, self.splot_tphase, self.splot_stagesmag, self.splot_pz, self.splot_sgain, self.splot_sphase]
         self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
         self.redrawStagePlotsArr = [True] * len(self.stagePlots)
         
@@ -451,7 +450,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "define_with": self.define_with_box.currentIndex(),
             "N_min": self.N_min_box.value(),
             "N_max": self.N_max_box.value(),
-            "gain": self.gain_box.value(),
+            "gain": 10**(self.gain_box.value()/20),
             "denorm": self.denorm_box.value(),
             "aa_dB": self.aa_box.value(),
             "ap_dB": self.ap_box.value(),
@@ -969,12 +968,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.zeros_list.clear()
         self.poles_list.clear()
         self.remaining_gain_text.clear()
-        self.total_filtgain_label.clear()
         self.total_filtdrloss_label.clear()
         if self.selected_dataset_data.type == 'filter':
             self.new_stage_btn.setEnabled(True)
             self.remove_stage_btn.setEnabled(True)
             zeros, poles = self.selected_dataset_data.origin.tf.getZP(False)
+            
+            remzeros = np.copy(np.array(self.selected_dataset_data.origin.remainingZeros))
             for p in poles:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, p)
@@ -985,21 +985,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for z in zeros:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, z)
-                qlwt.setText("{0:.3}j".format(np.imag(z)))
-                if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)):
+                qlwt.setText("{0:.3g}j".format(np.imag(z)))
+                iz = np.where(remzeros == z)
+                if(len(iz[0]) > 0):
+                    remzeros = np.delete(remzeros, iz[0][0])
+                else:
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.zeros_list.addItem(qlwt)
-            total_gain = 0
             for implemented_stage in self.selected_dataset_data.origin.stages:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, Dataset(origin=implemented_stage))
                 qlwt.setText(stage_to_str(implemented_stage, 1))
                 self.stages_list.addItem(qlwt)
-                total_gain *= implemented_stage.gain
-            self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
-            self.total_filtgain_label.setText(str(total_gain))
-            self.total_filtdrloss_label.setText(str(self.selected_dataset_data.origin.getStagesDynamicRangeLoss()))
-            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
+            self.remaining_gain_text.setText("{:.2g} dB".format(20*np.log10(self.selected_dataset_data.origin.remainingGain)))
+            self.total_filtdrloss_label.setText("{:.2g} dB".format(self.selected_dataset_data.origin.getStagesDynamicRangeLoss()))
+            self.stage_gain_box.setValue(20*np.log10(self.selected_dataset_data.origin.remainingGain))
         else:  
             self.new_stage_btn.setEnabled(False)
             self.remove_stage_btn.setEnabled(False)
@@ -1079,7 +1079,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def addFilterStage(self):
         selected_poles = [x.data(Qt.UserRole) for x in self.poles_list.selectedIndexes()]
         selected_zeros = [x.data(Qt.UserRole) for x in self.zeros_list.selectedIndexes()]
-        selected_gain = self.stage_gain_box.value()
+        selected_gain = 10**(self.stage_gain_box.value()/20)
 
         selected_poles_idx = [x.row() for x in self.poles_list.selectedIndexes()]
         selected_zeros_idx = [x.row() for x in self.zeros_list.selectedIndexes()]
@@ -1098,11 +1098,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             qlwt.setData(Qt.UserRole, Dataset(origin=self.selected_dataset_data.origin.stages[-1]))
             qlwt.setText(stage_to_str(self.selected_dataset_data.origin.stages[-1], 1))
             self.stages_list.addItem(qlwt)
-            self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
-            self.stage_gain_box.setValue(self.selected_dataset_data.origin.remainingGain)
-            total_gain = np.prod([stage.gain for stage in self.selected_dataset_data.origin.stages])
-            self.total_filtgain_label.setText(str(total_gain))
-            self.total_filtdrloss_label.setText(str(self.selected_dataset_data.origin.getStagesDynamicRangeLoss()))
+            self.remaining_gain_text.setText("{:.2g} dB".format(20*np.log10(self.selected_dataset_data.origin.remainingGain)))
+            self.stage_gain_box.setValue(20*np.log10(self.selected_dataset_data.origin.remainingGain))
+            self.total_filtdrloss_label.setText("{:.2g} dB".format(self.selected_dataset_data.origin.getStagesDynamicRangeLoss()))
             self.stages_list.setCurrentRow(self.stages_list.count() - 1)
             
             self.updateStagePlots()
@@ -1158,23 +1156,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.selected_dataset_data.origin.removeStage(i)
         
-        zeros, poles = self.selected_dataset_data.origin.tf.getZP(self.use_hz)
-        for p in poles:
-            qlwt = QListWidgetItem()
-            qlwt.setData(Qt.UserRole, p)
-            qlwt.setText(str(p))
-            if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)):
-                qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
-            self.poles_list.addItem(qlwt)
-        for z in zeros:
-            qlwt = QListWidgetItem()
-            qlwt.setData(Qt.UserRole, z)
-            qlwt.setText(str(z))
-            if(z not in np.array(self.selected_dataset_data.origin.remainingZeros)):
-                qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
-            self.zeros_list.addItem(qlwt)
+        # zeros, poles = self.selected_dataset_data.origin.tf.getZP(False)
+        # remzeros = np.copy(np.array(self.selected_dataset_data.origin.remainingZeros))
+        # for p in poles:
+        #     qlwt = QListWidgetItem()
+        #     qlwt.setData(Qt.UserRole, p)
+        #     qlwt.setText(str(p))
+        #     if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)):
+        #         qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
+        #     self.poles_list.addItem(qlwt)
+        # for z in zeros:
+        #     qlwt = QListWidgetItem()
+        #     qlwt.setData(Qt.UserRole, z)
+        #     qlwt.setText(str(z))
+        #     iz = np.where(remzeros == z)
+        #     if(len(iz[0]) == 0):
+        #         remzeros = np.delete(remzeros, iz[0][0])
+        #         qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
+        #     self.zeros_list.addItem(qlwt)
         self.stages_list.takeItem(i)
-        self.remaining_gain_text.setText(str(self.selected_dataset_data.origin.remainingGain))
         self.stages_list.setCurrentRow(self.stages_list.count() - 1)
 
         self.updateFilterStages()
@@ -1229,6 +1229,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         sphasecanvas = self.splot_sphase.canvas
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
+        sstamagcanvas = self.splot_stagesmag.canvas
 
         self.condition_canvas(self.splot_pz.canvas, '$\sigma$ ($rad/s$)', '$j\omega$ ($rad/s$)')
         self.condition_canvas(self.splot_fpz.canvas, '$\sigma$ ($rad/s$)', '$j\omega$ ($rad/s$)')
@@ -1237,6 +1238,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(sphasecanvas, 'Frecuencia angular ($rad/s$)', 'Fase [$^o$]', 'log')
         self.condition_canvas(tgaincanvas, 'Frecuencia angular ($rad/s$)', 'Magnitud [dB]', 'log')
         self.condition_canvas(tphasecanvas, 'Frecuencia angular ($rad/s$)', 'Fase [$^o$]', 'log')
+        self.condition_canvas(sstamagcanvas, 'Frecuencia angular ($rad/s$)', 'Magnitud [dB]', 'log')
         sphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
         tphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
 
@@ -1283,11 +1285,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         accumulated_ds = Dataset(origin=self.selected_dataset_data.origin.implemented_tf)
 
-        f = accumulated_ds.data[0]['f']
+        w = accumulated_ds.data[0]['f'] * 2 * np.pi
         g = 20 * np.log10(np.abs(np.array(accumulated_ds.data[0]['g'])))
         ph = accumulated_ds.data[0]['ph']
-        tgaincanvas.ax.plot(f, g)
-        tphasecanvas.ax.plot(f, ph)
+        tgaincanvas.ax.plot(w, g)
+        sstamagcanvas.ax.plot(w, g, label="Total")
+        tphasecanvas.ax.plot(w, ph)
         
         self.splot_tpz.canvas.ax.axis('equal')
         self.splot_tpz.canvas.ax.axhline(0, color="black", alpha=0.1)
@@ -1303,21 +1306,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.totalStagesPoleCursor = cursor(poles_t, multiple=True, highlight=True)
         self.totalStagesPoleCursor.connect("add", self.formatPoleAnnotationW)
 
-        # self.splot_fpz.canvas.draw()
-        # self.splot_tpz.canvas.draw()
-        # tgaincanvas.draw()
-        # tphasecanvas.draw()
+        for i, stage in enumerate(self.selected_dataset_data.origin.stages):
+            sw,sg, sph = stage.getBodeMagFast(start=np.log10(w[0]), stop=np.log10(w[-1]), num=5000, db=True, use_hz=False)
+            sstamagcanvas.ax.plot(sw, sg, label="Stage " + str(i), alpha=0.8)
+        sstamagcanvas.ax.legend()
 
         if(self.stages_list.currentItem()):
             accumulated_ds = self.stages_list.currentItem().data(Qt.UserRole)
 
-            f = accumulated_ds.data[0]['f']
+            w = accumulated_ds.data[0]['f'] * 2 * np.pi
             g = 20 * np.log10(np.abs(np.array(accumulated_ds.data[0]['g'])))
             ph = accumulated_ds.data[0]['ph']
             z, p = accumulated_ds.origin.getZP(False)
 
-            smagcanvas.ax.plot(f, g)
-            sphasecanvas.ax.plot(f, ph)
+            smagcanvas.ax.plot(w, g)
+            sphasecanvas.ax.plot(w, ph)
 
             (min, max) = self.getRelevantFrequencies(z, p)
             self.splot_pz.canvas.ax.axis('equal')
@@ -1460,7 +1463,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.aprox_box.setCurrentIndex(self.selected_dataset_data.origin.approx_type)
         self.compareapprox_cb.setCurrentIndexes(self.selected_dataset_data.origin.helper_approx)
         self.comp_N_box.setValue(self.selected_dataset_data.origin.helper_N)
-        self.gain_box.setValue(self.selected_dataset_data.origin.gain)
+        self.gain_box.setValue(20*np.log10(self.selected_dataset_data.origin.gain))
         self.aa_box.setValue(self.selected_dataset_data.origin.aa_dB)
         self.ap_box.setValue(self.selected_dataset_data.origin.ap_dB)
         self.N_label.setText(str(self.selected_dataset_data.origin.N))

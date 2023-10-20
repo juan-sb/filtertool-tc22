@@ -101,17 +101,21 @@ class TFunction():
         self.dD = np.flip(D.deriv().coef)
         self.computedDerivatives = True
 
+    def multiplyGain(self, k):
+        self.gain *= k
+        self.k *= k
+        self.N = self.N*k
+        self.tf_object = signal.TransferFunction(self.N, self.D)
+
     def normalize(self):
         self.gain = self.k
         a = 1+0j #lo voy a usar para normalizar, los zpk que da numpy no vienen normalizados
         for zero in self.z:
-            if abs(np.real(zero)) + abs(np.imag(zero)) < 1e-32:
-                continue
-            a = -a*zero
+            if not np.isclose(zero, 0, rtol=1e-5):
+                a = -a*zero
         for pole in self.p:
-            if abs(np.real(pole)) + abs(np.imag(pole)) < 1e-32:
-                continue
-            a = -a/pole
+            if not np.isclose(pole, 0, rtol=1e-5):
+                a = -a/pole
         self.k = self.k/a
         self.N = self.N/a
         self.computedDerivatives = False
@@ -199,7 +203,11 @@ class TFunction():
         self.setZPK(np.append(self.z, tf.z), np.append(self.p, tf.p), self.k*tf.k)
 
     def removeStage(self, tf):
-        self.setZPK([i for i in self.z if i not in tf.z], [i for i in self.p if i not in tf.p], self.k/tf.k)
+        for z in tf.z:
+            iz = np.where(self.z == z)
+            if(len(iz[0]) > 0):
+                self.z = np.delete(self.z, iz[0][0])
+        self.setZPK(self.z, [i for i in self.p if i not in tf.p], self.k/tf.k)
     
     def getLatex(self, txt):
         return self.eparser.getLatex(txt=txt)
@@ -273,11 +281,12 @@ class TFunction():
 
     def getEdgeGainsInRange(self, isReject, bpw, db=True):
         if isReject:
-            f1, g1, ph1, gd1 = self.getBode(linear=True, start=bpw[0][0], stop=bpw[0][1], num=1000, db=db)
-            f2, g2, ph2, gd2 = self.getBode(linear=True, start=bpw[1][0], stop=bpw[1][1], num=1000, db=db)
-            minGain, maxGain = min(g1 + g2), max(g1 + g2)
+            f1, g1, ph1, gd1 = self.getBode(linear=True, start=bpw[0][0], stop=bpw[0][1], num=1000, db=db, use_hz=False)
+            f2, g2, ph2, gd2 = self.getBode(linear=True, start=bpw[1][0], stop=bpw[1][1], num=1000, db=db, use_hz=False)
+            
+            minGain, maxGain = min(np.append(g1,g2)), max(np.append(g1,g2))
         else:
-            f, g, ph, gd = self.getBode(linear=True, start=bpw[0], stop=bpw[1], num=1000, db=db)
+            f, g, ph, gd = self.getBode(linear=True, start=bpw[0], stop=bpw[1], num=1000, db=db, use_hz=False)
             minGain, maxGain = min(g), max(g)
         return minGain, maxGain
 
