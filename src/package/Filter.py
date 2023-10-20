@@ -100,6 +100,7 @@ class AnalogFilter():
         self.remainingZeros = []
         self.remainingPoles = []
         self.remainingGain = np.nan
+        self.actualGain = np.nan
         self.eparser = ExprParser()
         self.helperFilters = []
         self.helperLabels = []
@@ -468,14 +469,33 @@ class AnalogFilter():
             k = np.abs(k)
             self.tf = TFunction(denorm_z, denorm_p, k*self.gain)
             self.tf_template = TFunction(denorm_z, denorm_p, k)
+
+            usableZeros = [z for z in self.tf.z if not np.isclose(z, 0, rtol=1e-3)]
+            
+            if(self.filter_type == BAND_PASS):
+                self.actualGain = k/np.prod(np.abs(self.tf.p))
+                if(len(usableZeros) > 0):
+                    self.actualGain *= np.prod(np.abs(usableZeros))
+            if(self.filter_type == BAND_REJECT):
+                self.actualGain = k
+            self.actualGain *= self.gain
+
             return
         self.eparser.transform(transformation)
         N, D = self.eparser.getND()
         self.tf = TFunction([a * self.gain for a in N], D)
         self.tf_template = TFunction(N, D)
+        usableZeros = [z for z in self.tf.z if not np.isclose(z, 0, rtol=1e-3)]
+        if self.filter_type == LOW_PASS:
+            self.actualGain = N[-1]/D[-1]
+        elif self.filter_type == HIGH_PASS:
+            self.actualGain = N[0]/(D[0]*np.prod(np.abs(self.tf.p)))
+            if(len(usableZeros) > 0):
+                self.actualGain *= np.prod(np.abs(usableZeros))
+        self.actualGain *= self.gain
 
     def resetStages(self):
-        self.remainingGain = self.gain
+        self.remainingGain = np.float64(self.actualGain)
         self.remainingZeros = self.tf.z.tolist()
         self.remainingPoles = self.tf.p.tolist()
         self.stages = []

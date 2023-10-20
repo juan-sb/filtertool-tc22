@@ -254,6 +254,8 @@ class TFunction():
             Q = w0 / self.D[1]
             return BP, "2nd order BP ω0={:.2f} Q={:.2f}".format(w0, Q)
         elif(zp_ord == [0, 2]):
+            w0 = np.abs(self.p[0])
+            Q = w0 / self.D[1]
             return LP2, "2nd order LP ωc={:.2f} Q={:.2f}".format(np.abs(self.p[0]), Q)
         elif(zp_ord == [1, 1]):
             if(np.isclose(np.abs(self.z[0]), 0)):

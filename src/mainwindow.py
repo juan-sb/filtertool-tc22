@@ -740,7 +740,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         minval = minf/100
         maxval = maxf*100
         f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
-
+        gain_offset = 20*np.log10(filtds.origin.gain)
         magcanvas.ax.plot(f, g, label = str(filtds.origin))
         phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
         groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin))
@@ -750,8 +750,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         magcanvas.ax.set_xlim([minval, maxval])
         phasecanvas.ax.set_xlim([minval, maxval])
 
-        ap = filtds.origin.ap_dB
-        aa = filtds.origin.aa_dB
+        ap = filtds.origin.ap_dB - gain_offset
+        aa = filtds.origin.aa_dB - gain_offset
         
         minp, maxp = self.getRelevantFrequencies(z, p)
         xmin = 0
@@ -768,8 +768,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             xmin = 0
 
             attcanvas.ax.fill_between([0, fp], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([fa, maxp*100], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, ymax])
+            attcanvas.ax.fill_between([fa, maxp*100], [aa, aa], -gain_offset, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([-gain_offset, ymax])
             if(filtds.origin.denorm == 0):
                 patches.append(Circle((0, 0), fp, fill=False, linestyle=':', alpha=0.15))
             elif(filtds.origin.denorm == 100):
@@ -785,8 +785,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             xmin = 0
 
             attcanvas.ax.fill_between([fp, maxp*100], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([0, fa], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, ymax])
+            attcanvas.ax.fill_between([0, fa], [aa, aa], -gain_offset, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([-gain_offset, ymax])
             if(filtds.origin.denorm == 0):
                 patches.append(Circle((0, 0), fp, fill=False, linestyle=':', alpha=0.15))
             elif(filtds.origin.denorm == 100):
@@ -803,18 +803,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             xmin = max([0, fa[0] - deltaf])
             xmin = 0
             
-            attcanvas.ax.fill_between([0,  reqfa[0]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.fill_between([reqfa[1], maxp*100 ], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([0,  reqfa[0]], [aa, aa], -gain_offset, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.fill_between([reqfa[1], maxp*100 ], [aa, aa], -gain_offset, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
             
             if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS:
                 if(fa[0] != reqfa[0]):
-                    attcanvas.ax.fill_between([fa[0],  reqfa[0]], [aa, aa], 0, facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
+                    attcanvas.ax.fill_between([fa[0],  reqfa[0]], [aa, aa], -gain_offset, facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
                 elif(fa[1] != reqfa[1]):
-                    attcanvas.ax.fill_between([reqfa[1], fa[1] ], [aa, aa], 0, facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
+                    attcanvas.ax.fill_between([reqfa[1], fa[1] ], [aa, aa], -gain_offset, facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
                 else:
                     pass
             attcanvas.ax.fill_between([fp[0], fp[1]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, ymax])
+            attcanvas.ax.set_ylim([-gain_offset, ymax])
             
             if(filtds.origin.denorm == 0):
                 mintransband = np.min([fp[0]-fa[0], fa[1]-fp[1]])
@@ -850,8 +850,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     attcanvas.ax.fill_between([reqfp[1], fp[1]], [ap, ap], ymax, facecolor='#555555', edgecolor='#121212', hatch='//', linewidth=0)
                 else:
                     print("WTF")
-            attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], 0, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
-            attcanvas.ax.set_ylim([0, ymax])
+            attcanvas.ax.fill_between([fa[0], fa[1]], [aa, aa], -gain_offset, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
+            attcanvas.ax.set_ylim([-gain_offset, ymax])
             
             if(filtds.origin.denorm == 0):
                 mintransband = np.min([fa[0]-fp[0], fp[1]-fa[1]])
@@ -871,7 +871,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             xmin = 0
             groupdelaycanvas.ax.fill_between([0,  frg], [filtds.origin.tau0, filtds.origin.tau0], filtds.origin.tau0*(1 - filtds.origin.gamma/100), facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
         attcanvas.ax.set_xlim(xmin, xmax)
-        fa, ga, pa, gda = filtds.origin.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
+        fa, ga, pa, gda = filtds.origin.tf.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
         with np.errstate(divide='ignore'): 
             attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
 
@@ -889,7 +889,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         maxf2 = 0
         for helper in filtds.origin.helperFilters:
-            fa, ga, pa, gda = helper.tf_template.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
+            fa, ga, pa, gda = helper.tf.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
             attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
             f,g,ph,gd = helper.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
             z, p = helper.tf.getZP(self.use_hz)
@@ -978,7 +978,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for p in poles:
                 qlwt = QListWidgetItem()
                 qlwt.setData(Qt.UserRole, p)
-                qlwt.setText("{0:.3g}\tω0={1:.3g}\tQ={2:.2g}".format(p, np.abs(p), self.calcQ(p)))
+                qlwt.setText("{0:.3g} ω0={1:.3g} Q={2:.2g}".format(p, np.abs(p), self.calcQ(p)))
                 if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)):
                     qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
                 self.poles_list.addItem(qlwt)
@@ -1301,7 +1301,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.totalStagesZeroCursor = cursor(zeroes_t, multiple=True, highlight=True)
         self.totalStagesZeroCursor.connect("add", self.formatZeroAnnotation)
         self.totalStagesPoleCursor = cursor(poles_t, multiple=True, highlight=True)
-        self.totalStagesPoleCursor.connect("add", self.formatPoleAnnotation)
+        self.totalStagesPoleCursor.connect("add", self.formatPoleAnnotationW)
 
         # self.splot_fpz.canvas.draw()
         # self.splot_tpz.canvas.draw()
