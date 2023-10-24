@@ -549,7 +549,7 @@ class AnalogFilter():
         
         norm_gain *= gain
         self.remainingk /= norm_gain
-        print("NORM GAIN", norm_gain)
+        # print("NORM GAIN", norm_gain)
         newStage_tf = TFunction(z_arr, p_arr, norm_gain, normalize=False)
 
 
