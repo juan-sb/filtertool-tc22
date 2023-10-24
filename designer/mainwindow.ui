@@ -30,7 +30,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -101,8 +101,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
-                <height>451</height>
+                <width>217</width>
+                <height>538</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -671,8 +671,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>98</width>
-                <height>492</height>
+                <width>192</width>
+                <height>575</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1406,8 +1406,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>203</width>
-                   <height>431</height>
+                   <width>193</width>
+                   <height>513</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -1850,8 +1850,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>240</width>
-                <height>352</height>
+                <width>217</width>
+                <height>413</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -2429,8 +2429,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>300</width>
-             <height>653</height>
+             <width>279</width>
+             <height>719</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -2468,7 +2468,7 @@
              <number>7</number>
             </property>
             <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_12" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0">
+             <layout class="QGridLayout" name="gridLayout_12" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0">
               <property name="leftMargin">
                <number>6</number>
               </property>
@@ -2487,23 +2487,7 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
-              <item row="17" column="0">
-               <widget class="QPushButton" name="sgetHhuman_btn">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Cpy H(s) (human)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
+              <item row="9" column="0">
                <widget class="QPushButton" name="new_stage_btn">
                 <property name="enabled">
                  <bool>false</bool>
@@ -2516,6 +2500,13 @@
                 </property>
                 <property name="text">
                  <string>New stage</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="label_38">
+                <property name="text">
+                 <string>Total DR loss</string>
                 </property>
                </widget>
               </item>
@@ -2544,13 +2535,16 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
-               <widget class="QComboBox" name="stages_selfil_cb"/>
-              </item>
-              <item row="6" column="1">
-               <widget class="QLabel" name="remaining_gain_text">
+              <item row="3" column="0" colspan="2">
+               <widget class="QLabel" name="label_89">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string>?</string>
+                 <string>Poles</string>
                 </property>
                </widget>
               </item>
@@ -2561,31 +2555,42 @@
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
-               <widget class="QLabel" name="label_38">
-                <property name="text">
-                 <string>Total DR loss</string>
+              <item row="2" column="0" colspan="2">
+               <widget class="QListWidget" name="zeros_list">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="selectionMode">
+                 <enum>QAbstractItemView::MultiSelection</enum>
                 </property>
                </widget>
               </item>
-              <item row="8" column="1">
-               <widget class="QPushButton" name="updatestage_btn">
+              <item row="18" column="1">
+               <widget class="QPushButton" name="sgetHlatex_btn">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string>Update stage</string>
+                 <string>Cpy H(s) (LaTeX)</string>
                 </property>
                </widget>
               </item>
-              <item row="15" column="0">
-               <widget class="QPushButton" name="autoselectstagessp_btn">
-                <property name="text">
-                 <string>Auto select (scipy)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="10" column="0" colspan="2">
+              <item row="11" column="0" colspan="2">
                <widget class="QLabel" name="label_87">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -2604,26 +2609,23 @@
                 </property>
                </widget>
               </item>
-              <item row="19" column="0" colspan="2">
-               <widget class="QPushButton" name="si_calc_btn">
-                <property name="text">
-                 <string>Calculate values</string>
-                </property>
-               </widget>
-              </item>
-              <item row="17" column="1">
-               <widget class="QPushButton" name="sgetHlatex_btn">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
+              <item row="15" column="1">
+               <widget class="QPushButton" name="sswapup_btn">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Cpy H(s) (LaTeX)</string>
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QLabel" name="total_filtdrloss_label">
+                <property name="text">
+                 <string>?</string>
                 </property>
                </widget>
               </item>
@@ -2652,7 +2654,63 @@
                 </property>
                </widget>
               </item>
-              <item row="15" column="1">
+              <item row="17" column="0" colspan="2">
+               <widget class="QLabel" name="si_info">
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>?</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <widget class="QLabel" name="label_88">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Zeroes</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <widget class="QPushButton" name="updatestage_btn">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Update stage</string>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="0">
+               <widget class="QPushButton" name="autoselectstagessp_btn">
+                <property name="text">
+                 <string>Auto select (scipy)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0" colspan="2">
+               <widget class="Line" name="line">
+                <property name="maximumSize">
+                 <size>
+                  <width>2165116</width>
+                  <height>10</height>
+                 </size>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="16" column="1">
                <widget class="QPushButton" name="remove_stage_btn">
                 <property name="enabled">
                  <bool>false</bool>
@@ -2674,57 +2732,17 @@
                 </property>
                </widget>
               </item>
-              <item row="14" column="0">
-               <widget class="QPushButton" name="sswapdown_btn">
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_90">
                 <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset theme="SP_TitleBarUnshadeButton">
-                  <normaloff>.</normaloff>.</iconset>
+                 <string>Stage gain</string>
                 </property>
                </widget>
               </item>
-              <item row="14" column="1">
-               <widget class="QPushButton" name="sswapup_btn">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="stages_selfil_cb"/>
               </item>
-              <item row="16" column="0" colspan="2">
-               <widget class="QLabel" name="si_info">
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>20</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>?</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0" colspan="2">
-               <widget class="QLabel" name="label_89">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Poles</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="0" colspan="2">
+              <item row="12" column="0" colspan="2">
                <widget class="QListWidget" name="stages_list">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -2740,66 +2758,55 @@
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="15" column="0">
+               <widget class="QPushButton" name="sswapdown_btn">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset theme="SP_TitleBarUnshadeButton">
+                  <normaloff>.</normaloff>.</iconset>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
                <widget class="QLabel" name="label_91">
                 <property name="text">
                  <string>Remaining gain</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0" colspan="2">
-               <widget class="Line" name="line">
-                <property name="maximumSize">
-                 <size>
-                  <width>2165116</width>
-                  <height>10</height>
-                 </size>
-                </property>
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QListWidget" name="zeros_list">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="selectionMode">
-                 <enum>QAbstractItemView::MultiSelection</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="2">
-               <widget class="QLabel" name="label_88">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Zeroes</string>
-                </property>
-               </widget>
-              </item>
               <item row="7" column="1">
-               <widget class="QLabel" name="total_filtdrloss_label">
+               <widget class="QLabel" name="remaining_gain_text">
                 <property name="text">
                  <string>?</string>
                 </property>
                </widget>
               </item>
-              <item row="18" column="0" colspan="2">
+              <item row="20" column="0" colspan="2">
+               <widget class="QPushButton" name="si_calc_btn">
+                <property name="text">
+                 <string>Calculate values</string>
+                </property>
+               </widget>
+              </item>
+              <item row="18" column="0">
+               <widget class="QPushButton" name="sgetHhuman_btn">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Cpy H(s) (human)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="19" column="0" colspan="2">
                <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,1">
                 <item>
                  <widget class="QLabel" name="label_37">
@@ -2875,11 +2882,35 @@
                 </item>
                </layout>
               </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_90">
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_34">
                 <property name="text">
-                 <string>Stage gain</string>
+                 <string>Normalized to</string>
                 </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QComboBox" name="normalizationtype_cb">
+                <item>
+                 <property name="text">
+                  <string>ω→0</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>ω→∞</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Distrib DRL</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>ω→ω0</string>
+                 </property>
+                </item>
                </widget>
               </item>
              </layout>
@@ -2900,7 +2931,7 @@
      <x>0</x>
      <y>0</y>
      <width>1017</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">
