@@ -9,7 +9,7 @@ from src.package.Dataset import Dataset
 import src.package.Filter as Filter
 import src.package.CellCalculator as CellCalculator
 import src.package.transfer_function as TF
-from src.package.Filter import AnalogFilter, NORM_CB_DC, NORM_CB_DRL, NORM_CB_HF, NORM_CB_BP, NORM_CB_PB
+from src.package.Filter import AnalogFilter, NORM_CB_DC, NORM_CB_HF, NORM_CB_BP, NORM_CB_PB
 from src.widgets.fleischer_tow_window import FleischerTowDialog
 from src.widgets.tf_dialog import TFDialog
 from src.widgets.case_window import CaseDialog
@@ -1054,26 +1054,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.normalizationtype_cb.clear()
         if(auxarr == [0, 1]): # LP
             self.normalizationtype_cb.addItem(NORM_CB_DC)
-            self.normalizationtype_cb.addItem(NORM_CB_DRL)
         elif(auxarr == [1, 1]):
             if(np.abs(z[0]) < np.abs(p[0])):
                 self.normalizationtype_cb.addItem(NORM_CB_HF)
             else:
                 self.normalizationtype_cb.addItem(NORM_CB_DC)
-            self.normalizationtype_cb.addItem(NORM_CB_DRL)
         elif(auxarr == [0, 2]):
             self.normalizationtype_cb.addItem(NORM_CB_DC)
-            self.normalizationtype_cb.addItem(NORM_CB_DRL)
         elif(auxarr == [1, 2]):
             self.normalizationtype_cb.addItem(NORM_CB_BP)
-            self.normalizationtype_cb.addItem(NORM_CB_DRL)
         elif(auxarr == [2, 2]):
             if(np.isclose(np.abs(z[0]), 0, atol=1e-5)):
                 self.normalizationtype_cb.addItem(NORM_CB_HF)
             else:
                 self.normalizationtype_cb.addItem(NORM_CB_DC)
                 self.normalizationtype_cb.addItem(NORM_CB_HF)
-            self.normalizationtype_cb.addItem(NORM_CB_DRL)
 
 
     def updateSelectedPolesFromPlot(self, s):
@@ -1119,7 +1114,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         selected_poles_idx.sort(reverse=True)
         selected_zeros_idx.sort(reverse=True)
 
-        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, self.normalizationtype_cb.currentText(), False):
+        if self.selected_dataset_data.origin.addStage(selected_zeros, selected_poles, selected_gain, self.normalizationtype_cb.currentText(), self.cb_symdrl.isChecked(), False):
             for z in selected_zeros_idx:
                 self.zeros_list.item(z).setFlags(Qt.ItemFlag.NoItemFlags)
             for p in selected_poles_idx:

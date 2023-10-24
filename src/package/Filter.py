@@ -18,7 +18,6 @@ TEMPLATE_FREQS, F0_BW = range(2)
 
 NORM_CB_PB = 'Passband'
 NORM_CB_DC = 'ω→0'
-NORM_CB_DRL = 'Distrib DRL'
 NORM_CB_HF = 'ω→∞'
 NORM_CB_BP = 'ω→ω0'
 
@@ -500,7 +499,7 @@ class AnalogFilter():
         self.stages = []
         self.implemented_tf = TFunction(1, 1, normalize=False)
 
-    def addStage(self, z_arr, p_arr, gain, normtype, pz_in_hz=False):
+    def addStage(self, z_arr, p_arr, gain, normtype, symdrl=False, pz_in_hz=False):
         if(pz_in_hz):
             # Por problemas de precisión, tengo que buscar los polos originales haciendo la misma transformación exacta
             # que los que llegaron en Hz
@@ -527,6 +526,7 @@ class AnalogFilter():
 
         if newRemainingZeros > newRemainingPoles:
             return False
+        
 
         if(normtype == NORM_CB_PB):
             if(self.filter_type==LOW_PASS):
@@ -537,40 +537,31 @@ class AnalogFilter():
                 normtype = NORM_CB_BP
             else:
                 normtype = NORM_CB_DC # BR normalizes to 0, for now
-        elif(normtype == NORM_CB_DC):
+        
+        if(normtype == NORM_CB_DC):
             norm_gain = np.prod([p for p in p_arr if not np.isclose(p, 0, atol=1e-5)]) / np.prod([z for z in z_arr if not np.isclose(z, 0, atol=1e-5)])
         elif(normtype == NORM_CB_HF):
             norm_gain = 1
         elif(normtype == NORM_CB_BP):
             temp_tf = TFunction(z_arr, p_arr, 1, normalize=False)
             norm_gain = 1/temp_tf.at(np.abs(p_arr[0]))
-        elif(normtype == NORM_CB_DRL):
-            pass
-        
+
+        if(symdrl):
+            isReject, bp = self.getBandpassRange()
+            temp_tf = TFunction(z_arr, p_arr, norm_gain, normalize=False)
+            minGain, maxGain = temp_tf.getEdgeGainsInRange(isReject, bp, True)
+            DRL_mean = (maxGain + minGain)/2
+            norm_gain *= 10**(-DRL_mean / 20)
+            print(minGain, maxGain, DRL_mean, 10**(DRL_mean / 20))
+            
         norm_gain *= gain
-        self.remainingk /= norm_gain
-        # print("NORM GAIN", norm_gain)
+        self.remainingk /= np.abs(norm_gain)
+        
         newStage_tf = TFunction(z_arr, p_arr, norm_gain, normalize=False)
-
-
-        # if(newRemainingZeros == 0 and newRemainingPoles == 0):
-        #     val=0
-        #     if(self.filter_type==LOW_PASS):
-        #         val = newStage_tf.at(0) * self.implemented_tf.at(0)
-        #     elif(self.filter_type==HIGH_PASS):
-        #         val = newStage_tf.at(1e40) * self.implemented_tf.at(1e40)
-        #     elif(self.filter_type==BAND_PASS):
-        #         val = newStage_tf.at(self.w0) * self.implemented_tf.at(self.w0)
-        #     elif(self.filter_type==BAND_REJECT):
-        #         val = newStage_tf.at(0) * self.implemented_tf.at(0)
-        #     val = np.abs(val)/self.gain
-        #     if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
-        #         val /= np.power(10, -self.ap_dB/20)
-        #     newStage_tf.multiplyGain(1/val)
 
         if(self.filter_type == BAND_PASS):
             self.kbandpasscurr /= newStage_tf.k
-        # newStage_tf.gain = gain
+        
         self.stages.append(newStage_tf)
         self.implemented_tf.appendStage(newStage_tf)
         self.remainingGain /= gain
@@ -587,7 +578,7 @@ class AnalogFilter():
         if(self.filter_type == BAND_PASS):
             self.kbandpasscurr *= self.stages[i].k
         self.remainingGain = self.remainingGain * np.real(self.stages[i].gain)
-        self.remainingk *= self.stages[i]*self.stages[i].k
+        self.remainingk *= self.stages[i].k
         zeros_to_delete = len(self.stages[i].z)
         add_list = []
         for sz in self.stages[i].z:
