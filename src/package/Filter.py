@@ -494,7 +494,7 @@ class AnalogFilter():
     def resetStages(self):
         self.remainingGain = np.float64(self.actualGain)
         self.remainingk = self.tf.k
-        print("REMAINING K ", self.remainingk)
+        # print("REMAINING K ", self.remainingk)
         self.remainingZeros = self.tf.z.tolist()
         self.remainingPoles = self.tf.p.tolist()
         self.stages = []
@@ -659,7 +659,7 @@ class AnalogFilter():
         
         sos = signal.zpk2sos(self.remainingZeros, self.remainingPoles, 1, pairing='minimal', analog=True)
         for sosSection in sos:
-            print("Adding section N=", sosSection[0:3], " D=", sosSection[3:6])
+            # print("Adding section N=", sosSection[0:3], " D=", sosSection[3:6])
             z_arr, p_arr, gain = signal.tf2zpk(sosSection[0:3], sosSection[3:6])
             newRemainingZeros = len(self.remainingZeros) - len(z_arr)
             newRemainingPoles = len(self.remainingPoles) - len(p_arr)
