@@ -492,8 +492,9 @@ class AnalogFilter():
             self.actualGain = np.power(10, -self.ap_dB/20) * self.gain
 
     def resetStages(self):
-        self.remainingGain = np.float64(self.gain)
+        self.remainingGain = np.float64(self.actualGain)
         self.remainingk = self.tf.k
+        print("REMAINING K ", self.remainingk)
         self.remainingZeros = self.tf.z.tolist()
         self.remainingPoles = self.tf.p.tolist()
         self.stages = []
@@ -527,6 +528,7 @@ class AnalogFilter():
         if newRemainingZeros > newRemainingPoles:
             return False
         
+        resultingGain = gain
 
         if(normtype == NORM_CB_PB):
             if(self.filter_type==LOW_PASS):
@@ -546,25 +548,43 @@ class AnalogFilter():
             temp_tf = TFunction(z_arr, p_arr, 1, normalize=False)
             norm_gain = 1/temp_tf.at(np.abs(p_arr[0]))
 
-        if(symdrl):
+        
+        newStage_tf = TFunction(z_arr, p_arr, norm_gain*resultingGain, normalize=False)
+        if(newRemainingZeros == 0 and newRemainingPoles == 0):
+            val=0
+            if(self.filter_type==LOW_PASS):
+                val = newStage_tf.at(0) * self.implemented_tf.at(0)
+            elif(self.filter_type==HIGH_PASS):
+                val = newStage_tf.at(1e40) * self.implemented_tf.at(1e40)
+            elif(self.filter_type==BAND_PASS):
+                val = newStage_tf.at(self.w0) * self.implemented_tf.at(self.w0)
+            elif(self.filter_type==BAND_REJECT):
+                val = newStage_tf.at(0) * self.implemented_tf.at(0)
+            val = np.abs(val)/self.gain
+            if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
+                val /= np.power(10, -self.ap_dB/20)
+            resultingGain /= val
+            newStage_tf.multiplyGain(1/val)            
+        elif(symdrl):
             isReject, bp = self.getBandpassRange()
             temp_tf = TFunction(z_arr, p_arr, norm_gain, normalize=False)
             minGain, maxGain = temp_tf.getEdgeGainsInRange(isReject, bp, True)
             DRL_mean = (maxGain + minGain)/2
-            norm_gain *= 10**(-DRL_mean / 20)
+            resultingGain *= 10**(-DRL_mean / 20)
             print(minGain, maxGain, DRL_mean, 10**(DRL_mean / 20))
+            newStage_tf = TFunction(z_arr, p_arr, norm_gain*resultingGain, normalize=False)
             
-        norm_gain *= gain
-        self.remainingk /= np.abs(norm_gain)
-        
-        newStage_tf = TFunction(z_arr, p_arr, norm_gain, normalize=False)
+        # norm_gain *= gain
+        self.remainingk /= newStage_tf.k
+        self.remainingGain /= resultingGain
+        newStage_tf.gain = resultingGain
 
         if(self.filter_type == BAND_PASS):
             self.kbandpasscurr /= newStage_tf.k
         
         self.stages.append(newStage_tf)
         self.implemented_tf.appendStage(newStage_tf)
-        self.remainingGain /= gain
+        # self.remainingGain /= gain
         for z in z_arr:
             self.remainingZeros.remove(z)
         for p in p_arr:
@@ -636,22 +656,25 @@ class AnalogFilter():
         self.stages[index1] = temp
     
     def orderStagesBySos(self):
-        sos = signal.zpk2sos(self.remainingZeros, self.remainingPoles, self.remainingk, pairing='minimal', analog=True)
+        
+        sos = signal.zpk2sos(self.remainingZeros, self.remainingPoles, 1, pairing='minimal', analog=True)
         for sosSection in sos:
+            print("Adding section N=", sosSection[0:3], " D=", sosSection[3:6])
             z_arr, p_arr, gain = signal.tf2zpk(sosSection[0:3], sosSection[3:6])
             newRemainingZeros = len(self.remainingZeros) - len(z_arr)
             newRemainingPoles = len(self.remainingPoles) - len(p_arr)
 
             if newRemainingZeros > newRemainingPoles:
-                return False
+                return False # se rompio todo
 
-            append_gain = gain
+            append_gain = gain * np.power(self.remainingk, 1/len(sos))
 
             newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=False)
 
             self.stages.append(newStage_tf)
             self.implemented_tf.appendStage(newStage_tf)
             self.remainingGain /= append_gain
+            # self.remainingk /= newStage_tf.k
             
             for z in z_arr:
                 del_list = []
@@ -695,7 +718,6 @@ class AnalogFilter():
         isReject, bp = self.getBandpassRange()
         drl_acc = 0
         max_drl = 0
-        drl = 0
         for i, stage_tf in enumerate(self.stages):
             ming, maxg = stage_tf.getEdgeGainsInRange(isReject, bp, db=db)
             if(ming*maxg < 0):
