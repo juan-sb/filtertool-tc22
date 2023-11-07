@@ -840,7 +840,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f0 = self.SING_B_TO_F * filtds.origin.w0
             deltaf = (fp[1] - fp[0])/2
             xmax = fp[1] + deltaf
-            xmax = np.max(xmax, maxp)*1.4
+            xmax = np.max([xmax, maxp])*1.4
             xmin = np.max([0, fp[0] - deltaf])
             xmin = 0
             
