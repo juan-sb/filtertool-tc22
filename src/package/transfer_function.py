@@ -267,14 +267,14 @@ class TFunction():
             return LP2, "2nd order LP ωc={:.2f} Q={:.2f}".format(np.abs(self.p[0]), Q)
         elif(zp_ord == [1, 1]):
             if(np.isclose(np.abs(self.z[0]), 0)):
-                return HP1, "1st order HP ωc={:.2f}".format(self.p[0].real)
+                return HP1, "1st order HP ωc={:.2f}".format(np.abs(self.p[0].real))
             else:
                 if(np.abs(self.z[0]) > np.abs(self.p[0])):
                     return -1, "1 pole 1 zero HP"
                 else:
                     return -1, "1 pole 1 zero LP"
         elif(zp_ord == [0, 1]):
-            return LP1, "1st order LP ωc={:.2f}".format(self.p[0].real)
+            return LP1, "1st order LP ωc={:.2f}".format(np.abs(self.p[0].real))
         elif(zp_ord == [0, 0]):
             return "Cable"
         return "Invalid"

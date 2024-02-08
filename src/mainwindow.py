@@ -703,6 +703,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             label.set_fontsize(self.plt_ticksize_sb.value())
 
     def updateFilterPlots(self):
+        # print("Update filter plots")
+        # return
         if(not isinstance(self.selected_dataset_data, Dataset)): return
         if(self.filterZerCursor):
             for sel in self.filterZerCursor.selections:
@@ -730,6 +732,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(impulsecanvas, 'Tiempo [s]', 'Respuesta [V]')
         filtds = self.selected_dataset_data
 
+        # print("Plots conditioned")
+
         tstep, stepres = signal.step(filtds.tf.tf_object, N=5000)
         timp, impres = signal.impulse(filtds.tf.tf_object, N=5000)
         
@@ -751,6 +755,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ap = filtds.origin.ap_dB - gain_offset
         aa = filtds.origin.aa_dB - gain_offset
         
+        # print("Plots plotted 1")
         minp, maxp = self.getRelevantFrequencies(z, p)
         xmin = 0
         xmax = 0
@@ -761,8 +766,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             fa = filtds.origin.wa * self.SING_B_TO_F
             deltaf = (fa - fp)/2
             xmax = fa + deltaf
-            xmax = max([maxp, fa])*1.4
-            xmin = max([0, fp - deltaf])
+            xmax = np.max([maxp, fa])*1.4
+            xmin = np.max([0, fp - deltaf])
             xmin = 0
 
             attcanvas.ax.fill_between([0, fp], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
@@ -778,8 +783,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             fa = filtds.origin.wa * self.SING_B_TO_F
             deltaf = (fp - fa)/2
             xmax = fp + deltaf
-            xmax = max([fp, maxp])*1.4
-            xmin = max([0, fa - deltaf])
+            xmax = np.max([fp, maxp])*1.4
+            xmin = np.max([0, fa - deltaf])
             xmin = 0
 
             attcanvas.ax.fill_between([fp, maxp*100], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
@@ -797,8 +802,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             reqfa = [w * self.SING_B_TO_F for w in filtds.origin.reqwa] if self.define_with_box.currentIndex() == Filter.TEMPLATE_FREQS else fa
             deltaf = (fa[1] - fa[0])/2
             xmax = fa[1] + deltaf
-            xmax = max(xmax, maxp)*1.4
-            xmin = max([0, fa[0] - deltaf])
+            xmax = np.max([xmax, maxp])*1.4
+            xmin = np.max([0, fa[0] - deltaf])
             xmin = 0
             
             attcanvas.ax.fill_between([0,  reqfa[0]], [aa, aa], -gain_offset, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
@@ -835,8 +840,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f0 = self.SING_B_TO_F * filtds.origin.w0
             deltaf = (fp[1] - fp[0])/2
             xmax = fp[1] + deltaf
-            xmax = max(xmax, maxp)*1.4
-            xmin = max([0, fp[0] - deltaf])
+            xmax = np.max([xmax, maxp])*1.4
+            xmin = np.max([0, fp[0] - deltaf])
             xmin = 0
             
             attcanvas.ax.fill_between([0,  reqfp[0]], [ap, ap], ymax, facecolor=TEMPLATE_FACE_COLOR, edgecolor=TEMPLATE_EDGE_COLOR, hatch='\\', linewidth=0)
@@ -869,10 +874,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             xmin = 0
             groupdelaycanvas.ax.fill_between([0,  frg], [filtds.origin.tau0, filtds.origin.tau0], filtds.origin.tau0*(1 - filtds.origin.gamma/100), facecolor=ADD_TEMPLATE_FACE_COLOR, edgecolor=ADD_TEMPLATE_EDGE_COLOR, hatch='//', linewidth=0)
         attcanvas.ax.set_xlim(xmin, xmax)
-        fa, ga, pa, gda = filtds.origin.tf.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
+        fa, ga, pa = filtds.origin.tf.getBodeMagFast(linear=True, start=0.5*xmin, stop=2*xmax, db=True, num=10000, use_hz=self.use_hz)
         with np.errstate(divide='ignore'): 
-            attcanvas.ax.plot(fa, -20*np.log10(ga), label = str(filtds.origin))
+            attcanvas.ax.plot(fa, -ga, label = str(filtds.origin))
 
+        # print("Plots plotted 2")
         self.fplot_pz.canvas.ax.axhline(0, color="black", alpha=0.1)
         self.fplot_pz.canvas.ax.axvline(0, color="black", alpha=0.1)
         minf, maxf = self.getRelevantFrequencies(z, p)
@@ -885,10 +891,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.fplot_pz.canvas.ax.set_ylabel(self.PZ_YLABEL)
         self.zeros_acum = np.append(self.zeros_acum, zeroes)
 
+        # print("Plots plotted 3")
         maxf2 = 0
         for helper in filtds.origin.helperFilters:
-            fa, ga, pa, gda = helper.tf.getBode(linear=True, start=0.5*xmin, stop=2*xmax, num=15000, use_hz=self.use_hz)
-            attcanvas.ax.plot(fa, -20 * np.log10(np.abs(np.array(ga))), label = str(helper))
+            fa, ga, pa = helper.tf.getBodeMagFast(linear=True, start=0.5*xmin, stop=2*xmax, db=True, num=10000, use_hz=self.use_hz)
+            attcanvas.ax.plot(fa, -ga, label = str(helper))
             f,g,ph,gd = helper.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
             z, p = helper.tf.getZP(self.use_hz)
             p = np.append(p, [minf, maxf])
@@ -939,27 +946,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fplot_pz.canvas.ax.legend()
             stepcanvas.ax.legend()
             impulsecanvas.ax.legend()
-        attcanvas.draw()
-        magcanvas.draw()
-        phasecanvas.draw()
-        groupdelaycanvas.draw()
+        attcanvas.draw_idle()
+        magcanvas.draw_idle()
+        phasecanvas.draw_idle()
+        groupdelaycanvas.draw_idle()
         
-        self.fplot_pz.canvas.draw()
-        stepcanvas.draw()
-        impulsecanvas.draw()
+        self.fplot_pz.canvas.draw_idle()
+        stepcanvas.draw_idle()
+        impulsecanvas.draw_idle()
 
         self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
         self.redrawFilterPlotsArr[self.tabWidget_2.currentIndex()] = False
-        self.filterPlots[self.tabWidget_2.currentIndex()].canvas.draw()
+        self.filterPlots[self.tabWidget_2.currentIndex()].canvas.draw_idle()
     
     def redrawFilterPlots(self, index):
         if(self.redrawFilterPlotsArr[index]):
             self.redrawFilterPlotsArr[index] = False
-            self.filterPlots[index].canvas.draw()
+            self.filterPlots[index].canvas.draw_idle()
     def redrawStagePlots(self, index):
         if(self.redrawStagePlotsArr[index]):
             self.redrawStagePlotsArr[index] = False
-            self.stagePlots[index].canvas.draw()
+            self.stagePlots[index].canvas.draw_idle()
         
 
     def updateFilterStages(self):
@@ -1234,6 +1241,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return np.abs(sing)/(- 2 * sing.real)
 
     def updateStagePlots(self):
+        # print("Update stage plots")
         if(not isinstance(self.selected_dataset_data, Dataset)): return
     
         if(self.totalStagesZeroCursor):
@@ -1366,12 +1374,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stageLonePoleCursor.connect("add", self.formatPoleAnnotation)
             self.si_info.setText(accumulated_ds.origin.getSOFilterType()[1])
         #     self.updatePossibleImplementations()
-        # self.splot_pz.canvas.draw()
-        # smagcanvas.draw()
-        # sphasecanvas.draw()
+        # self.splot_pz.canvas.draw_idle()
+        # smagcanvas.draw_idle()
+        # sphasecanvas.draw_idle()
         self.redrawStagePlotsArr = [True] * len(self.stagePlots)
         self.redrawStagePlotsArr[self.tabWidget_3.currentIndex()] = False
-        self.stagePlots[self.tabWidget_3.currentIndex()].canvas.draw()
+        self.stagePlots[self.tabWidget_3.currentIndex()].canvas.draw_idle()
 
     def clearCanvas(self, canvas):
         canvas.ax.clear()
@@ -1761,7 +1769,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 canvas.ax.grid(False)
 
             try:
-                canvas.draw()
+                canvas.draw_idle()
             except ValueError:
                 pass
 
