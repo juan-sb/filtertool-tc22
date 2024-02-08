@@ -1766,7 +1766,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if(self.plt_grid.isChecked()):
                 canvas.ax.grid(True, which="both", linestyle=':')
             else:
-                canvas.ax.grid(False)
+                canvas.ax.grid(False, which="both")
+                
 
             try:
                 canvas.draw_idle()
