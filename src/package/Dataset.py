@@ -8,7 +8,7 @@ from src.package.Filter import AnalogFilter
 from collections import defaultdict
 from PyQt5.QtCore import QFileInfo
 from src.package.Dataline import Dataline
-
+import scipy.signal as signal
 class Dataset:
     def __init__(self, filepath='', title='', origin=''):
         qfi = QFileInfo(filepath)
@@ -143,6 +143,8 @@ class Dataset:
 
     def parse_from_expression(self):
         f, g, ph, gd = self.tf.getBode()
+        tstep, stepr = signal.step(self.tf.tf_object, N=5000)
+        timp, impr = signal.impulse(self.tf.tf_object, N=5000)
         z, p = self.tf.getZP()
         self.data = [{}]
         self.zeros = [{}]
@@ -151,6 +153,10 @@ class Dataset:
         self.data[0]['g'] = g
         self.data[0]['ph'] = ph
         self.data[0]['gd'] = gd
+        self.data[0]['tstep'] = tstep
+        self.data[0]['stepr'] = stepr
+        self.data[0]['timp'] = timp
+        self.data[0]['impr'] = impr
         self.zeros[0] = z
         self.poles[0] = p
         self.suggestedXsource = 'f'
