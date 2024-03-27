@@ -74,21 +74,41 @@ class Dataset:
                 self.data[i][varname] = vardata
 
     def parse_from_txt(self, filepath):
+        has_cases = False
+        self.data = [{}]
         with open(filepath, mode='r') as file:
-            fields = file.readline().replace('\n', '').split('\t')
-            case = -1
             for line in file.readlines():
                 if('Step Information:' in line):
-                    self.data.append(defaultdict(list))
-                    self.casenames.append(line[18:line.index('  (Run: ')])
-                    case += 1
-                else:
+                    has_cases = True
+                    break
+
+        with open(filepath, mode='r') as file:
+            fields = file.readline().replace('\n', '').split('\t')
+            for field in fields:
+                self.data[0][field] = []
+            case = -1
+            if(has_cases):
+                for line in file.readlines():
+                    if('Step Information:' in line):
+                        self.data.append(defaultdict(list))
+                        if('Run:' in line):
+                            self.casenames.append(line[18:line.index('  (Run: ')])
+                        elif('Step:' in line):
+                            self.casenames.append(line[18:line.index('  (Step: ')])
+                        case += 1
+                    else:
+                        linedata = line.replace('\n', '').split('\t')
+                        for x in range(len(fields)):
+                            if('i' in linedata[x]):
+                                self.data[case][fields[x]].append(np.complex128(linedata[x]))
+                            else:
+                                self.data[case][fields[x]].append(float(linedata[x]))
+            else:
+                for line in file.readlines():
                     linedata = line.replace('\n', '').split('\t')
                     for x in range(len(fields)):
-                        if('i' in linedata[x]):
-                            self.data[case][fields[x]].append(np.complex128(linedata[x]))
-                        else:
-                            self.data[case][fields[x]].append(float(linedata[x]))
+                        self.data[0][fields[x]].append(float(linedata[x]))
+
 
     def parse_from_csv(self, filepath):
         with open(filepath, mode='r') as csv_file:
