@@ -107,7 +107,18 @@ class Dataset:
                 for line in file.readlines():
                     linedata = line.replace('\n', '').split('\t')
                     for x in range(len(fields)):
-                        self.data[0][fields[x]].append(float(linedata[x]))
+                        if('dB' in linedata[x]):
+                            newlindata = linedata[x][1:-2].split('dB,')
+                            self.data[0][fields[x]].append(float(newlindata[0]))
+                            try:
+                                self.data[0][fields[x] + ' deg'].append(float(newlindata[1]))
+                            except KeyError:
+                                self.data[0][fields[x] + ' deg'] = [float(newlindata[1]),]
+                        elif(',' in linedata[x]):
+                            self.data[0][fields[x]].append(complex(linedata[x].replace(',','+').replace('+-','-') + 'j'))
+                        else:
+                            self.data[0][fields[x]].append(float(linedata[x]))
+                    
 
 
     def parse_from_csv(self, filepath):

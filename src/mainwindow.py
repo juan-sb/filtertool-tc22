@@ -369,17 +369,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def processFiles(self, filenamearray):
         for f in filenamearray:
-            try:
-                ds = Dataset(filepath=f)
-                dataset_items_origin = [
-                    self.dataset_list.item(x).data(Qt.UserRole).origin
-                    for x in range(self.dataset_list.count())
-                ]
-                if(ds.origin not in dataset_items_origin):
-                    self.droppedFiles.append(ds.origin)
-                    self.addDataset(ds)
-            except(ValueError):
-                print('Wrong file config')
+            # try:
+            ds = Dataset(filepath=f)
+            dataset_items_origin = [
+                self.dataset_list.item(x).data(Qt.UserRole).origin
+                for x in range(self.dataset_list.count())
+            ]
+            if(ds.origin not in dataset_items_origin):
+                self.droppedFiles.append(ds.origin)
+                self.addDataset(ds)
+            # except(ValueError):
+            #     print('Wrong file config')
         self.statusbar.clearMessage()
 
     def openTFDialog(self):
