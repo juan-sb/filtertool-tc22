@@ -1,12 +1,41 @@
 # PlotTool TC2022 Grupo 2
 
+## Utilización
+
+Crear el venv
+
+    python -m venv venv
+
+Para activar el venv en Windows desde la terminal del sistema operativo:
+
+    venv\Scripts\activate.bat
+
+Para activar el venv en Windows desde Git Bash
+
+    . venv/Scripts/activate
+
+Para activar el venv en Linux
+
+    . venv/bin/activate
+
+Instalar dependencias
+
+    pip install -r requirements.txt
+
+Correr el programa
+
+    python main.py
+
 ## Consigna
+
 ### Inputs
+
 - Mediante una función transferencia de orden arbitrario.
 - Extraı́dos de una simulación de LTspice.
 - Extraı́dos de un archivo CSV donde se almacenaron mediciones.
 
 ### Obligatorios
+
 - Especificar la etiqueta de los ejes X e Y, como ası́ también poder agregar un tı́tulo de ser necesario.
 - Guardar el resultado del gráfico como imagen.
 - Borrar los gráficos sin necesidad de cerrar la herramienta.
@@ -15,6 +44,7 @@
 - Representación de polos y ceros en el plano solo para cuando se escribe una transferencia de orden N.
 
 ### Opcionales
+
 - “Togglear” cada curva (mostrar/ocultar)
 - Cambiar los labels de las curvas.
 - Cambiar el color de las mismas.
@@ -24,6 +54,7 @@
 - Cualquier otra cosa
 
 ## Features
+
 El flujo de trabajo consiste en cargar ''datasets'', a partir de los cuales se pueden generar ''datalines'' personalizadas y permitiendo configurar los gráficos en los que aparece cada línea.
 
 - Cargar más de un archivo como dataset, ya sea seleccionándolos en ''Import files'' o arrastrándolos directamente desde el explorador de archivos.
