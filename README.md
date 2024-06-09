@@ -1,20 +1,18 @@
-# PlotTool TC2022 Grupo 2
+# PlotTool TC^2
 
-## Consigna
+## Especificaciones
 ### Inputs
 - Mediante una función transferencia de orden arbitrario.
 - Extraı́dos de una simulación de LTspice.
 - Extraı́dos de un archivo CSV donde se almacenaron mediciones.
 
-### Obligatorios
+### Features
 - Especificar la etiqueta de los ejes X e Y, como ası́ también poder agregar un tı́tulo de ser necesario.
 - Guardar el resultado del gráfico como imagen.
 - Borrar los gráficos sin necesidad de cerrar la herramienta.
 - Al menos poder gráficar tres curvas a la vez. (∀x max : x max ≥ 3)
 - Para diagramas de Bode, cambiar la escala del eje X e Y entre logarı́tmica y lineal.
 - Representación de polos y ceros en el plano solo para cuando se escribe una transferencia de orden N.
-
-### Opcionales
 - “Togglear” cada curva (mostrar/ocultar)
 - Cambiar los labels de las curvas.
 - Cambiar el color de las mismas.

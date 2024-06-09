@@ -16,6 +16,12 @@ LOW_PASS, HIGH_PASS, BAND_PASS, BAND_REJECT, GROUP_DELAY = range(5)
 BUTTERWORTH, CHEBYSHEV, CHEBYSHEV2, CAUER, LEGENDRE, BESSEL, GAUSS, APPRX_NONE = range(8)
 TEMPLATE_FREQS, F0_BW = range(2)
 
+NORM_CB_PB = 'Passband'
+NORM_CB_DC = 'ω→0'
+NORM_CB_HF = 'ω→∞'
+NORM_CB_BP = 'ω→ω0'
+
+
 def get_Leps(n, eps):
     k = int(n / 2 - 1) if (n % 2 == 0) else int((n - 1) / 2)
         
@@ -100,6 +106,7 @@ class AnalogFilter():
         self.remainingZeros = []
         self.remainingPoles = []
         self.remainingGain = np.nan
+        self.actualGain = np.nan
         self.eparser = ExprParser()
         self.helperFilters = []
         self.helperLabels = []
@@ -265,7 +272,7 @@ class AnalogFilter():
                 p0 = np.prod(p) * (1 if self.N % 2 == 0 else -1) #en N tengo N polos y yo quiero obtener el producto de los polos negados para normalizar
                 tf2 = TFunction(z, p, p0)
                 
-                tf2_wmax = abs(tf2.at(self.wan*1j))
+                tf2_wmax = abs(tf2.at(self.wan))
                 # print(self.N, tf2_wmin >= self.gp, tf2_wmax <= self.ga, tf2_wmin, tf2_wmax)
                 if(self.N == self.N_max or tf2_wmax <= self.ga):
                     self.tf_norm = TFunction(z, p, p0)
@@ -273,31 +280,93 @@ class AnalogFilter():
                 self.N += 1
         
         elif self.approx_type == BESSEL:
+            s = sym.symbols('s')
             self.N = self.N_min
             while True:
-                N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
-                z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay')
-                tf2 = TFunction(z, p, k, N, D)
-                if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
-                    self.tf_norm = TFunction(z, p, k, N, D)
-                    break
+                if(self.filter_type == GROUP_DELAY):
+                    N, D = signal.bessel(self.N, 1, analog=True, output='ba', norm='delay') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
+                    z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk', norm='delay')
+                    tf2 = TFunction(z, p, k, N, D)
+                    if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
+                        self.tf_norm = TFunction(z, p, k, N, D)
+                        break
+                else:
+                    N, D = signal.bessel(self.N, 1, analog=True, output='ba') #produce un delay de 1/1 seg (cambiar el segundo parámetro)
+                    self.eparser.setExpression(sym.Poly(N, s)/sym.Poly(D, s))
+                    z, p, k = signal.bessel(self.N, 1, analog=True, output='zpk')
+                    tf2 = TFunction(z, p, k, N, D)
+                    w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(5*self.wan/(2*pi)), num=100, use_hz=False)
+                    wd = np.nan
+                    wr = w[::-1]
+                    gr = g[::-1]
+                    for i, wi in enumerate(wr):
+                        if (gr[i] > self.gp):
+                            wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=500, use_hz=False)
+                            wrint = wint[::-1]
+                            grint = gint[::-1]
+                            for ii, wi2 in enumerate(wrint):
+                                if (grint[ii] >= self.gp):
+                                    wd = wi2
+                                    break
+                            if(not np.isnan(wd)):
+                                break
+                    assert not np.isnan(wd)
+                    
+                    transformation = s * wd
+                    self.eparser.transform(transformation)
+                    N, D = self.eparser.getND()
+                    tf3 = TFunction(N, D)
+                    if(self.N == self.N_max or np.abs(tf3.at(self.wan)) <= self.ga):
+                        self.tf_norm = tf3
+                        break
                 self.N += 1
 
         elif self.approx_type == GAUSS:
+            s = sym.symbols('s')
             self.N = 1
+            
             gauss_poly = [1, 0, 1] # producirá un delay de 1 segundo
             fact_prod = 1
+            
             while True:
                 if self.N >= self.N_min:
-                    z = []
                     p = select_roots(Polynomial(gauss_poly))
                     p0 = np.prod(p)
-                    tf2 = TFunction(z, p, p0)
-                    if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
+                    tf2 = TFunction([], p, p0)
+                    
+                    if(self.filter_type == GROUP_DELAY):
                         g0 = tf2.gd_at(0)                       
                         p = [r * g0 for r in p]
-                        self.tf_norm = TFunction(z, p, p0)
-                        break
+                        tf2 = TFunction([], p, p0)
+                        if(self.N == self.N_max or (1 - tf2.gd_at(self.wrg_n) <= self.gamma/100)): #si el gd es menor-igual que el esperado, estamos
+                            p0 = np.prod(p)
+                            self.tf_norm = TFunction([], p, p0)
+                            break
+                    else:
+                        w, g, ph = tf2.getBodeMagFast(linear=False, start=np.log10(1/(10*self.wan*2*pi)), stop=np.log10(5*self.wan/(2*pi)), num=100, use_hz=False)
+                        wd = np.nan
+                        wr = w[::-1]
+                        gr = g[::-1]
+                        for i, wi in enumerate(wr):
+                            if (gr[i] > self.gp):
+                                wint, gint, ph = tf2.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=500, use_hz=False)
+                                wrint = wint[::-1]
+                                grint = gint[::-1]
+                                for ii, wi2 in enumerate(wrint):
+                                    if (grint[ii] >= self.gp):
+                                        wd = wi2
+                                        break
+                                if(not np.isnan(wd)):
+                                    break
+                        assert not np.isnan(wd)
+                        self.eparser.setExpression(sym.Poly(tf2.N, s)/sym.Poly(tf2.D, s))
+                        transformation = s * wd
+                        self.eparser.transform(transformation)
+                        N, D = self.eparser.getND()
+                        tf3 = TFunction(N, D)
+                        if(self.N == self.N_max or np.abs(tf3.at(self.wan)) <= self.ga):
+                            self.tf_norm = tf3
+                            break
                 self.N += 1
                 fact_prod *= self.N
                 gauss_poly.append(0)
@@ -325,27 +394,38 @@ class AnalogFilter():
 
         #Primera desnormalización: la elegida en las opciones
         if self.filter_type != GROUP_DELAY:
-            
-            f, g, p, gd = self.tf_norm.getBode(linear=False, start=np.log10(0.5/(2*pi)), stop=np.log10(2*self.wan/(2*pi)), num=10000)
-            w = 2* pi * f
+            w, g, ph = self.tf_norm.getBodeMagFast(linear=False, start=np.log10(1/(30*self.wan*2*pi)), stop=np.log10(30*self.wan/(2*pi)), num=100, use_hz=False)
             wd = np.nan
-            for wi in reversed(w):
-                if abs(self.tf_norm.at(1j*wi)) >= self.ga:
-                    wd = wi
-                    break
-            assert not np.isnan(wd)
-            
+            wr = w[::-1]
+            gr = g[::-1]
             denor = self.denorm/100
+            for i, wi in enumerate(wr):
+                if (gr[i] > self.ga):
+                    wint, gint, ph = self.tf_norm.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                    wrint = wint[::-1]
+                    grint = gint[::-1]
+                    for ii, wi2 in enumerate(wrint):
+                        if (grint[ii] >= self.ga):
+                            wd = wi2
+                            break
+                    if(not np.isnan(wd)):
+                        break
+            assert not np.isnan(wd)
             transformation = s * ((1 - denor) * self.wan + denor * wd)/self.wan
             if(self.approx_type == CHEBYSHEV2):
-                wp = np.nan
-                for wi in reversed(w):
-                    if abs(self.tf_norm.at(1j*wi)) >= self.gp:
-                        wp = wi
-                        break
-                assert not np.isnan(wd)
+                for i, wi in enumerate(wr):
+                    if (gr[i] > self.gp):
+                        wint, gint, ph = self.tf_norm.getBodeMagFast(linear=False, start=np.log10(wr[i+1]), stop=np.log10(wr[i-1]), num=2000, use_hz=False)
+                        wrint = wint[::-1]
+                        grint = gint[::-1]
+                        for ii, wi2 in enumerate(wrint):
+                            if (grint[ii] >= self.gp):
+                                wp = wi2
+                                break
+                        if(not np.isnan(wp)):
+                            break
+                assert not np.isnan(wp)
                 transformation *= (denor + (1-denor)*wp)
-                # transformation *= self.wan
 
             self.eparser.transform(transformation)
             N, D = self.eparser.getND()
@@ -390,25 +470,37 @@ class AnalogFilter():
             else:
                 denorm_z = np.append(denorm_z, [self.w0*1j, -self.w0*1j]*orddiff if orddiff > 0 else [])
                 k = 1 # (self.w0**2)**-orddiff
+                
+            self.actualGain = self.gain
             if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
                 k *= np.power(10, -self.ap_dB/20)    
+                self.actualGain = np.power(10, -self.ap_dB/20) * self.gain
+                
             k = np.abs(k)
+            self.kbandpass = k*self.gain
+            self.kbandpasscurr = k*self.gain
             self.tf = TFunction(denorm_z, denorm_p, k*self.gain)
             self.tf_template = TFunction(denorm_z, denorm_p, k)
+            
             return
         self.eparser.transform(transformation)
         N, D = self.eparser.getND()
         self.tf = TFunction([a * self.gain for a in N], D)
         self.tf_template = TFunction(N, D)
+        self.actualGain = self.gain
+        if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
+            self.actualGain = np.power(10, -self.ap_dB/20) * self.gain
 
     def resetStages(self):
-        self.remainingGain = self.gain
+        self.remainingGain = np.float64(self.actualGain)
+        self.remainingk = self.tf.k
+        # print("REMAINING K ", self.remainingk)
         self.remainingZeros = self.tf.z.tolist()
         self.remainingPoles = self.tf.p.tolist()
         self.stages = []
         self.implemented_tf = TFunction(1, 1, normalize=False)
 
-    def addStage(self, z_arr, p_arr, gain, pz_in_hz=False):
+    def addStage(self, z_arr, p_arr, gain, normtype, symdrl=False, pz_in_hz=False):
         if(pz_in_hz):
             # Por problemas de precisión, tengo que buscar los polos originales haciendo la misma transformación exacta
             # que los que llegaron en Hz
@@ -418,8 +510,8 @@ class AnalogFilter():
                 pindexes += [(self.tf.p / (2*np.pi)).tolist().index(p)]
             for z in z_arr:
                 zindexes += [(self.tf.z / (2*np.pi)).tolist().index(z)]
-            p_arr = [self.tf.p[i] for i in pindexes]
-            z_arr = [self.tf.z[i] for i in zindexes]
+            p_arr = [self.tf.p[i] for i in pindexes] / (2 * np.pi)
+            z_arr = [self.tf.z[i] for i in zindexes] / (2 * np.pi)
 
         if len(z_arr) > 2 or len(p_arr) > 2 or len(p_arr) == 0 or len(z_arr) > len(p_arr):
             return False
@@ -435,14 +527,64 @@ class AnalogFilter():
 
         if newRemainingZeros > newRemainingPoles:
             return False
+        
+        resultingGain = gain
 
-        append_gain = gain # self.remainingGain if newRemainingPoles == 0 else gain
+        if(normtype == NORM_CB_PB):
+            if(self.filter_type==LOW_PASS):
+                normtype = NORM_CB_DC
+            elif(self.filter_type==HIGH_PASS):
+                normtype = NORM_CB_HF
+            elif(self.filter_type==BAND_PASS):
+                normtype = NORM_CB_BP
+            else:
+                normtype = NORM_CB_DC # BR normalizes to 0, for now
+        
+        if(normtype == NORM_CB_DC):
+            norm_gain = np.prod([p for p in p_arr if not np.isclose(p, 0, atol=1e-5)]) / np.prod([z for z in z_arr if not np.isclose(z, 0, atol=1e-5)])
+        elif(normtype == NORM_CB_HF):
+            norm_gain = 1
+        elif(normtype == NORM_CB_BP):
+            temp_tf = TFunction(z_arr, p_arr, 1, normalize=False)
+            norm_gain = 1/temp_tf.at(np.abs(p_arr[0]))
 
-        newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=True)
+        
+        newStage_tf = TFunction(z_arr, p_arr, norm_gain*resultingGain, normalize=False)
+        if(newRemainingZeros == 0 and newRemainingPoles == 0):
+            val=0
+            if(self.filter_type==LOW_PASS):
+                val = newStage_tf.at(0) * self.implemented_tf.at(0)
+            elif(self.filter_type==HIGH_PASS):
+                val = newStage_tf.at(1e40) * self.implemented_tf.at(1e40)
+            elif(self.filter_type==BAND_PASS):
+                val = newStage_tf.at(self.w0) * self.implemented_tf.at(self.w0)
+            elif(self.filter_type==BAND_REJECT):
+                val = newStage_tf.at(0) * self.implemented_tf.at(0)
+            val = np.abs(val)/self.gain
+            if(self.N % 2 == 0 and self.approx_type in [CHEBYSHEV, CAUER]):
+                val /= np.power(10, -self.ap_dB/20)
+            resultingGain /= val
+            newStage_tf.multiplyGain(1/val)            
+        elif(symdrl):
+            isReject, bp = self.getBandpassRange()
+            temp_tf = TFunction(z_arr, p_arr, norm_gain, normalize=False)
+            minGain, maxGain = temp_tf.getEdgeGainsInRange(isReject, bp, True)
+            DRL_mean = (maxGain + minGain)/2
+            resultingGain *= 10**(-DRL_mean / 20)
+            print(minGain, maxGain, DRL_mean, 10**(DRL_mean / 20))
+            newStage_tf = TFunction(z_arr, p_arr, norm_gain*resultingGain, normalize=False)
+            
+        # norm_gain *= gain
+        self.remainingk /= newStage_tf.k
+        self.remainingGain /= resultingGain
+        newStage_tf.gain = resultingGain
 
+        if(self.filter_type == BAND_PASS):
+            self.kbandpasscurr /= newStage_tf.k
+        
         self.stages.append(newStage_tf)
         self.implemented_tf.appendStage(newStage_tf)
-        self.remainingGain /= append_gain
+        # self.remainingGain /= gain
         for z in z_arr:
             self.remainingZeros.remove(z)
         for p in p_arr:
@@ -453,19 +595,25 @@ class AnalogFilter():
     def removeStage(self, i):
         self.implemented_tf.removeStage(self.stages[i])
         self.stages[i].denormalize()
+        if(self.filter_type == BAND_PASS):
+            self.kbandpasscurr *= self.stages[i].k
         self.remainingGain = self.remainingGain * np.real(self.stages[i].gain)
+        self.remainingk *= self.stages[i].k
+        zeros_to_delete = len(self.stages[i].z)
+        add_list = []
         for sz in self.stages[i].z:
-            add_list = []
             for z in self.tf.z:
-                if(np.isclose(sz, z)):
-                    add_list.append(z)
-            self.remainingZeros += add_list
+                if(zeros_to_delete > 0):
+                    if(np.isclose(sz, z)):
+                        add_list.append(z)
+                        zeros_to_delete -= 1
+        self.remainingZeros += add_list
+        add_list = []
         for sp in self.stages[i].p:
-            add_list = []
             for p in self.tf.p:
                 if(np.isclose(sp, p)):
                     add_list.append(p)
-            self.remainingPoles += add_list
+        self.remainingPoles += add_list
         self.stages.pop(i)
 
     def addHelperFilters(self):
@@ -508,22 +656,25 @@ class AnalogFilter():
         self.stages[index1] = temp
     
     def orderStagesBySos(self):
-        sos = signal.zpk2sos(self.remainingZeros, self.remainingPoles, self.remainingGain, pairing='minimal', analog=True)
+        
+        sos = signal.zpk2sos(self.remainingZeros, self.remainingPoles, 1, pairing='minimal', analog=True)
         for sosSection in sos:
+            # print("Adding section N=", sosSection[0:3], " D=", sosSection[3:6])
             z_arr, p_arr, gain = signal.tf2zpk(sosSection[0:3], sosSection[3:6])
             newRemainingZeros = len(self.remainingZeros) - len(z_arr)
             newRemainingPoles = len(self.remainingPoles) - len(p_arr)
 
             if newRemainingZeros > newRemainingPoles:
-                return False
+                return False # se rompio todo
 
-            append_gain = gain
+            append_gain = gain * np.power(self.remainingk, 1/len(sos))
 
-            newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=True)
+            newStage_tf = TFunction(z_arr, p_arr, append_gain, normalize=False)
 
             self.stages.append(newStage_tf)
             self.implemented_tf.appendStage(newStage_tf)
             self.remainingGain /= append_gain
+            # self.remainingk /= newStage_tf.k
             
             for z in z_arr:
                 del_list = []
@@ -542,17 +693,16 @@ class AnalogFilter():
         return True
 
     def getBandpassRange(self):
-        fakezero = 1e-10
         if self.filter_type == LOW_PASS:
-            return False, [fakezero, self.wp]
+            return False, [0, self.wp]
         elif self.filter_type == HIGH_PASS:
             return False, [self.wp, 100*self.wp]
         elif self.filter_type == BAND_PASS:
             return False, self.wp
         elif self.filter_type == BAND_REJECT:
-            return True, [[fakezero, self.wp[0]], [self.wp[1], 100*self.wp[1]]]
+            return True, [[0, self.wp[0]], [self.wp[1], 100*self.wp[1]]]
         elif self.filter_type == GROUP_DELAY:
-            return False, [1e-10, self.wrg]
+            return False, [0, self.wrg]
 
     def getDynamicRangeLoss(self, db=True):
         minGain, maxGain = self.getEdgeGainsInBP(db=db)
@@ -562,15 +712,27 @@ class AnalogFilter():
     
     def getEdgeGainsInBP(self, db=True):
         isReject, bp = self.getBandpassRange()
-        return self.tf.getEdgeGainsInRange(isReject, np.array(bp) / (2 * np.pi), db=db)
+        return self.tf.getEdgeGainsInRange(isReject, bp, db=db)
 
     def getStagesDynamicRangeLoss(self, db=True):
         isReject, bp = self.getBandpassRange()
-        drl = 0
-        for stage_tf in self.stages:
-            ming, maxg = stage_tf.getEdgeGainsInRange(isReject, np.array(bp) / (2 * np.pi), db=db)
-            drl += np.max(np.abs([ming, maxg])) if ming*maxg > 0 else (maxg - ming) 
-        return drl
+        drl_acc = 0
+        max_drl = 0
+        for i, stage_tf in enumerate(self.stages):
+            ming, maxg = stage_tf.getEdgeGainsInRange(isReject, bp, db=db)
+            if(ming*maxg < 0):
+                if(maxg > -ming):
+                    drl_acc += maxg
+                else:
+                    drl_acc += ming
+            else:
+                if(maxg > 0):
+                    drl_acc += maxg
+                else:
+                    drl_acc += ming
+            if(np.abs(drl_acc) > max_drl):
+                max_drl = np.abs(drl_acc)
+        return max_drl
 
     def __eq__(self, other):
         if(isinstance(other, str)):

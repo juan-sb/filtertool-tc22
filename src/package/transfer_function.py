@@ -101,17 +101,21 @@ class TFunction():
         self.dD = np.flip(D.deriv().coef)
         self.computedDerivatives = True
 
+    def multiplyGain(self, k):
+        self.gain *= k
+        self.k *= k
+        self.N = self.N*k
+        self.tf_object = signal.TransferFunction(self.N, self.D)
+
     def normalize(self):
         self.gain = self.k
         a = 1+0j #lo voy a usar para normalizar, los zpk que da numpy no vienen normalizados
         for zero in self.z:
-            if abs(np.real(zero)) + abs(np.imag(zero)) < 1e-32:
-                continue
-            a = -a*zero
+            if not np.isclose(zero, 0, rtol=1e-5):
+                a = -a*zero
         for pole in self.p:
-            if abs(np.real(pole)) + abs(np.imag(pole)) < 1e-32:
-                continue
-            a = -a/pole
+            if not np.isclose(pole, 0, rtol=1e-5):
+                a = -a/pole
         self.k = self.k/a
         self.N = self.N/a
         self.computedDerivatives = False
@@ -127,7 +131,11 @@ class TFunction():
         self.computedDerivatives = False
 
     def at(self, s):
-        return poly_at(self.N, s) / poly_at(self.D, s)
+        # return poly_at(self.N, s) / poly_at(self.D, s)
+        arr = np.array([s])
+        # print(signal.freqresp(self.tf_object, arr)[1][0], poly_at(self.N, s) / poly_at(self.D, s))
+        # print(signal.freqresp(self.tf_object, arr)[1])
+        return signal.freqresp(self.tf_object, arr)[1][0]
     
     def minFunctionMod(self, w):
         return abs(self.at(1j*w))
@@ -148,16 +156,32 @@ class TFunction():
         else:
             return self.z, self.p
 
-    def getBode(self, linear=False, start=-2, stop=6, num=10000, db=False):
+    def getBodeMagFast(self, linear=False, start=-2, stop=6, num=10000, db=False, use_hz=True):
         if linear:
-            ws = np.linspace(start, stop, num) * 2 * np.pi
+            ws = np.linspace(start, stop, num) * (2 * np.pi if use_hz else 1)
         else:
-            ws = np.logspace(start, stop, num) * 2 * np.pi
+            ws = np.logspace(start, stop, num) * (2 * np.pi if use_hz else 1)
+        w, g, ph = signal.bode(self.tf_object, w=ws)
+        f = ws / (2 * np.pi)
+        return f if use_hz else ws, g if db else 10**(g/20), ph
+
+    def getBode(self, linear=False, start=-2, stop=6, num=10000, db=False, use_hz=True):
+        if linear:
+            ws = np.linspace(start, stop, num) * (2 * np.pi if use_hz else 1)
+        else:
+            ws = np.logspace(start, stop, num) * (2 * np.pi if use_hz else 1)
         #h = self.at(1j*ws)
         w, g, ph = signal.bode(self.tf_object, w=ws)
+        for i, wi in enumerate(w):
+            ph[i] = 0
+            for p in self.p:
+                ph[i] -= np.angle(1j*wi - p, True)
+            for z in self.z:
+                ph[i] += np.angle(1j*wi - z, True)
+
         gd = self.gd_at(ws) #/ (2 * np.pi) #--> no hay que hacer regla de cadena porque se achica tmb la escala de w
         f = ws / (2 * np.pi)
-        return f, g if db else 10**(g/20), ph, gd
+        return f if use_hz else ws, g if db else 10**(g/20), ph, gd
 
     #No funciona (y no lo necesitamos) actualmente
     def optimize(self, start, stop, maximize = False):
@@ -179,7 +203,11 @@ class TFunction():
         self.setZPK(np.append(self.z, tf.z), np.append(self.p, tf.p), self.k*tf.k)
 
     def removeStage(self, tf):
-        self.setZPK([i for i in self.z if i not in tf.z], [i for i in self.p if i not in tf.p], self.k/tf.k)
+        for z in tf.z:
+            iz = np.where(self.z == z)
+            if(len(iz[0]) > 0):
+                self.z = np.delete(self.z, iz[0][0])
+        self.setZPK(self.z, [i for i in self.p if i not in tf.p], self.k/tf.k)
     
     def getLatex(self, txt):
         return self.eparser.getLatex(txt=txt)
@@ -222,40 +250,43 @@ class TFunction():
             w0 = np.abs(self.p[0])
             Q = w0 / self.D[1]
             if(np.isclose(np.abs(self.z[0]), 0)):
-                return HP2, "Second order high pass wc={:.2f}".format(np.abs(self.p[0]))
+                return HP2, "2nd order HP ωc={:.2f} Q={:.2f}".format(np.abs(self.p[0]), Q)
             elif(np.isclose(np.abs(self.z[0]), np.abs(self.p[0]))):
-                return BR, "Second order band reject w0={:.2f} Q={:.2f}".format(w0, Q)
+                return BR, "2nd order BR ω0={:.2f} Q={:.2f}".format(w0, Q)
             elif(np.abs(self.z[0]) > np.abs(self.p[0])):
-                return LPN, "Second order low pass notch w0={:.2f} Q={:.2f}".format(w0, Q)
+                return LPN, "2nd order LP notch ω0={:.2f} Q={:.2f}".format(w0, Q)
             else:
-                return HPN, "Second order high pass notch w0={:.2f} Q={:.2f}".format(w0, Q)
+                return HPN, "2nd order HP notch ω0={:.2f} Q={:.2f}".format(w0, Q)
         elif(zp_ord == [1, 2]):
             w0 = np.sqrt(self.D[2]/self.D[0])
             Q = w0 / self.D[1]
-            return BP, "Second order band pass w0={:.2f} Q={:.2f}".format(w0, Q)
+            return BP, "2nd order BP ω0={:.2f} Q={:.2f}".format(w0, Q)
         elif(zp_ord == [0, 2]):
-            return LP2, "Second order low pass wc={:.2f}".format(np.abs(self.p[0]))
+            w0 = np.abs(self.p[0])
+            Q = w0 / self.D[1]
+            return LP2, "2nd order LP ωc={:.2f} Q={:.2f}".format(np.abs(self.p[0]), Q)
         elif(zp_ord == [1, 1]):
             if(np.isclose(np.abs(self.z[0]), 0)):
-                return HP1, "1st order high pass, wc={:.2f}".format(self.p[0].real)
+                return HP1, "1st order HP ωc={:.2f}".format(np.abs(self.p[0].real))
             else:
                 if(np.abs(self.z[0]) > np.abs(self.p[0])):
-                    return -1, "Single pole single zero high pass"
+                    return -1, "1 pole 1 zero HP"
                 else:
-                    return -1, "Single pole single zero low pass"
+                    return -1, "1 pole 1 zero LP"
         elif(zp_ord == [0, 1]):
-            return LP1, "1st order low pass"
+            return LP1, "1st order LP ωc={:.2f}".format(np.abs(self.p[0].real))
         elif(zp_ord == [0, 0]):
             return "Cable"
         return "Invalid"
 
     def getEdgeGainsInRange(self, isReject, bpw, db=True):
         if isReject:
-            f1, g1, ph1, gd1 = self.getBode(linear=True, start=bpw[0][0], stop=bpw[0][1], num=1000, db=db)
-            f2, g2, ph2, gd2 = self.getBode(linear=True, start=bpw[1][0], stop=bpw[1][1], num=1000, db=db)
-            minGain, maxGain = min(g1 + g2), max(g1 + g2)
+            f1, g1, ph1, gd1 = self.getBode(linear=True, start=bpw[0][0], stop=bpw[0][1], num=1000, db=db, use_hz=False)
+            f2, g2, ph2, gd2 = self.getBode(linear=True, start=bpw[1][0], stop=bpw[1][1], num=1000, db=db, use_hz=False)
+            
+            minGain, maxGain = min(np.append(g1,g2)), max(np.append(g1,g2))
         else:
-            f, g, ph, gd = self.getBode(linear=True, start=bpw[0], stop=bpw[1], num=1000, db=db)
+            f, g, ph, gd = self.getBode(linear=True, start=bpw[0], stop=bpw[1], num=1000, db=db, use_hz=False)
             minGain, maxGain = min(g), max(g)
         return minGain, maxGain
 
