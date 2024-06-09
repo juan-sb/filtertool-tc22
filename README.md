@@ -1,6 +1,6 @@
-# PlotTool TC2022 Grupo 2
+# PlotTool TC^2
 
-## Consigna
+## Especificaciones
 ### Inputs
 - Mediante una función transferencia de orden arbitrario.
 - Extraı́dos de una simulación de LTspice.
