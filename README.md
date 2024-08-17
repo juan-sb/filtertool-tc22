@@ -20,9 +20,11 @@ Para activar el venv en Linux
 
 Instalar dependencias
 
-En Windows se necesita primero Microsoft Visual C++:
+En Windows se necesita:
 
-    https://aka.ms/vs/17/release/vc_redist.x64.exe
+    https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+Descargar, ejecutar, elegir "Modify", "Desktop development with C++"
 
 Luego:
 
