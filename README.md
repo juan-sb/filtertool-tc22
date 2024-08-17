@@ -20,6 +20,12 @@ Para activar el venv en Linux
 
 Instalar dependencias
 
+En Windows se necesita primero Microsoft Visual C++:
+
+    https://aka.ms/vs/17/release/vc_redist.x64.exe
+
+Luego:
+
     pip install -r requirements.txt
 
 Correr el programa
