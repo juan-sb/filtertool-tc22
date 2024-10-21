@@ -188,7 +188,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tabWidget_2.currentChanged.connect(self.redrawFilterPlots)
         self.tabWidget_3.currentChanged.connect(self.redrawStagePlots)
         self.filterPlots = [self.fplot_att, self.fplot_mag, self.fplot_phase, self.fplot_gd, self.fplot_pz, self.fplot_step, self.fplot_impulse]
-        self.stagePlots = [self.splot_fpz, self.splot_tpz, self.splot_tgain, self.splot_tphase, self.splot_stagesmag, self.splot_pz, self.splot_sgain, self.splot_sphase]
+        self.stagePlots = [self.splot_fpz, self.splot_tpz, self.splot_tgain, self.splot_tphase, self.splot_stagesmag, self.splot_pz, self.splot_sgain, self.splot_sphase, self.splot_simp, self.splot_sstep]
         self.redrawFilterPlotsArr = [True] * len(self.filterPlots)
         self.redrawStagePlotsArr = [True] * len(self.stagePlots)
         
@@ -1009,6 +1009,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
 
     def updateFilterStages(self):
+        self.stages_list.blockSignals(True)
         self.stages_list.clear()
         self.zeros_list.clear()
         self.poles_list.clear()
@@ -1050,6 +1051,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.remove_stage_btn.setEnabled(False)
         
         self.stages_list.setCurrentRow(self.stages_list.count() - 1)
+        self.stages_list.blockSignals(False)
+        self.updateStagePlots()
 
     def stage_sel_changed(self):
         selected_pol_indexes = [sel.index for sel in self.stageCursorPol.selections]
@@ -1177,7 +1180,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.total_filtdrloss_label.setText("{:.2g} dB".format(self.selected_dataset_data.origin.getStagesDynamicRangeLoss()))
             self.stages_list.setCurrentRow(self.stages_list.count() - 1)
             
-            self.updateStagePlots()
+            # self.updateStagePlots() # stages_list changes, so theres no need to do this
         else:
             print('Error al crear STAGE')
 
@@ -1186,71 +1189,53 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if(not(self.stages_list.count() > 1 and index != 0)):
             return
         self.selected_dataset_data.origin.swapStages(index, index - 1)
+        self.stages_list.blockSignals(True)
         self.stages_list.clear()
         for stage in self.selected_dataset_data.origin.stages:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=stage))
             qlwt.setText(stage_to_str(stage, 1))
             self.stages_list.addItem(qlwt)
+        self.stages_list.blockSignals(False)
         self.stages_list.setCurrentRow(index - 1)
-        self.updateStagePlots()
 
     def swapStagesDownwards(self):
         index = self.stages_list.currentRow()
         if(not(self.stages_list.count() > 1 and index != (self.stages_list.count() - 1))):
             return
         self.selected_dataset_data.origin.swapStages(index, index + 1)
+        self.stages_list.blockSignals(True)
         self.stages_list.clear()
         for stage in self.selected_dataset_data.origin.stages:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=stage))
             qlwt.setText(stage_to_str(stage, 1))
             self.stages_list.addItem(qlwt)
+        self.stages_list.blockSignals(False)
         self.stages_list.setCurrentRow(index + 1)
-        self.updateStagePlots()
 
     def orderStagesBySos(self):
         self.selected_dataset_data.origin.orderStagesBySos()
+        self.stages_list.blockSignals(True)
         self.stages_list.clear()
         for stage in self.selected_dataset_data.origin.stages:
             qlwt = QListWidgetItem()
             qlwt.setData(Qt.UserRole, Dataset(origin=stage))
             qlwt.setText(stage_to_str(stage, 1))
             self.stages_list.addItem(qlwt)
+        self.stages_list.blockSignals(False)
         self.updateFilterStages()
-        self.updateStagePlots()
 
     def removeFilterStage(self):
         i = self.stages_list.currentRow()
         if i < 0:
             return
-
-        self.zeros_list.clear()
-        self.poles_list.clear()
-
-        self.selected_dataset_data.origin.removeStage(i)
         
-        # zeros, poles = self.selected_dataset_data.origin.tf.getZP(False)
-        # remzeros = np.copy(np.array(self.selected_dataset_data.origin.remainingZeros))
-        # for p in poles:
-        #     qlwt = QListWidgetItem()
-        #     qlwt.setData(Qt.UserRole, p)
-        #     qlwt.setText(str(p))
-        #     if(p not in np.array(self.selected_dataset_data.origin.remainingPoles)):
-        #         qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
-        #     self.poles_list.addItem(qlwt)
-        # for z in zeros:
-        #     qlwt = QListWidgetItem()
-        #     qlwt.setData(Qt.UserRole, z)
-        #     qlwt.setText(str(z))
-        #     iz = np.where(remzeros == z)
-        #     if(len(iz[0]) == 0):
-        #         remzeros = np.delete(remzeros, iz[0][0])
-        #         qlwt.setFlags(Qt.ItemFlag.NoItemFlags)
-        #     self.zeros_list.addItem(qlwt)
+        self.selected_dataset_data.origin.removeStage(i)
+        self.stages_list.blockSignals(True)
         self.stages_list.takeItem(i)
         self.stages_list.setCurrentRow(self.stages_list.count() - 1)
-
+        self.stages_list.blockSignals(False)
         self.updateFilterStages()
 
     def formatPoleAnnotation(self, sel):
@@ -1280,7 +1265,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return np.abs(sing)/(- 2 * sing.real)
 
     def updateStagePlots(self):
-        # print("Update stage plots")
         if(not isinstance(self.selected_dataset_data, Dataset)): return
     
         if(self.totalStagesZeroCursor):
@@ -1305,6 +1289,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tgaincanvas = self.splot_tgain.canvas
         tphasecanvas = self.splot_tphase.canvas
         sstamagcanvas = self.splot_stagesmag.canvas
+        simpcanvas = self.splot_simp.canvas
+        sstepcanvas = self.splot_sstep.canvas
 
         self.condition_canvas(self.splot_pz.canvas, '$\sigma$ ($rad/s$)', '$j\omega$ ($rad/s$)')
         self.condition_canvas(self.splot_fpz.canvas, '$\sigma$ ($rad/s$)', '$j\omega$ ($rad/s$)')
@@ -1314,6 +1300,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.condition_canvas(tgaincanvas, 'Frecuencia angular ($rad/s$)', 'Magnitud [dB]', 'log')
         self.condition_canvas(tphasecanvas, 'Frecuencia angular ($rad/s$)', 'Fase [$^o$]', 'log')
         self.condition_canvas(sstamagcanvas, 'Frecuencia angular ($rad/s$)', 'Magnitud [dB]', 'log')
+        self.condition_canvas(simpcanvas, 'Tiempo [s]', 'Respuesta [V]')
+        self.condition_canvas(sstepcanvas, 'Tiempo [s]', 'Respuesta [V]')
         sphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
         tphasecanvas.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', steps=[4.5, 9]))
 
@@ -1396,6 +1384,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             smagcanvas.ax.plot(w, g)
             sphasecanvas.ax.plot(w, ph)
+      
+            tstep, stepres = signal.step(accumulated_ds.origin.tf_object, N=5000)
+            timp, impres = signal.impulse(accumulated_ds.origin.tf_object, N=5000)
+            simpcanvas.ax.plot(timp, impres)
+            sstepcanvas.ax.plot(tstep, stepres)
 
             (min, max) = self.getRelevantFrequencies(z, p)
             self.splot_pz.canvas.ax.axis('equal')
@@ -1583,7 +1576,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fp_max_box.setValue(0)
         self.updateFilterStages()
         self.updateFilterPlots()
-        self.updateStagePlots()
         self.updateFilterParametersAvailable()
 
     def updateSelectedDatasetName(self):
