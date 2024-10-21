@@ -102,7 +102,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>98</width>
-                <height>538</height>
+                <height>451</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -672,7 +672,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>98</width>
-                <height>575</height>
+                <height>492</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1406,8 +1406,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>193</width>
-                   <height>513</height>
+                   <width>203</width>
+                   <height>431</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -1850,8 +1850,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>217</width>
-                <height>413</height>
+                <width>240</width>
+                <height>352</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -2429,8 +2429,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>279</width>
-             <height>745</height>
+             <width>98</width>
+             <height>641</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -2938,7 +2938,7 @@
      <x>0</x>
      <y>0</y>
      <width>1017</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">
@@ -2965,7 +2965,15 @@
      <addaction name="actionUse_Hz"/>
      <addaction name="actionUse_rad_s"/>
     </widget>
+    <widget class="QMenu" name="menuFilter_colors">
+     <property name="title">
+      <string>Filter colors</string>
+     </property>
+     <addaction name="actionColorsCanonical"/>
+     <addaction name="actionColorsRandom"/>
+    </widget>
     <addaction name="menuFrequency_units"/>
+    <addaction name="menuFilter_colors"/>
    </widget>
    <addaction name="menuProject"/>
    <addaction name="menuSettings"/>
@@ -3014,6 +3022,33 @@
    </property>
    <property name="text">
     <string>Use rad/s</string>
+   </property>
+  </action>
+  <action name="actionColorsDefaut">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Ordered</string>
+   </property>
+  </action>
+  <action name="actionColorsCanonical">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Canonical</string>
+   </property>
+  </action>
+  <action name="actionColorsRandom">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Random</string>
    </property>
   </action>
  </widget>

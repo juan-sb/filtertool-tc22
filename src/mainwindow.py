@@ -31,6 +31,16 @@ import pickle
 
 MARKER_STYLES = { 'None': '', 'Point': '.',  'Pixel': ',',  'Circle': 'o',  'Triangle down': 'v',  'Triangle up': '^',  'Triangle left': '<',  'Triangle right': '>',  'Tri down': '1',  'Tri up': '2',  'Tri left': '3',  'Tri right': '4',  'Octagon': '8',  'Square': 's',  'Pentagon': 'p',  'Plus (filled)': 'P',  'Star': '*',  'Hexagon': 'h',  'Hexagon alt.': 'H',  'Plus': '+',  'x': 'x',  'x (filled)': 'X',  'Diamond': 'D',  'Diamond (thin)': 'd',  'Vline': '|',  'Hline': '_' }
 LINE_STYLES = { 'None': '', 'Solid': '-', 'Dashed': '--', 'Dash-dot': '-.', 'Dotted': ':' }
+DEFAULT_COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2']
+CANON_COLORS = [
+    '#1f77b4',      # azul, butter
+    '#d62728',      # rojo, cheby I
+    '#2ca02c',      # verde, cheby II
+    '#ff7f0e',      # naranja, cauer
+    '#9467bd',      # violeta, optimo l
+    '#e377c2',      # rosa, bessel
+    '#8c564b',      # marrón, gauss
+]
 
 POLE_COLOR = '#FF0000'
 POLE_SEL_COLOR = '#00FF00'
@@ -143,6 +153,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.chg_filter_btn.clicked.connect(self.changeSelectedFilter)
         self.tipo_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
         self.define_with_box.currentIndexChanged.connect(self.updateFilterParametersAvailable)
+        self.aprox_box.currentIndexChanged.connect(self.updateComparisonAproxOptions)
         self.updateFilterParametersAvailable()
 
         self.new_stage_btn.clicked.connect(self.addFilterStage)
@@ -171,6 +182,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.prevFilterType = Filter.LOW_PASS
         self.compareapprox_cb.setCurrentIndexes([])
+        self.updateComparisonAproxOptions(self.aprox_box.currentIndex())
 
         self.si_calc_btn.clicked.connect(self.openImplementationDialog)
         self.tabWidget_2.currentChanged.connect(self.redrawFilterPlots)
@@ -197,6 +209,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionUse_Hz.triggered.connect(self.selectUseHz)
         self.actionUse_rad_s.triggered.connect(self.selectUseRadians)
         
+        self.actionColorsCanonical.triggered.connect(self.selectUseCanonical)
+        self.actionColorsRandom.triggered.connect(self.selectUseRandom)
         
         self.use_hz = True
         self.SING_B_TO_F = W_TO_F if self.use_hz else 1
@@ -204,7 +218,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.PZ_XLABEL = f'$\sigma$ [1/s]' if self.use_hz else '$\sigma$ ($rad/s$)'
         self.PZ_YLABEL = f'$jf$ [Hz]' if self.use_hz else '$j\omega$ ($rad/s$)'
         self.FREQ_LABEL = f'Frecuencia [Hz]' if self.use_hz else 'Frecuencia angular ($rad/s$)'
-    
+        self.updateComparisonAproxOptions(self.aprox_box.currentIndex())
+
+    def updateComparisonAproxOptions(self, index):
+        self.compareapprox_cb.model().item(index).setCheckState(False)
+        for i in range(self.compareapprox_cb.count()):
+            self.compareapprox_cb.model().item(i).setEnabled(i != index)
+
+    def selectUseCanonical(self):
+        self.actionColorsCanonical.setChecked(True)
+        self.actionColorsRandom.setChecked(False)
+        self.updateFilterPlots()
+
+    def selectUseRandom(self):
+        self.actionColorsCanonical.setChecked(False)
+        self.actionColorsRandom.setChecked(True)
+        self.updateFilterPlots()
+
     def selectUseHz(self):
         if(self.actionUse_Hz.isChecked()):
             self.actionUse_rad_s.setChecked(False)
@@ -429,8 +459,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.updateSelectedDataline()
 
     def buildFilterFromParams(self):
-        if(self.prevFilterType != self.tipo_box.currentIndex()):
-            self.compareapprox_cb.setCurrentIndexes([])
+        # if(self.prevFilterType != self.tipo_box.currentIndex()):
+        #     self.compareapprox_cb.setCurrentIndexes([])
         self.prevFilterType = self.tipo_box.currentIndex()
         if self.tipo_box.currentIndex() in [Filter.BAND_PASS, Filter.BAND_REJECT]:
             wa = [self.SING_F_TO_B * self.fa_min_box.value(), self.SING_F_TO_B * self.fa_max_box.value()]
@@ -554,6 +584,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not self.aprox_box.model().item(self.aprox_box.currentIndex()).isEnabled():
                 self.aprox_box.setCurrentIndex(Filter.BUTTERWORTH)
                 self.compareapprox_cb.setCurrentIndex(Filter.BUTTERWORTH)
+            self.updateComparisonAproxOptions(self.aprox_box.currentIndex())
             self.define_with_box.setVisible(False)
             self.label_definewith.setVisible(False)
             self.ap_box.setVisible(True)
@@ -651,6 +682,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for i in range(Filter.LEGENDRE + 1):
                 self.aprox_box.model().item(i).setEnabled(False)
                 self.compareapprox_cb.model().item(i).setEnabled(False)
+                self.compareapprox_cb.model().item(i).setChecked(False)
             for i in range(Filter.BESSEL, Filter.GAUSS + 1):
                 self.aprox_box.model().item(i).setEnabled(True)
                 self.compareapprox_cb.model().item(i).setEnabled(True)
@@ -703,6 +735,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             label.set_fontsize(self.plt_ticksize_sb.value())
 
     def updateFilterPlots(self):
+        random_colors = np.copy(DEFAULT_COLORS)
+        np.random.shuffle(random_colors)
+        if(self.actionColorsCanonical.isChecked()):
+            color_arr = CANON_COLORS
+        else:
+            color_arr = random_colors
+        curraprox = self.aprox_box.currentIndex()
         # print("Update filter plots")
         # return
         if(not isinstance(self.selected_dataset_data, Dataset)): return
@@ -743,11 +782,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         maxval = maxf*100
         f,g,ph,gd = filtds.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
         gain_offset = 20*np.log10(filtds.origin.gain)
-        magcanvas.ax.plot(f, g, label = str(filtds.origin))
-        phasecanvas.ax.plot(f, ph, label = str(filtds.origin))
-        groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin))
-        stepcanvas.ax.plot(tstep, stepres, label = str(filtds.origin))
-        impulsecanvas.ax.plot(timp, impres, label = str(filtds.origin))
+        magcanvas.ax.plot(f, g, label = str(filtds.origin), color=color_arr[curraprox])
+        phasecanvas.ax.plot(f, ph, label = str(filtds.origin), color=color_arr[curraprox])
+        groupdelaycanvas.ax.plot(f, gd, label = str(filtds.origin), color=color_arr[curraprox])
+        stepcanvas.ax.plot(tstep, stepres, label = str(filtds.origin), color=color_arr[curraprox])
+        impulsecanvas.ax.plot(timp, impres, label = str(filtds.origin), color=color_arr[curraprox])
 
         magcanvas.ax.set_xlim([minval, maxval])
         phasecanvas.ax.set_xlim([minval, maxval])
@@ -876,7 +915,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         attcanvas.ax.set_xlim(xmin, xmax)
         fa, ga, pa = filtds.origin.tf.getBodeMagFast(linear=True, start=0.5*xmin, stop=2*xmax, db=True, num=10000, use_hz=self.use_hz)
         with np.errstate(divide='ignore'): 
-            attcanvas.ax.plot(fa, -ga, label = str(filtds.origin))
+            attcanvas.ax.plot(fa, -ga, label = str(filtds.origin), color=color_arr[curraprox])
 
         # print("Plots plotted 2")
         self.fplot_pz.canvas.ax.axhline(0, color="black", alpha=0.1)
@@ -886,7 +925,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         zy = z.imag
         px = p.real
         py = p.imag
-        zeroes = self.fplot_pz.canvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin))
+        zeroes = self.fplot_pz.canvas.ax.scatter(zx, zy, marker='o', label = str(filtds.origin), color=color_arr[curraprox])
         self.fplot_pz.canvas.ax.set_xlabel(self.PZ_XLABEL)
         self.fplot_pz.canvas.ax.set_ylabel(self.PZ_YLABEL)
         self.zeros_acum = np.append(self.zeros_acum, zeroes)
@@ -895,7 +934,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         maxf2 = 0
         for helper in filtds.origin.helperFilters:
             fa, ga, pa = helper.tf.getBodeMagFast(linear=True, start=0.5*xmin, stop=2*xmax, db=True, num=10000, use_hz=self.use_hz)
-            attcanvas.ax.plot(fa, -ga, label = str(helper))
+            attcanvas.ax.plot(fa, -ga, label = str(helper), color=color_arr[helper.approx_type])
             f,g,ph,gd = helper.tf.getBode(start=np.log10(minval), stop=np.log10(maxval),db=True, use_hz=self.use_hz)
             z, p = helper.tf.getZP(self.use_hz)
             p = np.append(p, [minf, maxf])
@@ -903,24 +942,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             tstep, stepres = signal.step(helper.tf.tf_object, N=5000)
             timp, impres = signal.impulse(helper.tf.tf_object, N=5000)
-            magcanvas.ax.plot(f, g, label = str(helper))
-            phasecanvas.ax.plot(f, ph, label = str(helper))
-            groupdelaycanvas.ax.plot(f, gd, label = str(helper))
-            stepcanvas.ax.plot(tstep, stepres, label = str(helper))
-            impulsecanvas.ax.plot(timp, impres, label = str(helper))
-            zeroes = self.fplot_pz.canvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper))
+            magcanvas.ax.plot(f, g, label = str(helper), color=color_arr[helper.approx_type])
+            phasecanvas.ax.plot(f, ph, label = str(helper), color=color_arr[helper.approx_type])
+            groupdelaycanvas.ax.plot(f, gd, label = str(helper), color=color_arr[helper.approx_type])
+            stepcanvas.ax.plot(tstep, stepres, label = str(helper), color=color_arr[helper.approx_type])
+            impulsecanvas.ax.plot(timp, impres, label = str(helper), color=color_arr[helper.approx_type])
+            zeroes = self.fplot_pz.canvas.ax.scatter(z.real, z.imag, marker='o', label = str(helper), color=color_arr[helper.approx_type])
             self.zeros_acum = np.append(self.zeros_acum, zeroes)
 
         self.fplot_pz.canvas.ax.set_prop_cycle(None) # reset colors
         if(self.cb_frelcirc.isChecked()):
             for patch in patches:
                 self.fplot_pz.canvas.ax.add_patch(patch)
-        poles = self.fplot_pz.canvas.ax.scatter(px, py, marker='x')
+        poles = self.fplot_pz.canvas.ax.scatter(px, py, marker='x', color=color_arr[curraprox])
         self.poles_acum = np.append(self.poles_acum, poles)
         
         for helper in filtds.origin.helperFilters:
             z, p = helper.tf.getZP(self.use_hz)
-            poles = self.fplot_pz.canvas.ax.scatter(p.real, p.imag, marker='x')
+            poles = self.fplot_pz.canvas.ax.scatter(p.real, p.imag, marker='x', color=color_arr[helper.approx_type])
             self.poles_acum = np.append(self.poles_acum, poles)    
         self.filterPoleCursor = cursor(self.poles_acum, multiple=True, highlight=True)
         self.filterPoleCursor.connect("add", self.formatPoleAnnotation)
