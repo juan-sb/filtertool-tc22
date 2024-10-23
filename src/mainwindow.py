@@ -212,6 +212,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionColorsCanonical.triggered.connect(self.selectUseCanonical)
         self.actionColorsRandom.triggered.connect(self.selectUseRandom)
         
+        self.cb_flegends.stateChanged.connect(self.updateFilterLegends)
+        
         self.use_hz = True
         self.SING_B_TO_F = W_TO_F if self.use_hz else 1
         self.SING_F_TO_B = F_TO_W if self.use_hz else 1
@@ -219,6 +221,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.PZ_YLABEL = f'$jf$ [Hz]' if self.use_hz else '$j\omega$ ($rad/s$)'
         self.FREQ_LABEL = f'Frecuencia [Hz]' if self.use_hz else 'Frecuencia angular ($rad/s$)'
         self.updateComparisonAproxOptions(self.aprox_box.currentIndex())
+
+    def updateFilterLegends(self):
+        if(self.cb_flegends.isChecked()):
+            self.fplot_att.canvas.ax.legend()
+            self.fplot_mag.canvas.ax.legend()
+            self.fplot_phase.canvas.ax.legend()
+            self.fplot_gd.canvas.ax.legend()
+            self.fplot_step.canvas.ax.legend()
+            self.fplot_impulse.canvas.ax.legend()
+            self.fplot_pz.canvas.ax.legend()
+        else:           
+            self.fplot_att.canvas.ax.get_legend().remove()
+            self.fplot_mag.canvas.ax.get_legend().remove()
+            self.fplot_phase.canvas.ax.get_legend().remove()
+            self.fplot_gd.canvas.ax.get_legend().remove()
+            self.fplot_step.canvas.ax.get_legend().remove()
+            self.fplot_impulse.canvas.ax.get_legend().remove()
+            self.fplot_pz.canvas.ax.get_legend().remove()
+        self.fplot_att.canvas.draw_idle()
+        self.fplot_mag.canvas.draw_idle()
+        self.fplot_phase.canvas.draw_idle()
+        self.fplot_gd.canvas.draw_idle()
+        self.fplot_step.canvas.draw_idle()
+        self.fplot_impulse.canvas.draw_idle()
+        self.fplot_pz.canvas.draw_idle()
 
     def updateComparisonAproxOptions(self, index):
         self.compareapprox_cb.model().item(index).setCheckState(False)
