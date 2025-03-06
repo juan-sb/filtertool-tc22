@@ -102,7 +102,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>98</width>
-                <height>538</height>
+                <height>451</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -672,7 +672,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>98</width>
-                <height>575</height>
+                <height>492</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -1406,8 +1406,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>193</width>
-                   <height>513</height>
+                   <width>203</width>
+                   <height>431</height>
                   </rect>
                  </property>
                  <property name="sizePolicy">
@@ -1850,8 +1850,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>217</width>
-                <height>413</height>
+                <width>240</width>
+                <height>352</height>
                </rect>
               </property>
               <property name="sizePolicy">
@@ -2313,94 +2313,7 @@
        <attribute name="title">
         <string>Stages</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_19" columnstretch="1,2">
-        <item row="0" column="1">
-         <widget class="QTabWidget" name="tabWidget_3">
-          <property name="currentIndex">
-           <number>0</number>
-          </property>
-          <widget class="QWidget" name="tab_19">
-           <attribute name="title">
-            <string>Filter PZ map</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_36">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_fpz" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_22">
-           <attribute name="title">
-            <string>Accumulated PZ map</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_34">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_tpz" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_17">
-           <attribute name="title">
-            <string>Accumulated gain</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_29">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_tgain" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_21">
-           <attribute name="title">
-            <string>Accumulated phase</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_33">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_tphase" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_18">
-           <attribute name="title">
-            <string>Stages magnitude</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_37">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_stagesmag" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_15">
-           <attribute name="title">
-            <string>Stage PZ map</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_27" rowstretch="0" rowminimumheight="0">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_pz" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_16">
-           <attribute name="title">
-            <string>Stage gain</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_28">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_sgain" native="true"/>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_20">
-           <attribute name="title">
-            <string>Stage phase</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_35">
-            <item row="0" column="0">
-             <widget class="MplWidget" name="splot_sphase" native="true"/>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-        </item>
+       <layout class="QGridLayout" name="gridLayout_19" columnstretch="1,0">
         <item row="0" column="0">
          <widget class="QScrollArea" name="scrollArea_5">
           <property name="sizePolicy">
@@ -2429,8 +2342,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>279</width>
-             <height>745</height>
+             <width>300</width>
+             <height>653</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -2926,6 +2839,119 @@
           </widget>
          </widget>
         </item>
+        <item row="0" column="1">
+         <widget class="QTabWidget" name="tabWidget_3">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="tab_19">
+           <attribute name="title">
+            <string>Filter PZ map</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_36">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_fpz" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_22">
+           <attribute name="title">
+            <string>Acc PZ map</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_34">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_tpz" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_17">
+           <attribute name="title">
+            <string>Acc gain</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_29">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_tgain" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_21">
+           <attribute name="title">
+            <string>Acc phase</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_33">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_tphase" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_18">
+           <attribute name="title">
+            <string>Stages magnitude</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_37">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_stagesmag" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_15">
+           <attribute name="title">
+            <string>Stage PZ map</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_27" rowstretch="0" rowminimumheight="0">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_pz" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_16">
+           <attribute name="title">
+            <string>Stage gain</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_28">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_sgain" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_20">
+           <attribute name="title">
+            <string>Stage phase</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_35">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_sphase" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_23">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <attribute name="title">
+            <string>Stage impulse response</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_38">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_simp" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_24">
+           <attribute name="title">
+            <string>Stage step response</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_39">
+            <item row="0" column="0">
+             <widget class="MplWidget" name="splot_sstep" native="true"/>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
        </layout>
       </widget>
      </widget>
@@ -2938,7 +2964,7 @@
      <x>0</x>
      <y>0</y>
      <width>1017</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">
@@ -2949,6 +2975,9 @@
     <addaction name="actionSave_2"/>
    </widget>
    <widget class="QMenu" name="menuWindow">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="title">
      <string>Window</string>
     </property>
@@ -2965,7 +2994,15 @@
      <addaction name="actionUse_Hz"/>
      <addaction name="actionUse_rad_s"/>
     </widget>
+    <widget class="QMenu" name="menuFilter_colors">
+     <property name="title">
+      <string>Filter colors</string>
+     </property>
+     <addaction name="actionColorsCanonical"/>
+     <addaction name="actionColorsRandom"/>
+    </widget>
     <addaction name="menuFrequency_units"/>
+    <addaction name="menuFilter_colors"/>
    </widget>
    <addaction name="menuProject"/>
    <addaction name="menuSettings"/>
@@ -2993,6 +3030,9 @@
    </property>
   </action>
   <action name="actionSet_size">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Set size</string>
    </property>
@@ -3014,6 +3054,33 @@
    </property>
    <property name="text">
     <string>Use rad/s</string>
+   </property>
+  </action>
+  <action name="actionColorsDefaut">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Ordered</string>
+   </property>
+  </action>
+  <action name="actionColorsCanonical">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Canonical</string>
+   </property>
+  </action>
+  <action name="actionColorsRandom">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Random</string>
    </property>
   </action>
  </widget>
