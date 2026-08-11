@@ -1,9 +1,9 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import Plotly from 'plotly.js-dist'
-  import { filterResult, filterParams, stages, remainingPZ, comparisons, pzKey, theme, colorMode, colorShuffle, showLegend, activeTab } from '../../stores/app.js'
+  import { filterResult, filterParams, stages, remainingPZ, comparisons, pzKey, theme, colorMode, colorShuffle, showLegend, activeTab, plotUnit, dataUnit, plotCursor } from '../../stores/app.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
-  import { APPROX_NAMES, plotColor } from '../../lib/approx.js'
+  import { APPROX_NAMES, plotColor, sPlaneAxis } from '../../lib/approx.js'
 
   let container
   let plotMounted = false
@@ -18,12 +18,16 @@
   // Reset selection whenever a new filter is designed
   $: $filterResult, selectedKeys = new Set(), hoveredKey = null
 
-  // Format a complex number for display
-  function fmtComplex([r, i]) {
-    const rr = r.toFixed(4)
+  // Engine poles/zeros are rad/s: the plot follows plotUnit, the list dataUnit.
+  $: axis     = sPlaneAxis($plotUnit)
+  $: listAxis = sPlaneAxis($dataUnit)
+
+  // Format a complex number for display, scaled into the target unit
+  function fmtComplex([r, i], k = 1) {
+    const rr = (r * k).toFixed(4)
     if (Math.abs(i) < 1e-9) return rr
     const sign = i >= 0 ? '+' : '−'
-    return `${rr} ${sign} j${Math.abs(i).toFixed(4)}`
+    return `${rr} ${sign} j${Math.abs(i * k).toFixed(4)}`
   }
 
   function toggleKey(pt) {
@@ -90,16 +94,17 @@
 
   $: mainColor = plotColor($filterParams?.approx_type ?? 0, $theme, $colorMode, $colorShuffle)
 
-  function buildTraces(fr, remaining, selKeys, hovKey, mainCol, compList) {
+  function buildTraces(fr, remaining, selKeys, hovKey, mainCol, compList, k) {
     if (!fr) return []
     const avail = new Set([
       ...(remaining.zeros ?? []).map(pzKey),
       ...(remaining.poles ?? []).map(pzKey),
     ])
     const θ = Array.from({ length: 361 }, (_, i) => i * Math.PI / 180)
-    // Unit circle only — Re/Im axes come from Plotly zerolines (avoids double-thick axes).
+    // Unit circle (|s| = 1 rad/s) only — Re/Im axes come from Plotly zerolines
+    // (avoids double-thick axes).
     const out = [
-      { x: θ.map(Math.cos), y: θ.map(Math.sin),
+      { x: θ.map(t => Math.cos(t) * k), y: θ.map(t => Math.sin(t) * k),
         mode: 'lines', line: { color: C.unit, width: 1, dash: 'dot' },
         hoverinfo: 'skip', showlegend: false },
     ]
@@ -137,39 +142,39 @@
     for (const comp of (compList ?? [])) {
       const cc = plotColor(comp.approxType, $theme, $colorMode, $colorShuffle)
       const cn = APPROX_NAMES[comp.approxType]
-      if (comp.filterResult.poles.length) out.push(mkX(comp.filterResult.poles, cc, 7, `${cn} poles`))
-      if (comp.filterResult.zeros.length) out.push(mkO(comp.filterResult.zeros, cc, 7, `${cn} zeros`))
+      if (comp.filterResult.poles.length) out.push(mkX(comp.filterResult.poles, cc, 7, `${cn} poles`, k))
+      if (comp.filterResult.zeros.length) out.push(mkO(comp.filterResult.zeros, cc, 7, `${cn} zeros`, k))
     }
 
     // Main filter
-    if (usedPoles.length) out.push(mkX(usedPoles, C.used,  8,  'Used poles'))
-    if (usedZeros.length) out.push(mkO(usedZeros, C.used,  8,  'Used zeros'))
-    if (nP.length)        out.push(mkX(nP,        mainCol, 10, 'Poles'))
-    if (nZ.length)        out.push(mkO(nZ,        mainCol, 10, 'Zeros'))
-    if (hoP.length)       out.push(mkX(hoP,       C.hi,    12, 'Poles (hover)'))
-    if (hoZ.length)       out.push(mkO(hoZ,       C.hi,    12, 'Zeros (hover)'))
-    if (soP.length)       out.push(mkX(soP,       C.hi,    14, 'Selected poles'))
-    if (soZ.length)       out.push(mkO(soZ,       C.hi,    14, 'Selected zeros'))
-    if (shP.length)       out.push(mkX(shP,       C.hi,    16, 'Selected poles (hover)'))
-    if (shZ.length)       out.push(mkO(shZ,       C.hi,    16, 'Selected zeros (hover)'))
+    if (usedPoles.length) out.push(mkX(usedPoles, C.used,  8,  'Used poles', k))
+    if (usedZeros.length) out.push(mkO(usedZeros, C.used,  8,  'Used zeros', k))
+    if (nP.length)        out.push(mkX(nP,        mainCol, 10, 'Poles', k))
+    if (nZ.length)        out.push(mkO(nZ,        mainCol, 10, 'Zeros', k))
+    if (hoP.length)       out.push(mkX(hoP,       C.hi,    12, 'Poles (hover)', k))
+    if (hoZ.length)       out.push(mkO(hoZ,       C.hi,    12, 'Zeros (hover)', k))
+    if (soP.length)       out.push(mkX(soP,       C.hi,    14, 'Selected poles', k))
+    if (soZ.length)       out.push(mkO(soZ,       C.hi,    14, 'Selected zeros', k))
+    if (shP.length)       out.push(mkX(shP,       C.hi,    16, 'Selected poles (hover)', k))
+    if (shZ.length)       out.push(mkO(shZ,       C.hi,    16, 'Selected zeros (hover)', k))
     return out
   }
 
-  function mkX(pts, color, size, name) {
+  function mkX(pts, color, size, name, k) {
     return {
-      x: pts.map(([r]) => r), y: pts.map(([, i]) => i),
+      x: pts.map(([r]) => r * k), y: pts.map(([, i]) => i * k),
       mode: 'markers', name,
       marker: { symbol: 'x', size, color, line: { width: 2, color } },
-      hovertemplate: pts.map(p => `${fmtComplex(p)}<extra>${name}</extra>`),
+      hovertemplate: pts.map(p => `${fmtComplex(p, k)}<extra>${name}</extra>`),
     }
   }
 
-  function mkO(pts, color, size, name) {
+  function mkO(pts, color, size, name, k) {
     return {
-      x: pts.map(([r]) => r), y: pts.map(([, i]) => i),
+      x: pts.map(([r]) => r * k), y: pts.map(([, i]) => i * k),
       mode: 'markers', name,
       marker: { symbol: 'circle-open', size, color, line: { width: 2 } },
-      hovertemplate: pts.map(p => `${fmtComplex(p)}<extra>${name}</extra>`),
+      hovertemplate: pts.map(p => `${fmtComplex(p, k)}<extra>${name}</extra>`),
     }
   }
 
@@ -191,8 +196,9 @@
       y: 0.98, yanchor: 'top',
       tracegroupgap: 4,
     },
+    hovermode: $plotCursor ? 'closest' : false,
     xaxis: {
-      title: { text: '$\\mathrm{Re}(s)$', standoff: 8, font: baseFont },
+      title: { text: axis.xLabel, standoff: 8, font: baseFont },
       gridcolor: C.grid,
       linecolor: C.axis,
       tickcolor: C.axis,
@@ -203,7 +209,7 @@
       scaleanchor: 'y', scaleratio: 1,
     },
     yaxis: {
-      title: { text: '$\\mathrm{Im}(s)$', standoff: 8, font: baseFont },
+      title: { text: axis.yLabel, standoff: 8, font: baseFont },
       gridcolor: C.grid,
       linecolor: C.axis,
       tickcolor: C.axis,
@@ -227,7 +233,7 @@
     if (!plotMounted || destroyed || !container) return
     Plotly.react(
       container,
-      buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons),
+      buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, axis.scale),
       mkLayout(),
       cfg,
     )
@@ -243,7 +249,7 @@
 
   function mountPlot() {
     if (!container || destroyed) return
-    Plotly.newPlot(container, buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons), mkLayout(), cfg)
+    Plotly.newPlot(container, buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
     plotMounted = true
     wasActive = $activeTab === 'poleZero'
     resizeObserver = new ResizeObserver(() => {
@@ -261,10 +267,10 @@
 
   function updatePlot() {
     if (!plotMounted || destroyed || !container) return
-    Plotly.react(container, buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons), mkLayout(), cfg)
+    Plotly.react(container, buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
   }
 
-  $: updatePlot(), [$filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, $theme, $colorMode, $colorShuffle, $showLegend]
+  $: updatePlot(), [$filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, $theme, $colorMode, $colorShuffle, $showLegend, axis, $plotCursor]
 
   onMount(mountPlot)
   onDestroy(() => {
@@ -284,32 +290,34 @@
     {#if !$filterResult}
       <p class="hint">Design a filter to see its poles and zeros.</p>
     {:else}
-      <div class="sec">Poles</div>
+      <div class="sec">Poles [{listAxis.unit}]</div>
 
       {#if ($remainingPZ.poles ?? []).length === 0}
         <p class="hint-sm">All poles assigned.</p>
       {:else}
-        {#each ($remainingPZ.poles ?? []) as p (pzKey(p))}
+        <!-- Keyed by position too: band-pass/reject filters repeat poles/zeros
+             at the origin, and a value-only key collides. -->
+        {#each ($remainingPZ.poles ?? []) as p, i (`${pzKey(p)}#${i}`)}
           {@const key = pzKey(p)}
           <label class="pz-row" class:sel={selectedKeys.has(key)} class:hov={hoveredKey === key}
             on:mouseenter={() => hoveredKey = key} on:mouseleave={() => hoveredKey = null}>
             <input type="checkbox" checked={selectedKeys.has(key)} on:change={() => toggleKey(p)} />
-            <span class="val" style="color: {mainColor}">{fmtComplex(p)}</span>
+            <span class="val" style="color: {mainColor}">{fmtComplex(p, listAxis.scale)}</span>
           </label>
         {/each}
       {/if}
 
       {#if ($filterResult.zeros ?? []).length > 0}
-        <div class="sec mt">Zeros</div>
+        <div class="sec mt">Zeros [{listAxis.unit}]</div>
         {#if ($remainingPZ.zeros ?? []).length === 0}
           <p class="hint-sm">All zeros assigned.</p>
         {:else}
-          {#each ($remainingPZ.zeros ?? []) as z (pzKey(z))}
+          {#each ($remainingPZ.zeros ?? []) as z, i (`${pzKey(z)}#${i}`)}
             {@const key = pzKey(z)}
             <label class="pz-row" class:sel={selectedKeys.has(key)} class:hov={hoveredKey === key}
               on:mouseenter={() => hoveredKey = key} on:mouseleave={() => hoveredKey = null}>
               <input type="checkbox" checked={selectedKeys.has(key)} on:change={() => toggleKey(z)} />
-              <span class="val" style="color: {mainColor}">{fmtComplex(z)}</span>
+              <span class="val" style="color: {mainColor}">{fmtComplex(z, listAxis.scale)}</span>
             </label>
           {/each}
         {/if}

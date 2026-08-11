@@ -68,10 +68,42 @@ export function compareLine(approxType, theme, { dash = true, mode = 'default', 
   }
 }
 
+export const TWO_PI = 2 * Math.PI
+
+/**
+ * Frequency axis for Bode-style plots. Engine Bode frequencies are in Hz, so
+ * `scale` converts Hz → the display unit and `sScale` converts rad/s → the
+ * display unit (needed for template bounds, which come from params in rad/s).
+ * @param {'hz'|'rad'} unit
+ */
+export function freqAxis(unit) {
+  return unit === 'rad'
+    ? { scale: TWO_PI, sScale: 1,          xLabel: '$\\omega$ [rad/s]', unit: 'rad/s' }
+    : { scale: 1,      sScale: 1 / TWO_PI, xLabel: '$f$ [Hz]',          unit: 'Hz' }
+}
+
+/**
+ * Pole-zero (s-plane) axes. Engine poles/zeros are in rad/s; `scale` converts
+ * them to the display unit.
+ * @param {'hz'|'rad'} unit
+ */
+export function sPlaneAxis(unit) {
+  return unit === 'rad'
+    ? {
+        scale: 1, unit: 'rad/s',
+        xLabel: '$\\mathrm{Re}(s)$ [rad/s]',
+        yLabel: '$\\mathrm{Im}(s)$ [rad/s]',
+      }
+    : {
+        scale: 1 / TWO_PI, unit: 'Hz',
+        xLabel: '$\\mathrm{Re}(s)/2\\pi$ [Hz]',
+        yLabel: '$\\mathrm{Im}(s)/2\\pi$ [Hz]',
+      }
+}
+
 /** Derive a freq range (Hz) from filter params (which use rad/s). */
 export function freqRangeFromParams(params) {
   if (!params) return { min: 0.1, max: 1e5 }
-  const TWO_PI = 2 * Math.PI
   const wp = params.wp
   let ref
   let band = false

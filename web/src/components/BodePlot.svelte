@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy, afterUpdate } from 'svelte'
   import Plotly from 'plotly.js-dist'
-  import { theme, showLegend } from '../stores/app.js'
+  import { theme, showLegend, plotCursor } from '../stores/app.js'
 
   export let traces    = []
   export let xLabel    = '$f$ [Hz]'
@@ -22,8 +22,9 @@
   let wasActive = active
   let refreshTimer = null
   let refreshToken = 0
+  let lastTheme = $theme
 
-  $: _plotPrefs = `${$theme}|${$showLegend}|${xLabel}|${yLabel}|${yDtick}|${active}`
+  $: _plotPrefs = `${$theme}|${$showLegend}|${$plotCursor}|${xLabel}|${yLabel}|${yDtick}|${active}`
   $: void _plotPrefs
 
   function plotColors() {
@@ -77,7 +78,7 @@
         tracegroupgap: 4,
       },
       showlegend: $showLegend,
-      hovermode: 'x unified',
+      hovermode: $plotCursor ? 'x unified' : false,
       modebar: {
         color:       colors.modebar,
         activecolor: colors.modebarActive,
@@ -110,6 +111,43 @@
     await Plotly.react(container, traces, makeLayout(), CONFIG)
     if (token !== refreshToken || destroyed || !container || !active) return
     Plotly.Plots.resize(container)
+  }
+
+  /**
+   * Colors-only layout patch. Inactive tabs skip refreshPlot, so without this
+   * they keep the old theme's paper until their first activation — which reads
+   * as a dark flash when the tab is finally shown. Deliberately omits titles so
+   * hidden plots never re-typeset MathJax at 0 size.
+   */
+  function recolor() {
+    if (!initialized || destroyed || !container) return
+    const c = plotColors()
+    Plotly.relayout(container, {
+      paper_bgcolor: c.background,
+      plot_bgcolor:  c.background,
+      'font.color':  c.text,
+      'xaxis.gridcolor':     c.grid,
+      'xaxis.linecolor':     c.line,
+      'xaxis.zerolinecolor': c.line,
+      'xaxis.tickcolor':     c.line,
+      'xaxis.tickfont.color': c.text,
+      'yaxis.gridcolor':     c.grid,
+      'yaxis.linecolor':     c.line,
+      'yaxis.zerolinecolor': c.line,
+      'yaxis.tickcolor':     c.line,
+      'yaxis.tickfont.color': c.text,
+      'legend.bgcolor':      c.legend,
+      'legend.bordercolor':  c.border,
+      'modebar.color':       c.modebar,
+      'modebar.activecolor': c.modebarActive,
+      'modebar.bgcolor':     c.modebarBg,
+      shapes,   // template mask fill is theme-dependent too
+    })
+  }
+
+  $: if (initialized && $theme !== lastTheme) {
+    lastTheme = $theme
+    recolor()
   }
 
   function scheduleRefresh(delayMs = 32) {

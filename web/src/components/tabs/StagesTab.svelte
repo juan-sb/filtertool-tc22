@@ -1,6 +1,7 @@
 <script>
-  import { stages, filterResult, bodePoints, theme, activeTab } from '../../stores/app.js'
+  import { stages, filterResult, bodePoints, theme, activeTab, plotUnit } from '../../stores/app.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
+  import { freqAxis } from '../../lib/approx.js'
   import BodePlot from '../BodePlot.svelte'
 
   const COLORS = ['#58a6ff', '#3fb950', '#d29922', '#bc8cff', '#f78166', '#79c0ff', '#ffa657', '#39d353']
@@ -36,6 +37,8 @@
     return Number.isFinite(db) ? db : null
   }
 
+  $: axis = freqAxis($plotUnit)
+
   // Cascade = point-wise sum of stage dBs (= product of stage magnitudes).
   // Only shown when every stage has been computed.
   $: cascadeTrace = (() => {
@@ -51,14 +54,14 @@
       return sum
     })
     return {
-      x: freq, y: dB, mode: 'lines', name: 'Cascade',
+      x: freq.map(f => f * axis.scale), y: dB, mode: 'lines', name: 'Cascade',
       line: { color: $theme === 'light' ? '#24292f' : '#e6edf3', width: 2, dash: 'dot' },
     }
   })()
 
   $: traces = [
     ...$stages.map((stage, i) => ({
-      x: stageBodes[i]?.freq ?? [],
+      x: (stageBodes[i]?.freq ?? []).map(f => f * axis.scale),
       y: (stageBodes[i]?.magnitude ?? []).map(toDb),
       mode: 'lines',
       name: stage.name,
@@ -66,6 +69,8 @@
     })),
     ...(cascadeTrace ? [cascadeTrace] : []),
   ]
+
+  $: yLabel = $plotUnit === 'rad' ? '$|H(\\omega)|$ [dB]' : '$|H(f)|$ [dB]'
 </script>
 
 {#if $stages.length === 0}
@@ -73,7 +78,7 @@
     <p>No stages yet — select poles/zeros in the Pole-Zero tab to build a stage decomposition.</p>
   </div>
 {:else}
-  <BodePlot {traces} yLabel={'$|H(f)|$ [dB]'} filename="filtool_stages" active={$activeTab === 'stages'} />
+  <BodePlot {traces} {yLabel} xLabel={axis.xLabel} filename="filtool_stages" active={$activeTab === 'stages'} />
 {/if}
 
 <style>

@@ -1,15 +1,16 @@
 <script>
   import { getWorkerApi }  from '../lib/worker-client.js'
-  import { freqRangeFromParams } from '../lib/approx.js'
-  import { filterParams, filterResult, bodeData, stages, bodePoints, uiEnabled, engineStatus, pendingFormHydration } from '../stores/app.js'
+  import { freqRangeFromParams, TWO_PI } from '../lib/approx.js'
+  import { filterParams, filterResult, bodeData, stages, bodePoints, uiEnabled, engineStatus, pendingFormHydration, dataUnit } from '../stores/app.js'
   import SciInput from './SciInput.svelte'
 
   // ── Constants ─────────────────────────────────────────────────────────────
   const FILTER_TYPES  = ['Low-pass', 'High-pass', 'Band-pass', 'Band-reject', 'Group Delay']
   const APPROX_TYPES  = ['Butterworth', 'Chebyshev I', 'Chebyshev II', 'Cauer', 'Legendre', 'Bessel', 'Gauss']
-  const TWO_PI        = 2 * Math.PI
 
   // ── Form state ────────────────────────────────────────────────────────────
+  // Frequencies below are held in the current data unit (Hz or rad/s); params
+  // sent to the engine are always rad/s.
   let filterType  = 0
   let approxType  = 0
   let nMin = 1,   nMax = 10
@@ -17,15 +18,36 @@
   let denorm      = 0     // 0–100 %
 
   // LP / HP
-  let fpHz = 1000, faHz = 2000
+  let fp = 1000, fa = 2000
 
   // BP / BR
   let defineWith = 1
-  let f0Hz = 1000, bwpHz = 200, bwaHz = 600
-  let fp1Hz = 800, fp2Hz = 1200, fa1Hz = 600, fa2Hz = 1500
+  let f0 = 1000, bwp = 200, bwa = 600
+  let fp1 = 800, fp2 = 1200, fa1 = 600, fa2 = 1500
 
   // Group Delay
-  let tau0 = 1e-3, frgHz = 1000, gamma = 5
+  let tau0 = 1e-3, frg = 1000, gamma = 5
+
+  // ── Units ─────────────────────────────────────────────────────────────────
+  /** Hz value × uf = value in the current data unit. */
+  $: uf     = $dataUnit === 'rad' ? TWO_PI : 1
+  $: uLabel = $dataUnit === 'rad' ? 'rad/s' : 'Hz'
+  /** Symbol prefix: f for Hz, ω for rad/s. */
+  $: fsym   = $dataUnit === 'rad' ? 'ω' : 'f'
+  $: fMin   = 1e-3 * uf
+  $: fMax   = 1e12 * uf
+  $: bwMin  = 1e-6 * uf
+
+  // Rescale the entered values so the physical frequencies survive a unit flip.
+  let lastUnit = $dataUnit
+  $: if ($dataUnit !== lastUnit) {
+    const k = $dataUnit === 'rad' ? TWO_PI : 1 / TWO_PI
+    lastUnit = $dataUnit
+    fp *= k;  fa *= k
+    f0 *= k;  bwp *= k; bwa *= k
+    fp1 *= k; fp2 *= k; fa1 *= k; fa2 *= k
+    frg *= k
+  }
 
   // ── Derived ───────────────────────────────────────────────────────────────
   $: isBand     = filterType === 2 || filterType === 3
@@ -63,7 +85,7 @@
   }
 
   function applyParamsToForm(p) {
-    const fromRad = w => Number(w) / TWO_PI
+    const fromRad = w => (Number(w) / TWO_PI) * uf
     filterType = p.filter_type ?? 0
     approxType = p.approx_type ?? 0
     nMin = p.N_min ?? 1
@@ -77,29 +99,29 @@
     tau0 = p.tau0 ?? 1e-3
 
     if (filterType === 4) {
-      frgHz = fromRad(p.wrg ?? 0) || 1000
+      frg = fromRad(p.wrg ?? 0) || 1000 * uf
       return
     }
     if (filterType === 0 || filterType === 1) {
-      fpHz = fromRad(p.wp) || 1000
-      faHz = fromRad(p.wa) || 2000
+      fp = fromRad(p.wp) || 1000 * uf
+      fa = fromRad(p.wa) || 2000 * uf
       return
     }
     // Band-pass / band-reject
     if (defineWith === 1) {
-      f0Hz = fromRad(p.w0) || 1000
-      bwpHz = fromRad(p.bw?.[0]) || 200
-      bwaHz = fromRad(p.bw?.[1]) || 600
+      f0 = fromRad(p.w0) || 1000 * uf
+      bwp = fromRad(p.bw?.[0]) || 200 * uf
+      bwa = fromRad(p.bw?.[1]) || 600 * uf
     } else {
-      fp1Hz = fromRad(p.wp?.[0]) || 800
-      fp2Hz = fromRad(p.wp?.[1]) || 1200
-      fa1Hz = fromRad(p.wa?.[0]) || 600
-      fa2Hz = fromRad(p.wa?.[1]) || 1500
+      fp1 = fromRad(p.wp?.[0]) || 800 * uf
+      fp2 = fromRad(p.wp?.[1]) || 1200 * uf
+      fa1 = fromRad(p.wa?.[0]) || 600 * uf
+      fa2 = fromRad(p.wa?.[1]) || 1500 * uf
     }
   }
 
   function buildParams() {
-    const toRad = hz => hz * TWO_PI
+    const toRad = v => v * TWO_PI / uf
     const base = {
       filter_type: filterType, approx_type: approxType,
       N_min: nMin, N_max: nMax,
@@ -110,19 +132,19 @@
       define_with: defineWith, denorm,
       gamma, tau0,
     }
-    if (isGD) return { ...base, wrg: toRad(frgHz), wp: 0, wa: 0, w0: 0, bw: [0,0] }
-    if (!isBand) return { ...base, wp: toRad(fpHz), wa: toRad(faHz), w0: 0, bw:[0,0], wrg:0 }
+    if (isGD) return { ...base, wrg: toRad(frg), wp: 0, wa: 0, w0: 0, bw: [0,0] }
+    if (!isBand) return { ...base, wp: toRad(fp), wa: toRad(fa), w0: 0, bw:[0,0], wrg:0 }
     if (defineWith === 1) return {
       ...base,
-      wp: [toRad(f0Hz - bwpHz/2), toRad(f0Hz + bwpHz/2)],
-      wa: [toRad(f0Hz - bwaHz/2), toRad(f0Hz + bwaHz/2)],
-      w0: toRad(f0Hz), bw: [toRad(bwpHz), toRad(bwaHz)], wrg: 0,
+      wp: [toRad(f0 - bwp/2), toRad(f0 + bwp/2)],
+      wa: [toRad(f0 - bwa/2), toRad(f0 + bwa/2)],
+      w0: toRad(f0), bw: [toRad(bwp), toRad(bwa)], wrg: 0,
     }
     return {
       ...base,
-      wp: [toRad(fp1Hz), toRad(fp2Hz)], wa: [toRad(fa1Hz), toRad(fa2Hz)],
-      w0: toRad(Math.sqrt(fp1Hz * fp2Hz)),
-      bw: [toRad(fp2Hz - fp1Hz), toRad(fa2Hz - fa1Hz)], wrg: 0,
+      wp: [toRad(fp1), toRad(fp2)], wa: [toRad(fa1), toRad(fa2)],
+      w0: toRad(Math.sqrt(fp1 * fp2)),
+      bw: [toRad(fp2 - fp1), toRad(fa2 - fa1)], wrg: 0,
     }
   }
 </script>
@@ -161,51 +183,51 @@
     {#if !isBand}
       <div class="pair">
         <div class="stack">
-          <span class="lbl">fp</span>
-          <SciInput bind:value={fpHz} unit="Hz" min={1e-3} max={1e12} />
+          <span class="lbl">{fsym}p</span>
+          <SciInput bind:value={fp} unit={uLabel} min={fMin} max={fMax} />
         </div>
         <div class="stack">
-          <span class="lbl">fa</span>
-          <SciInput bind:value={faHz} unit="Hz" min={1e-3} max={1e12} />
+          <span class="lbl">{fsym}a</span>
+          <SciInput bind:value={fa} unit={uLabel} min={fMin} max={fMax} />
         </div>
       </div>
     {:else}
       <div class="row">
         <span class="lbl">Define</span>
         <select class="ctl" bind:value={defineWith}>
-          <option value={1}>f₀ + BW</option>
+          <option value={1}>{fsym}₀ + BW</option>
           <option value={0}>Frequencies</option>
         </select>
       </div>
       {#if defineWith === 1}
         <div class="row">
-          <span class="lbl">f₀</span>
-          <SciInput bind:value={f0Hz} unit="Hz" min={1e-3} max={1e12} />
+          <span class="lbl">{fsym}₀</span>
+          <SciInput bind:value={f0} unit={uLabel} min={fMin} max={fMax} />
         </div>
         <div class="row">
           <span class="lbl">BWp</span>
-          <SciInput bind:value={bwpHz} unit="Hz" min={1e-6} max={1e12} />
+          <SciInput bind:value={bwp} unit={uLabel} min={bwMin} max={fMax} />
         </div>
         <div class="row">
           <span class="lbl">BWa</span>
-          <SciInput bind:value={bwaHz} unit="Hz" min={1e-6} max={1e12} />
+          <SciInput bind:value={bwa} unit={uLabel} min={bwMin} max={fMax} />
         </div>
       {:else}
         <div class="row">
-          <span class="lbl">fp₁</span>
-          <SciInput bind:value={fp1Hz} unit="Hz" min={1e-3} max={1e12} />
+          <span class="lbl">{fsym}p₁</span>
+          <SciInput bind:value={fp1} unit={uLabel} min={fMin} max={fMax} />
         </div>
         <div class="row">
-          <span class="lbl">fp₂</span>
-          <SciInput bind:value={fp2Hz} unit="Hz" min={1e-3} max={1e12} />
+          <span class="lbl">{fsym}p₂</span>
+          <SciInput bind:value={fp2} unit={uLabel} min={fMin} max={fMax} />
         </div>
         <div class="row">
-          <span class="lbl">fa₁</span>
-          <SciInput bind:value={fa1Hz} unit="Hz" min={1e-3} max={1e12} />
+          <span class="lbl">{fsym}a₁</span>
+          <SciInput bind:value={fa1} unit={uLabel} min={fMin} max={fMax} />
         </div>
         <div class="row">
-          <span class="lbl">fa₂</span>
-          <SciInput bind:value={fa2Hz} unit="Hz" min={1e-3} max={1e12} />
+          <span class="lbl">{fsym}a₂</span>
+          <SciInput bind:value={fa2} unit={uLabel} min={fMin} max={fMax} />
         </div>
       {/if}
     {/if}
@@ -229,8 +251,8 @@
       <SciInput bind:value={tau0} unit="s" min={1e-12} max={1} />
     </div>
     <div class="row">
-      <span class="lbl">f ref</span>
-      <SciInput bind:value={frgHz} unit="Hz" min={1e-3} max={1e12} />
+      <span class="lbl">{fsym} ref</span>
+      <SciInput bind:value={frg} unit={uLabel} min={fMin} max={fMax} />
     </div>
     <div class="row">
       <span class="lbl">γ</span>

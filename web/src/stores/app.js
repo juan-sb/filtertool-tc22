@@ -16,6 +16,15 @@ function persistedBool(key, fallback) {
   return store
 }
 
+function persistedEnum(key, allowed, fallback) {
+  const stored = typeof window !== 'undefined' ? localStorage.getItem(key) : null
+  const store = writable(allowed.includes(stored) ? stored : fallback)
+  if (typeof window !== 'undefined') {
+    store.subscribe(value => localStorage.setItem(key, value))
+  }
+  return store
+}
+
 export const theme = writable(preferredTheme)
 
 if (typeof window !== 'undefined') {
@@ -29,6 +38,13 @@ if (typeof window !== 'undefined') {
 // Plot display prefs (navbar)
 export const compareDash = persistedBool('filtertool.compareDash', true)
 export const showLegend  = persistedBool('filtertool.showLegend', true)
+/** Plotly hover readout (crosshair + tooltip). Off by default. */
+export const plotCursor  = persistedBool('filtertool.plotCursor', false)
+
+/** Frequency units: 'hz' | 'rad'. Data = form entry + numeric readouts, plot = axes. */
+export const FREQ_UNITS = ['hz', 'rad']
+export const dataUnit = persistedEnum('filtertool.dataUnit', FREQ_UNITS, 'hz')
+export const plotUnit = persistedEnum('filtertool.plotUnit', FREQ_UNITS, 'hz')
 
 function loadColorMode() {
   if (typeof window === 'undefined') return 'default'

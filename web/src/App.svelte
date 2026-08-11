@@ -8,6 +8,7 @@
     activeTab, theme, bodePoints, filterResult, filterParams, bodeData,
     sidebarOpen, uiEnabled, compareDash, showLegend, colorMode, colorShuffle,
     stages, comparisons, compareApproxes, compareSameN, pendingFormHydration,
+    plotCursor, dataUnit, plotUnit,
   } from './stores/app.js'
   import LoadingBadge  from './components/LoadingBadge.svelte'
   import TabBar        from './components/TabBar.svelte'
@@ -27,6 +28,10 @@
     { id: 'default', label: 'Default' },
     { id: 'gray',    label: 'Gray' },
     { id: 'random',  label: 'Random' },
+  ]
+  const UNIT_OPTIONS = [
+    { id: 'hz',  label: 'Hz' },
+    { id: 'rad', label: 'rad/s' },
   ]
 
   let ioBusy = false
@@ -161,6 +166,32 @@
       </select>
     </label>
 
+    <label class="nav-field" title="Units for the parameter form and pole/zero readouts">
+      <span class="nav-lbl">Data</span>
+      <select class="nav-sel narrow" bind:value={$dataUnit}>
+        {#each UNIT_OPTIONS as opt}
+          <option value={opt.id}>{opt.label}</option>
+        {/each}
+      </select>
+    </label>
+    <label class="nav-field" title="Units for plot axes (Bode + pole/zero)">
+      <span class="nav-lbl">Plots</span>
+      <select class="nav-sel narrow" bind:value={$plotUnit}>
+        {#each UNIT_OPTIONS as opt}
+          <option value={opt.id}>{opt.label}</option>
+        {/each}
+      </select>
+    </label>
+
+    <button
+      class="header-btn"
+      class:active={$plotCursor}
+      on:click={() => plotCursor.update(v => !v)}
+      aria-pressed={$plotCursor}
+      title={$plotCursor ? 'Hide plot cursor (hover readout)' : 'Show plot cursor (hover readout)'}
+    >
+      Cursor
+    </button>
     <button
       class="header-btn"
       class:active={$compareDash}
@@ -189,11 +220,12 @@
     </label>
 
     <button
-      class="header-btn"
+      class="header-btn theme-btn"
       on:click={() => theme.set($theme === 'dark' ? 'light' : 'dark')}
       aria-label={`Switch to ${$theme === 'dark' ? 'light' : 'dark'} mode`}
       title={`Switch to ${$theme === 'dark' ? 'light' : 'dark'} mode`}
     >
+      <span class="theme-ico" aria-hidden="true">{$theme === 'dark' ? '☀️' : '🌙'}</span>
       {$theme === 'dark' ? 'Light' : 'Dark'}
     </button>
     <button
@@ -331,6 +363,18 @@
   .icon-btn:hover, .header-btn:hover:not(:disabled) { background: var(--hover); }
   .header-btn:disabled { opacity: 0.4; cursor: default; }
 
+  .theme-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+  }
+  .theme-ico {
+    font-size: 0.9rem;
+    line-height: 1;
+    /* Emoji ignore color; keep it from inheriting the muted text tint */
+    filter: saturate(1.1);
+  }
+
   .io-error {
     flex-shrink: 0;
     padding: 0.35rem 0.75rem;
@@ -369,6 +413,7 @@
     min-width: 5rem;
   }
   .nav-sel:focus { border-color: var(--accent); }
+  .nav-sel.narrow { min-width: 4.2rem; }
 
   .body {
     display: flex;
