@@ -180,12 +180,15 @@
 
   <NumField label="Gain" bind:value={$designForm.gainDb} unit="dB" min={-200} max={200} log={false} step={1} />
 
-  <div class="denorm-row">
-    <span class="lbl" title="Where the normalization lands between the passband edge (0 %) and the stopband edge (100 %)">Denorm</span>
+  <!-- Group delay has no denormalization: the engine scales the prototype by 1/τ₀ only. -->
+  <div class="denorm-row" class:off={isGD}
+    title={isGD ? 'Not used for group delay: the design is set by τ₀, f ref and γ' : ''}>
+    <span class="lbl" title={isGD ? '' : 'Where the normalization lands between the passband edge (0 %) and the stopband edge (100 %)'}>Denorm</span>
     <div class="denorm">
       <input class="slider" type="range" min="0" max="100" step="1" bind:value={$designForm.denorm} aria-label="Denormalization"
+        disabled={isGD}
         on:input={onDenormInput} on:change={onDenormRelease} on:pointerup={onDenormRelease} on:blur={onDenormRelease} />
-      <span class="pct">{$designForm.denorm}%</span>
+      <span class="pct">{isGD ? '—' : `${$designForm.denorm}%`}</span>
     </div>
   </div>
 
@@ -268,6 +271,8 @@
   }
 
   /* Denorm */
+  .denorm-row.off { opacity: 0.4; }
+  .denorm-row.off .slider { cursor: not-allowed; }
   .denorm-row {
     display: grid;
     grid-template-columns: var(--lbl-w) minmax(0, 1fr);
