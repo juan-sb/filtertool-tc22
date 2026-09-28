@@ -4,7 +4,8 @@
   import { dataUnit, hoveredStageId } from '../stores/app.js'
   import { TWO_PI } from '../lib/approx.js'
   import { poleSummary, scaleRoots, withQ, NORM_OPTIONS, normLabel, normProblem, Q_MIN, Q_MAX } from '../lib/stage-math.js'
-  import { updateStage, resetStage, removeStage, isModified } from '../lib/stages.js'
+  import { editStageLive, flushStageEdit, resetStage, removeStage, isModified } from '../lib/stages.js'
+  import { normGain } from '../lib/stage-eval.js'
   import { formatSI } from '../lib/si.js'
   import NumField from './form/NumField.svelte'
 
@@ -20,7 +21,9 @@
   $: summary  = poleSummary(stage.poles)
   $: f0       = summary.w0 != null ? (summary.w0 / TWO_PI) * uf : null   // data unit
   $: hasQ     = stage.poles.length === 2 && Number.isFinite(summary.q)
-  $: gainDb   = stage.gain > 0 ? 20 * Math.log10(stage.gain) : null
+  // Live stage gain (same as the engine's): normalization · offset
+  $: kLin     = normGain(stage.zeros, stage.poles, stage.normtype, filterType) * Math.pow(10, (stage.gainDb ?? 0) / 20)
+  $: gainDb   = kLin > 0 ? 20 * Math.log10(kLin) : null
   $: edited   = isModified(stage)
   $: hovered  = $hoveredStageId === stage.id
 
@@ -33,14 +36,14 @@
   function setF0(v) {
     if (!(v > 0) || !(f0 > 0)) return
     const r = v / f0
-    updateStage(stage.id, s => ({ zeros: scaleRoots(s.zeros, r), poles: scaleRoots(s.poles, r) }))
+    editStageLive(stage.id, s => ({ zeros: scaleRoots(s.zeros, r), poles: scaleRoots(s.poles, r) }))
   }
   function setQ(v) {
     if (!(v > 0)) return
-    updateStage(stage.id, s => ({ poles: withQ(s.poles, v) }))
+    editStageLive(stage.id, s => ({ poles: withQ(s.poles, v) }))
   }
   function setGain(v) {
-    if (Number.isFinite(v)) updateStage(stage.id, { gainDb: v })
+    if (Number.isFinite(v)) editStageLive(stage.id, { gainDb: v })
   }
 
   $: if (f0Edit != null && f0 != null && Math.abs(f0Edit / f0 - 1) > 1e-9) setF0(f0Edit)
@@ -77,7 +80,7 @@
 
   <label class="norm">
     <span class="lbl">Norm.</span>
-    <select value={stage.normtype ?? 'Passband'} on:change={e => updateStage(stage.id, { normtype: e.currentTarget.value })}>
+    <select value={stage.normtype ?? 'Passband'} on:change={e => { editStageLive(stage.id, { normtype: e.currentTarget.value }); flushStageEdit() }}>
       {#each NORM_OPTIONS as n}
         {@const why = normProblem(n, filterType, stage.zeros, stage.poles)}
         <option value={n} disabled={!!why && n !== (stage.normtype ?? 'Passband')}>{normLabel(n, filterType)}{why ? ` — n/a (${why})` : ''}</option>
@@ -87,13 +90,13 @@
 
   <div class="edits">
     {#if f0 != null}
-      <NumField layout="stack" label="{fsym}₀" bind:value={f0Edit} unit={uLabel} min={1e-6} max={1e15} />
+      <NumField layout="stack" label="{fsym}₀" bind:value={f0Edit} unit={uLabel} min={1e-6} max={1e15} on:scrubend={flushStageEdit} />
     {/if}
     {#if hasQ}
-      <NumField layout="stack" label="Q" bind:value={qEdit} min={Q_MIN} max={Q_MAX} si={false} />
+      <NumField layout="stack" label="Q" bind:value={qEdit} min={Q_MIN} max={Q_MAX} si={false} on:scrubend={flushStageEdit} />
     {/if}
     <NumField layout="stack" label="Gain" bind:value={gEdit} unit="dB" min={-200} max={200} log={false} step={0.5}
-      title="Gain offset on top of the normalization; drag to adjust" />
+      title="Gain offset on top of the normalization; drag to adjust" on:scrubend={flushStageEdit} />
   </div>
 </div>
 

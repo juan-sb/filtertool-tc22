@@ -13,7 +13,7 @@
 // Edits (updateStage) apply to the store at once and rebuild num/den through
 // the engine worker, latest-wins per stage, so drags stay responsive.
 
-import { get } from 'svelte/store'
+import { get, writable } from 'svelte/store'
 import { getWorkerApi } from './worker-client.js'
 import { stages, filterParams, filterResult, remainingPZ } from '../stores/app.js'
 import { autoStages } from './auto-stage.js'
@@ -76,6 +76,47 @@ export function previewStage(id, patch) {
 /** Rebuild num / den after a preview. */
 export function commitStage(id) {
   scheduleRebuild(id)
+}
+
+// ── Preview session (one stage at a time) ───────────────────────────────────
+// { id, phase: 'drag' | 'commit', num0, t0 }. While set, the Stages tab
+// freezes its Plotly traces and draws the stage live on a canvas; in 'commit'
+// the engine is rebuilding and the tab clears the session once the new Bode is in.
+export const stagePreview = writable(null)
+
+export function beginStagePreview(id) {
+  const cur = get(stagePreview)
+  if (cur?.id === id && cur.phase === 'drag') return
+  if (cur?.phase === 'drag') endStagePreview(true)
+  stagePreview.set({ id, phase: 'drag', num0: get(stages).find(s => s.id === id)?.num, t0: 0 })
+}
+
+export function endStagePreview(changed) {
+  clearTimeout(idleTimer)
+  const cur = get(stagePreview)
+  if (!cur || cur.phase !== 'drag') return
+  if (!changed) { stagePreview.set(null); return }
+  commitStage(cur.id)
+  const next = { ...cur, phase: 'commit', t0: performance.now() }
+  stagePreview.set(next)
+  // Safety net if the rebuild never lands
+  setTimeout(() => { if (get(stagePreview) === next) stagePreview.set(null) }, 2000)
+}
+
+/**
+ * Card edits (typing, arrows, wheel, scrubbing, normalization): preview now,
+ * commit to the engine after a short idle pause (flushStageEdit() commits at once).
+ */
+const IDLE_COMMIT_MS = 300
+let idleTimer = null
+export function editStageLive(id, patch) {
+  beginStagePreview(id)
+  previewStage(id, patch)
+  clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => endStagePreview(true), IDLE_COMMIT_MS)
+}
+export function flushStageEdit() {
+  if (get(stagePreview)?.phase === 'drag') endStagePreview(true)
 }
 
 function scheduleRebuild(id) {

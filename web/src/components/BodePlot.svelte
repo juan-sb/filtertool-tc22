@@ -156,8 +156,11 @@
     recolor()
   }
 
+  // Throttle, not debounce: continuous updates (denorm slider, live mode) must
+  // redraw while they happen, not only once they stop. The pending refresh
+  // reads the latest props when it fires.
   function scheduleRefresh(delayMs = 32) {
-    if (refreshTimer != null) clearTimeout(refreshTimer)
+    if (refreshTimer != null) return
     refreshTimer = setTimeout(() => {
       refreshTimer = null
       refreshPlot()

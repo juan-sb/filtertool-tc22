@@ -2,6 +2,7 @@
   // Labelled numeric field: drag the label to scrub, wheel/arrows while focused,
   // SI-prefix entry (SciInput), inline validation hint.
   import SciInput from '../SciInput.svelte'
+  import { createEventDispatcher } from 'svelte'
   import { scrub } from '../../lib/scrub.js'
   import { hoveredFields } from '../../stores/app.js'
 
@@ -27,6 +28,7 @@
   /** Edge colour group: 'pass' | 'stop' | 'centre'. */
   export let group = null
 
+  const dispatch = createEventDispatcher()
   let ownHover = false
   function enter() { if (edge) { hoveredFields.set([edge]); ownHover = true } }
   function leave() { if (ownHover) { hoveredFields.set([]); ownHover = false } }
@@ -39,7 +41,7 @@
   <span
     class="lbl"
     title={title || `Drag to adjust ${label}${log ? '' : ` (${step} ${unit} per 4 px)`}; Shift = fine`}
-    use:scrub={{ get: () => value, set: v => (value = v), log, step, min, max }}
+    use:scrub={{ get: () => value, set: v => (value = v), done: () => dispatch('scrubend'), log, step, min, max }}
   >{#if group}<i class="mark {group}" aria-hidden="true"></i>{/if}{label}</span>
   <SciInput bind:value {unit} {min} {max} {si} logNudge={log} {step} invalid={!!error} on:change />
   {#if error && showHint}<span class="hint">{error}</span>{/if}

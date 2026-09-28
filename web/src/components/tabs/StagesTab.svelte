@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
+  import { get } from 'svelte/store'
   import {
     stages, filterParams, filterResult, bodeData, bodePoints, theme, activeTab, plotUnit, dataUnit,
     remainingPZ, hoveredStageId,
@@ -11,7 +12,7 @@
   import { tfAbs, toDb } from '../../lib/poly.js'
   import {
     updateStage, resetAllStages, isModified, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ,
-    autoStage, moveStage, previewStage, commitStage,
+    autoStage, moveStage, previewStage, stagePreview, beginStagePreview, endStagePreview,
   } from '../../lib/stages.js'
   import { stageDb } from '../../lib/stage-eval.js'
   import { formatSI } from '../../lib/si.js'
@@ -51,6 +52,7 @@
         pendingBode.delete(s.id)
         bodes.set(s.id, { num, den, bode })
         bodes = bodes
+        finishCommit()
       }).catch(() => pendingBode.delete(s.id))
     }
   }
@@ -63,7 +65,14 @@
   // stage and the cascade faint as the "before" ghost; the live curves are drawn
   // on the canvas overlay below.
   let traces = []
-  $: if (!preview) traces = buildTraces($stages, bodes, $bodeData, axis, $theme, hovered, null)
+  let ghostFor = null
+  $: preview = $stagePreview
+  $: if (!preview) { ghostFor = null; traces = buildTraces($stages, bodes, $bodeData, axis, $theme, hovered, null) }
+  // Entering a preview: one re-render with that stage and the cascade ghosted, then frozen.
+  $: if (preview && ghostFor !== preview.id) {
+    ghostFor = preview.id
+    traces = buildTraces($stages, bodes, $bodeData, axis, $theme, null, preview.id)
+  }
 
   function buildTraces(list, bmap, designed, ax, th, hov, ghostId) {
     const out = []
@@ -178,32 +187,24 @@
   // evaluates its |H| in JS (lib/stage-eval.js, same maths as the engine) and
   // draws it with the cascade. On release the engine rebuilds once and the
   // overlay stays until the new Plotly curves are in.
-  let preview = null        // { id, phase: 'drag' | 'commit', num0, t0 }
+  let preview = null        // $stagePreview: { id, phase: 'drag' | 'commit', num0, t0 }
   let overlay
   let drawFrame = null, frameNo = 0
   const dbCache = new WeakMap()
   const dbOf = b => { if (!b) return null; let a = dbCache.get(b); if (!a) { a = b.magnitude.map(m => toDb(m)); dbCache.set(b, a) } return a }
 
-  function beginPreview(id) {
-    preview = { id, phase: 'drag', num0: $stages.find(st => st.id === id)?.num, t0: 0 }
-    traces = buildTraces($stages, bodes, $bodeData, axis, $theme, null, id)
-    scheduleDraw()
+  const beginPreview = id => beginStagePreview(id)
+  const endPreview = changed => endStagePreview(changed)
+  // Commit done once the rebuilt stage has its new Bode. Checked from the Bode
+  // callback (outside the reactive pass, so the trace un-freeze runs); lib/stages.js
+  // also has a timeout.
+  function finishCommit() {
+    const p = get(stagePreview)
+    if (p?.phase !== 'commit') return
+    const st = get(stages).find(x => x.id === p.id)
+    if (!st || (st.num !== p.num0 && bodes.get(st.id)?.num === st.num)) stagePreview.set(null)
   }
-  function endPreview(changed) {
-    if (!preview) return
-    if (!changed) { preview = null; scheduleDraw(); return }
-    commitStage(preview.id)
-    preview = { ...preview, phase: 'commit', t0: performance.now() }
-    const mine = preview
-    setTimeout(() => { if (preview === mine) { preview = null; scheduleDraw() } }, 2000)
-  }
-  // Commit done once the rebuilt stage has its new Bode (or after a safety timeout).
-  $: if (preview?.phase === 'commit') {
-    const st = $stages.find(x => x.id === preview.id)
-    const done = !st || (st.num !== preview.num0 && bodes.get(st.id)?.num === st.num)
-    if (done || performance.now() - preview.t0 > 2000) { preview = null; scheduleDraw() }
-  }
-  $: if (preview) scheduleDraw(), [$stages, $theme, axis]
+  $: preview, $stages, $theme, axis, scheduleDraw()
 
   function scheduleDraw() { if (drawFrame == null) drawFrame = requestAnimationFrame(drawOverlay) }
 

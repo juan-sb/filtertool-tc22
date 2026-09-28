@@ -121,8 +121,10 @@
     await Plotly.react(container, buildTraces(), makeLayout(), cfg())
   }
 
+  // Throttle, not debounce: during a drag changes arrive every frame, and a
+  // restarting timer would only redraw once the motion stops.
   function schedule(ms = 16) {
-    if (refreshTimer != null) clearTimeout(refreshTimer)
+    if (refreshTimer != null) return
     refreshTimer = setTimeout(() => { refreshTimer = null; refresh() }, ms)
   }
 
