@@ -4,17 +4,17 @@
 // "ghost" of the same spec, so e.g. Legendre's steeper monotonic edge or
 // Bessel's gentle roll-off read by contrast. Computed once per session.
 //
-// Spec: N = 5, Gp = 0.6, Ga = 0.4, except Cauer. At a fixed order an elliptic
-// design spends loose specs on selectivity: with Ga = 0.4 its zeros land at
-// ω ≈ 1.000–1.01, on top of the passband edge. N = 3, Ga = 0.1 puts the zero
-// at ω ≈ 1.18, a readable transition with passband and stopband ripple.
+// Spec: Gp = 0.6, Ga = 0.4 for all; N = 5 except Cauer. At a fixed order an
+// elliptic design spends loose specs on selectivity: at N ≥ 3 its zeros land at
+// ω ≈ 1.00–1.02, on top of the passband edge. N = 2 puts the zero at ω ≈ 1.17,
+// and (even order) the stopband climbs back to Ga, a full-height bounce.
 
 import { buildParams, DEFAULT_FORM, LP } from './params.js'
 
 export const SKETCH_W = 40, SKETCH_H = 20
 
 const BASE = { n: 5, gp: 0.6, ga: 0.4 }
-const SPECS = [BASE, BASE, BASE, { n: 3, gp: 0.6, ga: 0.1 }, BASE, BASE, BASE]
+const SPECS = [BASE, BASE, BASE, { ...BASE, n: 2 }, BASE, BASE, BASE]
 const W_MAX = 2.2, POINTS = 300, A_MAX = 1.05
 
 let cache = null
