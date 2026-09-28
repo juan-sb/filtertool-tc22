@@ -2,12 +2,12 @@
   import { onMount, onDestroy } from 'svelte'
   import {
     bodeData, filterParams, comparisons, theme, compareDash, colorMode, colorShuffle, activeTab,
-    plotUnit, dataUnit, designForm, hoveredFields, designBusy, templateDragging,
+    plotUnit, dataUnit, designForm, hoveredFields, designBusy, templateDragging, liveAdjusting,
   } from '../../stores/app.js'
   import { APPROX_NAMES, plotColor, compareLine, freqAxis, freqRangeFromParams, TWO_PI } from '../../lib/approx.js'
   import { GD, DEFAULT_FORM, buildParams, formFromParams, paramsClose, validateForm } from '../../lib/params.js'
   import { templateGeom, templateHandles, dragTo, compliance, transitionNear, symmetrizedGeom } from '../../lib/template.js'
-  import { runDesign, liveDenorm } from '../../lib/design-action.js'
+  import { runDesign, liveDenorm, denormPreview } from '../../lib/design-action.js'
   import { formatSI } from '../../lib/si.js'
   import BodePlot from '../BodePlot.svelte'
 
@@ -35,7 +35,10 @@
   $: symGeom = showTemplate ? symmetrizedGeom(geom) : null
   $: stale   = showTemplate && !!$filterParams && formValid &&
                !paramsClose(buildParams($designForm, toRad), $filterParams)
-  $: comp    = showTemplate ? compliance(geom, $bodeData) : null
+  // Compliance of the published design (red trace) and of what's on screen
+  // (chips): during a live denorm preview the chips follow the preview.
+  $: compDesign = showTemplate ? compliance(geom, $bodeData) : null
+  $: comp       = showTemplate && previewBode ? compliance(geom, previewBode) : compDesign
 
   // ── Drag state ───────────────────────────────────────────────────────────
   /**
@@ -51,7 +54,7 @@
 
   // ── Axis ranges, frozen while dragging so the plot doesn't move under the cursor
   let xRange = null, yRange = null
-  $: if (!dragging) {
+  $: if (!dragging && !previewing) {
     const fr = $bodeData?.freq?.length
       ? { min: $bodeData.freq[0], max: $bodeData.freq[$bodeData.freq.length - 1] }
       : freqRangeFromParams(formValid ? buildParams($designForm, toRad) : $filterParams)
@@ -63,13 +66,20 @@
   // ── Traces (untouched while dragging: only shapes move) ──────────────────
   const DANGER = { dark: '#f85149', light: '#cf222e' }
   let traces = []
-  $: if (!dragging) traces = [
+  // Frozen while dragging a handle or previewing denorm; entering a preview
+  // re-renders once with the published curve ghosted.
+  let ghosted = false
+  $: if (!dragging && !previewing) { ghosted = false; traces = buildTraces(false, $bodeData, $comparisons, compDesign, axis, $theme, $colorMode, $colorShuffle, $compareDash, $filterParams) }
+  $: if (previewing && !ghosted) { ghosted = true; traces = buildTraces(true) }
+
+  function buildTraces(ghost) { return [
     ...($bodeData ? [{
       x: $bodeData.freq.map(f => f * axis.scale),
       y: $bodeData.magnitude.map(toDb),
       mode: 'lines',
       name: APPROX_NAMES[$filterParams?.approx_type ?? 0],
       line: { color: plotColor($filterParams?.approx_type ?? 0, $theme, $colorMode, $colorShuffle), width: 2 },
+      opacity: ghost ? 0.25 : 1,
     }] : []),
     ...$comparisons.map(c => ({
       x: c.bodeData.freq.map(f => f * axis.scale),
@@ -78,15 +88,96 @@
       name: APPROX_NAMES[c.approxType],
       line: compareLine(c.approxType, $theme, { dash: $compareDash, mode: $colorMode, shuffle: $colorShuffle }),
     })),
-    ...($bodeData && comp?.bad?.some(v => v !== null) ? [{
+    ...($bodeData && !ghost && compDesign?.bad?.some(v => v !== null) ? [{
       x: $bodeData.freq.map(f => f * axis.scale),
-      y: comp.bad,
+      y: compDesign.bad,
       mode: 'lines',
       name: 'Outside template',
       line: { color: DANGER[$theme] ?? DANGER.dark, width: 3.5 },
       hoverinfo: 'skip',
     }] : []),
-  ]
+  ] }
+
+  // ── Live denorm preview (canvas) ─────────────────────────────────────────
+  // design-action publishes each step's poles / zeros; |H| is evaluated here
+  // at pixel resolution and drawn on a canvas over the frozen, ghosted plot.
+  let overlay
+  let previewBode = null        // { freq, magnitude } of the preview, for the chips
+  let holdOverlay = false       // preview ended: keep the canvas until Plotly redraws
+  let ovFrame = null, ovNo = 0
+  $: isActive = $activeTab === tabId
+  $: previewing = !!$denormPreview && isActive && $denormPreview.params.filter_type !== GD
+  $: previewBode = previewing ? previewResponse($denormPreview.result) : null
+  // Draw as soon as a preview step arrives (no extra frame of latency).
+  $: if (previewing && (previewBode || $theme)) { holdOverlay = true; drawOverlay() }
+
+  /** |H| of a design result on a log grid spanning the visible x range, plus its jω-axis zeros. */
+  function previewResponse(r) {
+    const fl = gd?._fullLayout
+    if (!fl?.xaxis || !r?.num?.length) return null
+    const xa = fl.xaxis
+    const [l0, l1] = xa.range            // log10 of plot units
+    const n = Math.max(200, Math.round(xa._length * 1.5))
+    const toHz = l => 10 ** l / axis.scale
+    const freq = Array.from({ length: n + 1 }, (_, i) => toHz(l0 + ((l1 - l0) * i) / n))
+    for (const [re, im] of r.zeros) {
+      const f = Math.abs(im) / TWO_PI
+      if (Math.abs(re) < 1e-9 * Math.max(1, Math.abs(im)) && f > freq[0] && f < freq[n]) freq.push(f)
+    }
+    freq.sort((a, b) => a - b)
+    const k = Math.abs(r.num[0])        // num = k·Π(s − z)
+    const magnitude = freq.map(fHz => {
+      const w = TWO_PI * fHz
+      let m = k
+      for (const [re, im] of r.zeros) m *= Math.hypot(re, w - im)
+      for (const [re, im] of r.poles) m /= Math.hypot(re, w - im)
+      return m
+    })
+    return { freq, magnitude }
+  }
+
+  function scheduleOverlay() { if (ovFrame == null) ovFrame = requestAnimationFrame(drawOverlay) }
+
+  function drawOverlay() {
+    ovFrame = null
+    if (!overlay || !gd) return
+    const dpr = window.devicePixelRatio || 1, w = gd.clientWidth, h = gd.clientHeight
+    if (overlay.width !== Math.round(w * dpr) || overlay.height !== Math.round(h * dpr)) {
+      overlay.width = Math.round(w * dpr); overlay.height = Math.round(h * dpr)
+      overlay.style.width = `${w}px`; overlay.style.height = `${h}px`
+    }
+    const ctx = overlay.getContext('2d')
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    const b = previewBode, fl = gd._fullLayout
+    if (!b || !fl?.xaxis) { overlay.dataset.frame = ''; return }
+    const xa = fl.xaxis, ya = fl.yaxis
+    const X = f => xa._offset + xa.l2p(xa.d2l(f * axis.scale)), Y = d => ya._offset + ya.l2p(d)
+    const stroke = (ys, color, width) => {
+      ctx.strokeStyle = color; ctx.lineWidth = width
+      ctx.beginPath()
+      let pen = false
+      for (let i = 0; i < b.freq.length; i++) {
+        const v = ys[i]
+        if (v == null || !Number.isFinite(v)) { pen = false; continue }
+        const x = X(b.freq[i]), y = Y(v)
+        if (pen) ctx.lineTo(x, y); else { ctx.moveTo(x, y); pen = true }
+      }
+      ctx.stroke()
+    }
+    ctx.save()
+    ctx.beginPath(); ctx.rect(xa._offset, ya._offset, xa._length, ya._length); ctx.clip()
+    ctx.lineJoin = 'round'
+    stroke(b.magnitude.map(m => (m > 0 ? 20 * Math.log10(m) : null)), plotColor($filterParams?.approx_type ?? 0, $theme, $colorMode, $colorShuffle), 2)
+    if (comp?.bad?.some(v => v !== null)) stroke(comp.bad, DANGER[$theme] ?? DANGER.dark, 3.5)
+    ctx.restore()
+    overlay.dataset.frame = String(++ovNo)
+  }
+
+  // After the preview, clear the canvas only once Plotly has drawn the real curve.
+  function onRendered() {
+    if (holdOverlay && !previewing) { holdOverlay = false; previewBode = null; scheduleOverlay() }
+  }
 
   // ── Template shapes ──────────────────────────────────────────────────────
   const HANDLE = {
@@ -365,6 +456,9 @@
   function onDragMove(e) {
     if (!drag) return
     lastMove = rel(e)
+    // Curve (denorm) drags apply at once: the preview design call already
+    // coalesces to the latest step. Handle drags batch per frame.
+    if (drag.kind === 'curve') { applyMove(); return }
     if (moveFrame != null) return
     moveFrame = requestAnimationFrame(applyMove)
   }
@@ -471,7 +565,9 @@
   logX={true}
   filename={showTemplate ? 'filtool_template' : 'filtool_magnitude'}
   active={$activeTab === tabId}
+  on:rendered={onRendered}
 >
+  <canvas class="denorm-overlay" bind:this={overlay} aria-hidden="true"></canvas>
   {#if showTemplate && geom}
     <div class="tpl-overlay">
       {#if $bodeData && comp?.pass}
@@ -491,7 +587,7 @@
       {/if}
       {#if !$filterParams}
         <span class="chip muted">Template preview · press Design</span>
-      {:else if stale && !dragging}
+      {:else if stale && !dragging && !$liveAdjusting}
         <button class="chip action" disabled={$designBusy} on:click={runDesign}>
           {$designBusy ? 'Designing…' : 'Out of date · Redesign'}
         </button>
@@ -546,6 +642,7 @@
   .chip.action:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 26%, var(--surface)); }
   .chip.action:disabled { opacity: 0.6; cursor: default; }
 
+  .denorm-overlay { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 4; }
   .drag-label {
     position: absolute;
     pointer-events: none;

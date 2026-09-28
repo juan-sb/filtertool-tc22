@@ -253,6 +253,7 @@ Deviations from the brief worth knowing:
 - A redesign keeps stage gain offsets / normalization but resets moved roots to the new design (with a notice).
 - E5 crosshair: upstream's Cursor toggle already gives the readout; Plotly double-click resets the view.
 - Q5 revisited: stage drags on the Stages tab are previewed from JS (`lib/stage-eval.js`, matches the engine to ~1e-13 dB) on a canvas overlay, neandertool-style; the engine still rebuilds once on release. Drag latency went from ~75 ms to ~21 ms (p50).
+- Live denorm (slider and Template curve drag) on the Template / Magnitude tabs: each step only fetches poles / zeros from the engine and draws |H| on a canvas (ghosted plot underneath); one real design on release. ~70–99 ms → ~21–24 ms p50. Other tabs keep the per-step redesign. Main-thread WASM was rejected: Legendre N=15 takes ~340 ms per design.
 
 ## 6. Suggested milestones
 

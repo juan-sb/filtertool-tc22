@@ -7,7 +7,7 @@
 // (other type / approximation / order, or REMAP_STAGES off) they're cleared
 // with an "Undo" toast that restores the previous design, form and stages.
 
-import { get } from 'svelte/store'
+import { get, writable } from 'svelte/store'
 import { TWO_PI, freqRangeFromParams } from './approx.js'
 import { buildParams, formFromParams, validateForm, paramsClose } from './params.js'
 import { withRoots } from './roots.js'
@@ -16,7 +16,7 @@ import { buildStage, rootsModified } from './stages.js'
 import { getWorkerApi } from './worker-client.js'
 import {
   designForm, dataUnit, bodePoints, filterParams, filterResult, bodeData, stages,
-  engineStatus, designBusy, designError, toast, liveAdjusting, liveMode, templateDragging,
+  engineStatus, designBusy, designError, toast, liveAdjusting, liveMode, templateDragging, activeTab,
 } from '../stores/app.js'
 
 /**
@@ -56,8 +56,38 @@ export async function runDesign(request = {}) {
  * Live denorm (slider or curve drag): re-design the last designed params with
  * only denorm changed, so pending form edits stay pending. Comparisons wait
  * for end() (liveAdjusting).
+ *
+ * On the Template / Magnitude tabs it runs in preview mode: each step only
+ * asks the engine for the new poles / zeros (no Bode, no store publish) and
+ * publishes them on `denormPreview`, which the tab evaluates and draws on a
+ * canvas; end() then designs once for real. Elsewhere every step re-designs.
  */
+export const denormPreview = writable(null)   // { result, params } | null
+const PREVIEW_TABS = new Set(['template', 'magnitude'])
+
 let liveBase = null
+let previewMode = false
+let previewSession = 0
+let lastDenorm = null
+let previewBusy = false, previewNext = null
+
+async function previewDesign(params, session) {
+  if (previewBusy) { previewNext = params; return }
+  previewBusy = true
+  try {
+    let p = params
+    while (p) {
+      previewNext = null
+      const r = await getWorkerApi().filterDesign(p)
+      if (session !== previewSession) return
+      if (!r.error) denormPreview.set({ result: r, params: p })
+      p = previewNext
+    }
+  } finally {
+    previewBusy = false
+  }
+}
+
 export const liveDenorm = {
   /** @returns {boolean} false when there's no design to adjust */
   start() {
@@ -65,17 +95,32 @@ export const liveDenorm = {
     const p = get(filterParams)
     if (!p) return false
     liveBase = p
+    lastDenorm = p.denorm ?? 0
+    previewMode = PREVIEW_TABS.has(get(activeTab))
+    previewSession++
     liveAdjusting.set(true)
     return true
   },
   update(denorm) {
     if (!liveBase) return
+    lastDenorm = denorm
     designForm.update(f => (f.denorm === denorm ? f : { ...f, denorm }))
-    runDesign({ params: { ...liveBase, denorm } })
+    if (previewMode) previewDesign({ ...liveBase, denorm }, previewSession)
+    else runDesign({ params: { ...liveBase, denorm } })
   },
   end() {
+    const base = liveBase, wasPreview = previewMode
     liveBase = null
+    previewMode = false
     liveAdjusting.set(false)
+    if (!wasPreview) return
+    const session = ++previewSession        // late preview results are dropped
+    if (!base || lastDenorm === (base.denorm ?? 0)) { denormPreview.set(null); return }
+    // One real design; the preview stays until it's published (the tab clears
+    // its canvas once Plotly has drawn the new curve).
+    runDesign({ params: { ...base, denorm: lastDenorm } }).finally(() => {
+      if (session === previewSession) denormPreview.set(null)
+    })
   },
   /** Params the live session started from (null when idle). */
   get base() { return liveBase },

@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy, afterUpdate } from 'svelte'
+  import { onMount, onDestroy, afterUpdate, createEventDispatcher } from 'svelte'
   import Plotly from 'plotly.js-dist'
   import { theme, showLegend, plotCursor } from '../stores/app.js'
 
@@ -19,6 +19,7 @@
   /** When false (inactive keep-alive tab), skip Plotly work; rising edge re-typesets MathJax. */
   export let active    = true
 
+  const dispatch = createEventDispatcher()
   let container
   let initialized = false
   let destroyed = false
@@ -121,6 +122,7 @@
     await Plotly.react(container, traces, makeLayout(), CONFIG)
     if (token !== refreshToken || destroyed || !container || !active) return
     Plotly.Plots.resize(container)
+    dispatch('rendered')
   }
 
   /**

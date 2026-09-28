@@ -7,7 +7,7 @@
   } from '../lib/params.js'
   import {
     designForm, filterParams, filterResult, uiEnabled, pendingFormHydration, dataUnit,
-    designBusy, designError, liveMode,
+    designBusy, designError, liveMode, liveAdjusting,
   } from '../stores/app.js'
   import Segmented  from './form/Segmented.svelte'
   import OrderRange from './form/OrderRange.svelte'
@@ -58,7 +58,8 @@
   /** First validation message of the band fields (shown under their one-row layout). */
   $: bandError = ['f0', 'bwp', 'bwa', 'fp1', 'fp2', 'fa1', 'fa2'].map(k => formErrors[k]).find(Boolean) ?? ''
   /** Form differs from the last successful design. */
-  $: stale = !!$filterParams && !hasErrors && !paramsClose(buildParams($designForm, toRad), $filterParams)
+  // Not stale mid live-denorm: the form's denorm leads the design until release.
+  $: stale = !$liveAdjusting && !!$filterParams && !hasErrors && !paramsClose(buildParams($designForm, toRad), $filterParams)
 
   function onTypeChange(e) {
     designForm.update(f => {
