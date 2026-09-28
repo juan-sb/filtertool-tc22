@@ -2,6 +2,7 @@
   import { onMount, onDestroy, afterUpdate, createEventDispatcher } from 'svelte'
   import Plotly from 'plotly.js-dist'
   import { theme, showLegend, plotCursor } from '../stores/app.js'
+  import { zoomHistory, zoomButtons } from '../lib/zoom-history.js'
 
   export let traces    = []
   export let xLabel    = '$f$ [Hz]'
@@ -49,6 +50,8 @@
     }
   }
 
+  // Ranges are copied: Plotly mutates layout range arrays in place on zoom,
+  // which would overwrite the app's props (and Home would return the zoom).
   function makeLayout() {
     const colors = plotColors()
     return {
@@ -59,7 +62,7 @@
       ...(uirevision !== undefined ? { uirevision } : {}),
       xaxis: {
         type:          logX ? 'log' : 'linear',
-        ...(xRange ? { range: logX ? xRange.map(Math.log10) : xRange, autorange: false } : { autorange: true }),
+        ...(xRange ? { range: logX ? xRange.map(Math.log10) : xRange.slice(), autorange: false } : { autorange: true }),
         title:         { text: xLabel, standoff: 8, font: { color: colors.text, size: 12 } },
         gridcolor:     colors.grid,
         linecolor:     colors.line,
@@ -76,7 +79,7 @@
         zerolinecolor: colors.line,
         tickcolor:     colors.line,
         tickfont:      { color: colors.text, size: 11 },
-        ...(yRange ? { range: yRange, autorange: false } : { autorange: true }),
+        ...(yRange ? { range: yRange.slice(), autorange: false } : { autorange: true }),
         ...(yDtick != null ? { dtick: yDtick, tick0: 0 } : {}),
       },
       legend: {
@@ -99,13 +102,22 @@
     }
   }
 
+  // Zoom history: Back replaces Plotly's ×2 zoom-out, Home / double-click go to
+  // the ranges the app currently asks for (lib/zoom-history.js).
+  let zoom = null
+  const home = () => ({
+    x: xRange ? (logX ? xRange.map(Math.log10) : xRange.slice()) : null,
+    y: yRange ? yRange.slice() : null,
+  })
   const CONFIG = {
     responsive:    true,
     displaylogo:   false,
     displayModeBar: true,
-    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d', 'resetScale2d', 'zoomOut2d'],
+    ...zoomButtons(() => zoom),
     toImageButtonOptions: { format: 'svg', filename },
   }
+  const onDblClick = () => zoom?.reset()
 
   async function awaitMathJax() {
     try {
@@ -114,12 +126,27 @@
     } catch { /* MathJax optional */ }
   }
 
+  // Plotly.react only recomputes autorange when it sees new data arrays. Redrawing
+  // the same traces (legend toggle, theme, tab activation) would leave an
+  // autoranged axis at the empty-plot default [10⁻¹, 10⁶]; fresh copies force it.
+  let lastReactTraces = null
+  function reactData() {
+    const same = traces === lastReactTraces
+    lastReactTraces = traces
+    if (!same) return traces
+    return traces.map(t => ({
+      ...t,
+      ...(Array.isArray(t.x) ? { x: t.x.slice() } : {}),
+      ...(Array.isArray(t.y) ? { y: t.y.slice() } : {}),
+    }))
+  }
+
   async function refreshPlot() {
     if (!initialized || destroyed || !container || !active) return
     const token = ++refreshToken
     await awaitMathJax()
     if (token !== refreshToken || destroyed || !container || !active) return
-    await Plotly.react(container, traces, makeLayout(), CONFIG)
+    await Plotly.react(container, reactData(), makeLayout(), CONFIG)
     if (token !== refreshToken || destroyed || !container || !active) return
     Plotly.Plots.resize(container)
     dispatch('rendered')
@@ -197,6 +224,10 @@
   onMount(() => {
     Plotly.newPlot(container, traces, makeLayout(), CONFIG)
     initialized = true
+    zoom = zoomHistory(container, home)
+    // Plotly lays a drag cover over the plot on mousedown, so the browser never
+    // fires a native dblclick; Plotly still emits its own double-click event.
+    container.on('plotly_doubleclick', onDblClick)
     resizeObserver = new ResizeObserver(() => {
       if (initialized && !destroyed && active && container) Plotly.Plots.resize(container)
     })
@@ -242,6 +273,7 @@
     if (shapesFrame != null) cancelAnimationFrame(shapesFrame)
     refreshToken++
     resizeObserver?.disconnect()
+    zoom?.detach()
     if (container) Plotly.purge(container)
   })
 

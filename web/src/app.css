@@ -75,3 +75,16 @@ html, body {
     font-size: 16px;
   }
 }
+
+/* Plot crosshair pointer. The system crosshair Plotly asks for is a thin white
+   cross on some platforms and vanishes on light backgrounds (e.g. the pale
+   template region). This is a 3 px cross that follows the theme: dark with a
+   white outline in light mode, white with a dark outline in dark mode; thick
+   enough to fully cover the system one. The handle / stage cursors set
+   elsewhere (data-tpl-cursor, data-stage-cursor) keep priority. */
+.js-plotly-plot:not([data-tpl-cursor]):not([data-stage-cursor='grab']) .cursor-crosshair {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='25' height='25' viewBox='0 0 25 25' fill='none'><path d='M12.5 2v21M2 12.5h21' stroke='%230d1117' stroke-width='5'/><path d='M12.5 2v21M2 12.5h21' stroke='%23e6edf3' stroke-width='3'/></svg>") 12 12, crosshair !important;
+}
+:root[data-theme='light'] .js-plotly-plot:not([data-tpl-cursor]):not([data-stage-cursor='grab']) .cursor-crosshair {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='25' height='25' viewBox='0 0 25 25' fill='none'><path d='M12.5 2v21M2 12.5h21' stroke='white' stroke-width='5'/><path d='M12.5 2v21M2 12.5h21' stroke='%231f2328' stroke-width='3'/></svg>") 12 12, crosshair !important;
+}
