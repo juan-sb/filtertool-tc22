@@ -7,7 +7,7 @@
   } from '../lib/params.js'
   import {
     designForm, filterParams, filterResult, uiEnabled, pendingFormHydration, dataUnit,
-    designBusy, designError,
+    designBusy, designError, liveMode,
   } from '../stores/app.js'
   import Segmented  from './form/Segmented.svelte'
   import OrderRange from './form/OrderRange.svelte'
@@ -130,9 +130,9 @@
   <div class="group">Template</div>
 
   {#if isGD}
-    <NumField label="τ₀" bind:value={$designForm.tau0} unit="s" min={1e-12} max={1} error={formErrors.tau0} />
-    <NumField label="{fsym} ref" bind:value={$designForm.frg} unit={uLabel} min={fMin} max={fMax} error={formErrors.frg} />
-    <NumField label="γ" bind:value={$designForm.gamma} unit="%" min={0.01} max={99} log={false} step={0.5} error={formErrors.gamma} />
+    <NumField label="τ₀" bind:value={$designForm.tau0} unit="s" min={1e-12} max={1} error={formErrors.tau0} edge="tau0" group="centre" />
+    <NumField label="{fsym} ref" bind:value={$designForm.frg} unit={uLabel} min={fMin} max={fMax} error={formErrors.frg} edge="frg" group="pass" />
+    <NumField label="γ" bind:value={$designForm.gamma} unit="%" min={0.01} max={99} log={false} step={0.5} error={formErrors.gamma} edge="gamma" group="pass" />
   {:else}
     {#if !isBand}
       <div class="pair">
@@ -193,6 +193,7 @@
     <p class="err">{$designError}</p>
   {/if}
 
+  <div class="design-row">
   <button
     class="btn"
     class:stale
@@ -201,8 +202,12 @@
     on:click={design}
   >
     {$designBusy ? 'Computing…' : 'Design Filter'}
-    {#if stale && !$designBusy}<span class="badge">out of date</span>{/if}
+    {#if stale && !$designBusy && !$liveMode}<span class="badge">out of date</span>{/if}
   </button>
+  <label class="live" class:on={$liveMode} title="Live mode: re-design automatically whenever the form changes (Ctrl+Enter still designs)">
+    <input type="checkbox" bind:checked={$liveMode} /> Live
+  </label>
+  </div>
 
 </div>
 
@@ -328,6 +333,16 @@
     cursor: pointer;
   }
 
+  .design-row { display: flex; gap: 0.4rem; align-items: stretch; margin-top: 0.15rem; }
+  .design-row .btn { flex: 1; margin-top: 0; }
+  .live {
+    display: flex; align-items: center; gap: 0.3rem;
+    padding: 0 0.55rem; border-radius: 4px; cursor: pointer; user-select: none;
+    border: 1px solid var(--border); background: var(--bg);
+    font-size: 0.8rem; color: var(--text-muted);
+  }
+  .live.on { border-color: var(--success); color: var(--success); background: color-mix(in srgb, var(--success) 12%, var(--bg)); }
+  .live input { accent-color: var(--success); margin: 0; }
   .btn {
     display: flex;
     align-items: center;

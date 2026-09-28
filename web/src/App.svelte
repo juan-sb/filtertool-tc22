@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { proxy } from 'comlink'
   import { getWorkerApi } from './lib/worker-client.js'
   import { freqRangeFromParams } from './lib/approx.js'
@@ -21,6 +21,9 @@
   import PoleZeroTab   from './components/tabs/PoleZeroTab.svelte'
   import StagesTab     from './components/tabs/StagesTab.svelte'
   import Toast         from './components/Toast.svelte'
+  import { runDesign, startLiveMode } from './lib/design-action.js'
+  import { removeStage } from './lib/stages.js'
+  import { hoveredStageId } from './stores/app.js'
   import { shufflePalette } from './lib/approx.js'
   import { serializeDesign, downloadDesign, pickDesignFile, materializeDesign } from './lib/design-io.js'
 
@@ -50,7 +53,30 @@
     && Number($bodePoints) <= 5000
   )
 
+  // ── Keyboard shortcuts (E5) ──────────────────────────────────────────────
+  // Ctrl/⌘+Enter: design · Del / Backspace: remove the hovered stage (outside
+  // text fields) · Esc: cancels drags (handled where the drag lives).
+  const NON_TEXT = new Set(['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color', 'file'])
+  const typing = el => !!el && (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' ||
+    (el.tagName === 'INPUT' && !NON_TEXT.has(el.type)))
+  function onKeydown(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault()
+      if ($uiEnabled) runDesign()
+      return
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !typing(document.activeElement) && $hoveredStageId != null) {
+      e.preventDefault()
+      removeStage($hoveredStageId)
+      hoveredStageId.set(null)
+    }
+  }
+
+  let stopLive = null
+  onDestroy(() => stopLive?.())
+
   onMount(async () => {
+    stopLive = startLiveMode()
     try {
       const api = getWorkerApi()
       await api.init(
@@ -284,6 +310,7 @@
   </div>
 </div>
 
+<svelte:window on:keydown={onKeydown} />
 <Toast />
 
 <style>

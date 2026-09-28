@@ -9,14 +9,14 @@
 
 import { get } from 'svelte/store'
 import { TWO_PI, freqRangeFromParams } from './approx.js'
-import { buildParams, formFromParams, validateForm } from './params.js'
+import { buildParams, formFromParams, validateForm, paramsClose } from './params.js'
 import { withRoots } from './roots.js'
 import { remapStages } from './stage-remap.js'
 import { buildStage, rootsModified } from './stages.js'
 import { getWorkerApi } from './worker-client.js'
 import {
   designForm, dataUnit, bodePoints, filterParams, filterResult, bodeData, stages,
-  engineStatus, designBusy, designError, toast, liveAdjusting,
+  engineStatus, designBusy, designError, toast, liveAdjusting, liveMode, templateDragging,
 } from '../stores/app.js'
 
 /**
@@ -161,4 +161,30 @@ function offerUndo(prev) {
       stages.set(prev.stages)
     },
   })
+}
+
+// ── Live mode (E6) ───────────────────────────────────────────────────────────
+// With liveMode on, any form change re-designs after a short pause. Denorm
+// (liveDenorm) and template drags (re-design on release) handle themselves.
+const LIVE_DEBOUNCE_MS = 200
+let liveTimer = null
+
+function liveTick() {
+  liveTimer = null
+  if (!get(liveMode) || get(liveAdjusting) || get(templateDragging)) return
+  const form = get(designForm)
+  if (Object.keys(validateForm(form)).length) return
+  const current = get(filterParams)
+  if (current && paramsClose(buildParams(form, toRadNow()), current)) return
+  runDesign()
+}
+
+/** Start watching the form for live mode; returns an unsubscribe function. */
+export function startLiveMode() {
+  const schedule = () => {
+    clearTimeout(liveTimer)
+    if (get(liveMode)) liveTimer = setTimeout(liveTick, LIVE_DEBOUNCE_MS)
+  }
+  const unsubs = [designForm.subscribe(schedule), liveMode.subscribe(schedule), templateDragging.subscribe(schedule)]
+  return () => { clearTimeout(liveTimer); unsubs.forEach(u => u()) }
 }

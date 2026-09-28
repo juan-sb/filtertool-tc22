@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import {
     bodeData, filterParams, comparisons, theme, compareDash, colorMode, colorShuffle, activeTab,
-    plotUnit, dataUnit, designForm, hoveredFields, designBusy,
+    plotUnit, dataUnit, designForm, hoveredFields, designBusy, templateDragging,
   } from '../../stores/app.js'
   import { APPROX_NAMES, plotColor, compareLine, freqAxis, freqRangeFromParams, TWO_PI } from '../../lib/approx.js'
   import { GD, DEFAULT_FORM, buildParams, formFromParams, paramsClose, validateForm } from '../../lib/params.js'
@@ -310,6 +310,7 @@
       const hy = h.y != null ? yPx(ya, h.y) : py
       drag = { kind: 'handle', h, gx: px - hx, gy: py - hy, startForm: { ...$designForm }, moved: false }
       dragging = true
+      templateDragging.set(true)
       setHover(h)
       setCursor(gd, h)
     } else if (curveHit(px, py) && liveDenorm.start()) {
@@ -387,6 +388,7 @@
     const d = drag
     drag = null
     dragging = false
+    templateDragging.set(false)
     label = null
     lastMove = null
     curveGuide = null

@@ -95,6 +95,12 @@ export const designError = writable('')
 /** True while a live control (denorm slider) is held: comparisons wait for release. */
 export const liveAdjusting = writable(false)
 
+/** True while a template handle is dragged (the release re-designs). */
+export const templateDragging = writable(false)
+
+/** E6: re-design automatically (debounced) whenever the form changes. */
+export const liveMode = persistedBool('filtertool.liveMode', false)
+
 /** One transient notice: { message, actionLabel?, onAction?, timeoutMs? } or null. */
 export const toast = writable(null)
 

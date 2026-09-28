@@ -236,6 +236,23 @@ And after a stage is moved, should the Pole-Zero tab show the moved roots (with 
 - **Q9:** comparisons recompute only on release / Design.
 - **Q10:** branch `web-qol`, one commit per milestone, delete the unused boilerplate.
 
+## 5c. Status (2026-09-28): all milestones done on `web-qol`
+
+| Milestone | Commits | Notes |
+|---|---|---|
+| M1 Foundations | `966d1ef` | B2 / B3 / T7 / Stages x-range on the WASM baseline; B1, B4, E2 were done upstream |
+| M2 Form | `0f9f14a`, `14e2a0b`…`255c30d` | Segmented type, approximation preview tiles (engine-drawn sketches, see `lib/approx-sketches.js`), two-thumb N slider, scrub fields, inline validation |
+| M3 Live template + drag | `a851321` | Handles, compliance chips / red segments (E1), form ↔ plot hover link |
+| M4 Live denorm | `e33bc50`, `eff3a05` | Slider and curve drag; stages remapped across redesigns (`REMAP_STAGES` flag); comparisons on release |
+| M5 Stages workspace | `ca2cdee`, `368df61`, `80c45f5` | T5 / T6 / T8, E3 (click-select, Auto-stage), E4 (f0 / Q / gain on cards, absorb Δ, reorder) |
+| M6 Extras | see `git log` | E5 shortcuts, E6 live mode, E7 GD template, E8 cleanup |
+
+Deviations from the brief worth knowing:
+- Curve drag for denorm maps pointer travel across the transition band to 0–100 % (a 1:1 follow would be ~5 px for the whole range).
+- Stage roots are draggable on both PZ maps; wheel-Q works on poles and stage curves, not on cards (it would fight card-list scrolling).
+- A redesign keeps stage gain offsets / normalization but resets moved roots to the new design (with a notice).
+- E5 crosshair: upstream's Cursor toggle already gives the readout; Plotly double-click resets the view.
+
 ## 6. Suggested milestones
 
 1. **Foundations** (done, rebuilt on the WASM baseline): `lib/params.js` (buildParams/formFromParams incl. B2/B3, validation mirroring the engine, unit rescale), `designForm` store, root identity model (T7, incl. Save/Load), Stages x-range (B5). B1 was fixed upstream; `lib/tf.js` dropped (Q5).
