@@ -3,7 +3,7 @@
   // (lib/approx-sketches.js) in its plot colour.
   import { createEventDispatcher } from 'svelte'
   import { APPROX_NAMES, plotColor } from '../../lib/approx.js'
-  import { loadSketches, sketchY, SKETCH_W, SKETCH_H, SKETCH_GP, SKETCH_GA } from '../../lib/approx-sketches.js'
+  import { loadSketches, sketchY, SKETCH_W, SKETCH_H } from '../../lib/approx-sketches.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { engineReady, theme, colorMode, colorShuffle } from '../../stores/app.js'
 
@@ -24,7 +24,7 @@
   ]
 
   const dispatch = createEventDispatcher()
-  let sketches = Array(7).fill(null)
+  let sketches = Array(7).fill(null)   // { path, ghost, gp, ga } per approximation
 
   $: if ($engineReady) loadSketches(getWorkerApi()).then(s => (sketches = s))
 
@@ -66,16 +66,18 @@
       aria-label={name}
       tabindex={value === i ? 0 : -1}
       disabled={!can(i)}
-      title={can(i) ? `${name}: ${TRAIT[i]}` : `${name}: ${disabledTitle}`}
+      title={can(i) ? `${name}: ${TRAIT[i]}${i ? ' (grey: Butterworth, same spec)' : ''}` : `${name}: ${disabledTitle}`}
       style="--c: {color}"
       on:click={() => pick(i)}
     >
       <svg viewBox="0 0 {SKETCH_W} {SKETCH_H}" preserveAspectRatio="none" aria-hidden="true">
-        <line class="guide" x1="0" y1={sketchY(SKETCH_GP)} x2={SKETCH_W} y2={sketchY(SKETCH_GP)} />
-        <line class="guide" x1="0" y1={sketchY(SKETCH_GA)} x2={SKETCH_W} y2={sketchY(SKETCH_GA)} />
         <line class="axis" x1="0" y1={SKETCH_H - 1} x2={SKETCH_W} y2={SKETCH_H - 1} />
         {#if sketches[i]}
-          <path d={sketches[i]} />
+          {@const sk = sketches[i]}
+          <line class="guide" x1="0" y1={sketchY(sk.gp)} x2={SKETCH_W} y2={sketchY(sk.gp)} />
+          <line class="guide" x1="0" y1={sketchY(sk.ga)} x2={SKETCH_W} y2={sketchY(sk.ga)} />
+          {#if sk.ghost}<path class="ghost" d={sk.ghost} />{/if}
+          {#if sk.path}<path class="curve" d={sk.path} />{/if}
         {/if}
       </svg>
       <span class="name">{SHORT[i]}</span>
@@ -126,11 +128,12 @@
   }
   path {
     fill: none;
-    stroke: var(--c);
-    stroke-width: 1.6;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
   }
+  .curve { stroke: var(--c); stroke-width: 1.6; }
+  /* Butterworth reference of the same spec */
+  .ghost { stroke: var(--text-dim); stroke-width: 1.1; opacity: 0.45; }
   .axis, .guide {
     stroke: var(--border);
     stroke-width: 1;
