@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte'
-  import { SI, formatSI as format } from '../lib/si.js'
+  import { SI, formatSI } from '../lib/si.js'
 
   export let value    = 1.0
   export let min      = -Infinity
@@ -14,6 +14,11 @@
   export let step     = 1
   /** Outline the field as invalid (form-level validation, e.g. fp ≥ fa). */
   export let invalid  = false
+  /** SI-prefix display (2.2k, 4.7n). false = plain number (dB, %, Q: 0.5 not "500m"). */
+  export let si       = true
+
+  const plain = v => (isFinite(v) ? parseFloat(v.toPrecision(5)).toString() : '—')
+  const format = v => (si ? formatSI(v) : plain(v))
 
   const dispatch = createEventDispatcher()
 

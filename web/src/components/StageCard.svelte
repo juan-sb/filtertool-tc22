@@ -90,7 +90,7 @@
       <NumField layout="stack" label="{fsym}₀" bind:value={f0Edit} unit={uLabel} min={1e-6} max={1e15} />
     {/if}
     {#if hasQ}
-      <NumField layout="stack" label="Q" bind:value={qEdit} min={Q_MIN} max={Q_MAX} />
+      <NumField layout="stack" label="Q" bind:value={qEdit} min={Q_MIN} max={Q_MAX} si={false} />
     {/if}
     <NumField layout="stack" label="Gain" bind:value={gEdit} unit="dB" min={-200} max={200} log={false} step={0.5}
       title="Gain offset on top of the normalization; drag to adjust" />

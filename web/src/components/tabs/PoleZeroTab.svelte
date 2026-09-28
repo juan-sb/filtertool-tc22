@@ -3,7 +3,7 @@
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { APPROX_NAMES, plotColor, sPlaneAxis } from '../../lib/approx.js'
   import { isComplexRoot, rootValue } from '../../lib/roots.js'
-  import { makeStage, buildStage, rootsModified } from '../../lib/stages.js'
+  import { makeStage, buildStage, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ } from '../../lib/stages.js'
   import { stageColor } from '../../lib/stage-colors.js'
   import PzMap from '../PzMap.svelte'
 
@@ -105,13 +105,12 @@
       const col = stageColor(i, $theme)
       const dim = hovStage != null && hovStage !== st.id
       const big = hovStage === st.id ? 4 : 0
-      const ref = `s:${st.id}`
       if (rootsModified(st)) {
         out.push({ roots: labelled(asRoots(st.orig.poles), k), symbol: 'x', color: col, size: 8, opacity: 0.3, name: `${st.name} poles (designed)`, showlegend: false })
         out.push({ roots: labelled(asRoots(st.orig.zeros), k), symbol: 'circle-open', color: col, size: 8, opacity: 0.3, name: `${st.name} zeros (designed)`, showlegend: false })
       }
-      out.push({ roots: labelled(asRoots(st.poles), k).map(r => ({ ...r, ref })), symbol: 'x', color: col, size: 9 + big, opacity: dim ? 0.35 : 1, name: `${st.name} poles` })
-      out.push({ roots: labelled(asRoots(st.zeros), k).map(r => ({ ...r, ref })), symbol: 'circle-open', color: col, size: 9 + big, opacity: dim ? 0.35 : 1, name: `${st.name} zeros` })
+      out.push({ roots: labelled(asRoots(st.poles), k).map((r, j) => ({ ...r, ref: rootRef(st.id, 'p', j) })), symbol: 'x', color: col, size: 9 + big, opacity: dim ? 0.35 : 1, name: `${st.name} poles` })
+      out.push({ roots: labelled(asRoots(st.zeros), k).map((r, j) => ({ ...r, ref: rootRef(st.id, 'z', j) })), symbol: 'circle-open', color: col, size: 9 + big, opacity: dim ? 0.35 : 1, name: `${st.name} zeros` })
     })
 
     // Unassigned roots: normal / hover / selected / selected + hover
@@ -144,6 +143,11 @@
     else { hoveredId = null; hoveredStageId.set(null) }
   }
 
+  const isStageRoot = ref => !!parseRootRef(ref)
+  const isStagePole = ref => parseRootRef(ref)?.kind === 'p'
+  const onMapDrag  = e => dragStageRoot(e.detail.ref, e.detail.re, e.detail.im, e.detail.snapIm)
+  const onMapWheel = e => { const r = parseRootRef(e.detail.ref); if (r) wheelStageQ(r.stageId, e.detail.dir) }
+
   // E3: click a root on the plot to (de)select it.
   function onMapClick(e) {
     const ref = e.detail.ref
@@ -164,8 +168,12 @@
       yLabel={axis.yLabel}
       active={$activeTab === 'poleZero'}
       resetKey={$filterResult}
+      canDrag={isStageRoot}
+      canWheel={isStagePole}
       on:hover={onMapHover}
       on:click={onMapClick}
+      on:drag={onMapDrag}
+      on:wheel={onMapWheel}
     />
   </div>
 
@@ -225,7 +233,9 @@
         <div class="div"></div>
         <div class="sec">Stages ({$stages.length})</div>
         {#each $stages as stage (stage.id)}
-          <div class="stage-row">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="stage-row" class:hov={$hoveredStageId === stage.id}
+            on:mouseenter={() => hoveredStageId.set(stage.id)} on:mouseleave={() => hoveredStageId.set(null)}>
             <span class="sname">{stage.name}</span>
             <span class="sdet">{stage.poles.length}P/{stage.zeros.length}Z</span>
             <button class="rm" on:click={() => stages.update(s => s.filter(st => st.id !== stage.id))}>×</button>
@@ -358,6 +368,7 @@
     min-width: 0;
   }
   .sname { font-size: 0.75rem; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .stage-row.hov { box-shadow: inset 0 0 0 1px var(--accent); }
   .sdet { font-size: 0.68rem; color: var(--text-dim); flex-shrink: 0; }
   .rm {
     background: none; border: none; color: var(--text-dim);

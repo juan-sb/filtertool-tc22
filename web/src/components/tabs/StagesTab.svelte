@@ -7,9 +7,11 @@
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { freqAxis, freqRangeFromParams, sPlaneAxis, TWO_PI } from '../../lib/approx.js'
   import { stageColor } from '../../lib/stage-colors.js'
-  import { normOmega, resolveNorm } from '../../lib/stage-math.js'
+  import { normOmega, resolveNorm, scaleRoots, poleSummary } from '../../lib/stage-math.js'
   import { tfAbs, toDb } from '../../lib/poly.js'
-  import { updateStage, resetAllStages, isModified, rootsModified } from '../../lib/stages.js'
+  import {
+    updateStage, resetAllStages, isModified, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ,
+  } from '../../lib/stages.js'
   import { formatSI } from '../../lib/si.js'
   import BodePlot from '../BodePlot.svelte'
   import PzMap from '../PzMap.svelte'
@@ -137,7 +139,7 @@
   }
 
   // ── PZ mini-map ───────────────────────────────────────────────────────────
-  const asRoots = (list, ref) => list.map(([re, im]) => ({ re, im, ref }))
+  const asRoots = (list, refOf) => list.map(([re, im], i) => ({ re, im, ref: refOf?.(i) }))
   $: mapGroups = (() => {
     const out = []
     const grey = $theme === 'light' ? '#8c959f' : '#6e7681'
@@ -150,8 +152,8 @@
         out.push({ roots: asRoots(s.orig.poles), symbol: 'x', color: col, size: 7, opacity: 0.3, name: `${s.name} (designed)` })
         out.push({ roots: asRoots(s.orig.zeros), symbol: 'circle-open', color: col, size: 7, opacity: 0.3, name: `${s.name} (designed)` })
       }
-      out.push({ roots: asRoots(s.poles, `s:${s.id}`), symbol: 'x', color: col, size: on ? 13 : 10, opacity: dim ? 0.3 : 1, name: `${s.name} poles` })
-      out.push({ roots: asRoots(s.zeros, `s:${s.id}`), symbol: 'circle-open', color: col, size: on ? 13 : 10, opacity: dim ? 0.3 : 1, name: `${s.name} zeros` })
+      out.push({ roots: asRoots(s.poles, i => rootRef(s.id, 'p', i)), symbol: 'x', color: col, size: on ? 13 : 10, opacity: dim ? 0.3 : 1, name: `${s.name} poles` })
+      out.push({ roots: asRoots(s.zeros, i => rootRef(s.id, 'z', i)), symbol: 'circle-open', color: col, size: on ? 13 : 10, opacity: dim ? 0.3 : 1, name: `${s.name} zeros` })
     })
     return out
   })()
@@ -160,6 +162,10 @@
     const ref = e.detail.ref
     hoveredStageId.set(ref?.startsWith('s:') ? Number(ref.split(':')[1]) : null)
   }
+  const isStageRoot = ref => !!parseRootRef(ref)
+  const isStagePole = ref => parseRootRef(ref)?.kind === 'p'
+  const onMapDrag  = e => dragStageRoot(e.detail.ref, e.detail.re, e.detail.im, e.detail.snapIm)
+  const onMapWheel = e => { const r = parseRootRef(e.detail.ref); if (r) wheelStageQ(r.stageId, e.detail.dir) }
 
   // ── Bode hover: nearest stage curve ───────────────────────────────────────
   let plot, gd
@@ -196,21 +202,104 @@
   }
 
   function rel(e) { const r = gd.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top] }
+
+  // ── Drag a stage curve: vertical = gain offset, horizontal = frequency scale
+  // (all its poles and zeros × ratio, so shape and Q are kept). Shift locks to
+  // the dominant axis; Esc restores.
+  let cdrag = null          // { id, zeros, poles, gainDb, x0, y0, f0, db0 }
+  let frozenY = null
+  let swallow = false
+  let dragLabel = null
+
+  function onBodeDown(e) {
+    if (e.button !== 0 || cdrag) return
+    const [px, py] = rel(e)
+    const s = stageAt(px, py)
+    if (!s) return
+    e.stopPropagation(); e.preventDefault(); swallow = true
+    const { xaxis: xa, yaxis: ya } = gd._fullLayout
+    frozenY = ya.range.slice()
+    cdrag = {
+      id: s.id, zeros: s.zeros, poles: s.poles, gainDb: s.gainDb ?? 0, x0: px, y0: py,
+      f0: xa.l2d(xa.p2l(px - xa._offset)), db0: ya.p2l(py - ya._offset),
+    }
+    hoveredStageId.set(s.id)
+    window.addEventListener('pointermove', onCurveMove)
+    window.addEventListener('pointerup', onCurveUp)
+    window.addEventListener('keydown', onCurveKey)
+  }
+  function onBodeMouseDown(e) {
+    if (!swallow) return
+    swallow = false
+    e.stopPropagation(); e.preventDefault()
+  }
+  function onCurveMove(e) {
+    if (!cdrag) return
+    const [px, py] = rel(e)
+    const { xaxis: xa, yaxis: ya } = gd._fullLayout
+    let dx = px - cdrag.x0, dy = py - cdrag.y0
+    if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0 }
+    const ratio = xa.l2d(xa.p2l(cdrag.x0 + dx - xa._offset)) / cdrag.f0
+    const dDb = ya.p2l(cdrag.y0 + dy - ya._offset) - cdrag.db0
+    updateStage(cdrag.id, {
+      zeros: scaleRoots(cdrag.zeros, ratio), poles: scaleRoots(cdrag.poles, ratio), gainDb: cdrag.gainDb + dDb,
+    })
+    const w0 = poleSummary(scaleRoots(cdrag.poles, ratio)).w0
+    const uf = $dataUnit === 'rad' ? TWO_PI : 1
+    dragLabel = {
+      x: px + 14, y: py - 30,
+      text: `${w0 ? `${$dataUnit === 'rad' ? 'ω' : 'f'}₀ ${formatSI((w0 / TWO_PI) * uf)} ${$dataUnit === 'rad' ? 'rad/s' : 'Hz'} · ` : ''}gain ${fmtDb(cdrag.gainDb + dDb)}`,
+    }
+  }
+  function endCurveDrag() {
+    window.removeEventListener('pointermove', onCurveMove)
+    window.removeEventListener('pointerup', onCurveUp)
+    window.removeEventListener('keydown', onCurveKey)
+    cdrag = null
+    frozenY = null
+    dragLabel = null
+  }
+  function onCurveUp() { endCurveDrag() }
+  function onCurveKey(e) {
+    if (e.key !== 'Escape' || !cdrag) return
+    e.preventDefault()
+    updateStage(cdrag.id, { zeros: cdrag.zeros, poles: cdrag.poles, gainDb: cdrag.gainDb })
+    endCurveDrag()
+  }
+  // Wheel over a stage curve: its Q (2-pole stages)
+  function onBodeWheel(e) {
+    const s = stageAt(...rel(e))
+    if (!s || s.poles.length !== 2) return
+    e.preventDefault(); e.stopPropagation()
+    wheelStageQ(s.id, e.deltaY < 0 ? 1 : -1)
+  }
+
   let ownHover = false
   function onBodeMove(e) {
+    if (cdrag) return
+    if (gd) gd.dataset.stageCursor = stageAt(...rel(e)) ? 'grab' : ''
     if (e.buttons) return
     const s = stageAt(...rel(e))
     if (s) { hoveredStageId.set(s.id); ownHover = true }
     else if (ownHover) { hoveredStageId.set(null); ownHover = false }
   }
-  function onBodeLeave() { if (ownHover) { hoveredStageId.set(null); ownHover = false } }
+  function onBodeLeave() { if (!cdrag && ownHover) { hoveredStageId.set(null); ownHover = false } }
 
   onMount(() => {
     gd = plot?.plotElement()
     gd?.addEventListener('pointermove', onBodeMove)
     gd?.addEventListener('pointerleave', onBodeLeave)
+    gd?.addEventListener('pointerdown', onBodeDown, true)
+    gd?.addEventListener('mousedown', onBodeMouseDown, true)
+    gd?.addEventListener('touchstart', onBodeMouseDown, true)
+    gd?.addEventListener('wheel', onBodeWheel, { capture: true, passive: false })
   })
   onDestroy(() => {
+    endCurveDrag()
+    gd?.removeEventListener('pointerdown', onBodeDown, true)
+    gd?.removeEventListener('mousedown', onBodeMouseDown, true)
+    gd?.removeEventListener('touchstart', onBodeMouseDown, true)
+    gd?.removeEventListener('wheel', onBodeWheel, { capture: true })
     gd?.removeEventListener('pointermove', onBodeMove)
     gd?.removeEventListener('pointerleave', onBodeLeave)
     if (ownHover) hoveredStageId.set(null)
@@ -222,8 +311,11 @@
 
 <div class="stages-tab">
   <div class="bode">
-    <BodePlot bind:this={plot} {traces} {yLabel} {xRange} xLabel={axis.xLabel} uirevision={`stages-${$plotUnit}`}
+    <BodePlot bind:this={plot} {traces} {yLabel} {xRange} yRange={frozenY} xLabel={axis.xLabel} uirevision={`stages-${$plotUnit}`}
       filename="filtool_stages" {active}>
+      {#if dragLabel}
+        <div class="drag-label" style="left: {dragLabel.x}px; top: {dragLabel.y}px">{dragLabel.text}</div>
+      {/if}
       {#if !$stages.length}
         <div class="empty">
           {#if $filterResult}
@@ -239,7 +331,8 @@
   <aside class="side">
     <div class="map">
       <PzMap groups={mapGroups} scale={sAxis.scale} compact {active} resetKey={$filterResult}
-        filename="filtool_stages_pz" on:hover={onMapHover} />
+        filename="filtool_stages_pz" canDrag={isStageRoot} canWheel={isStagePole}
+        on:hover={onMapHover} on:drag={onMapDrag} on:wheel={onMapWheel} />
     </div>
 
     <div class="bar">
@@ -270,6 +363,14 @@
 <style>
   .stages-tab { display: flex; height: 100%; min-height: 0; overflow: hidden; }
   .bode { flex: 1; min-width: 0; position: relative; }
+  .drag-label {
+    position: absolute; pointer-events: none; z-index: 6;
+    font-size: 0.76rem; font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+    padding: 0.2rem 0.45rem; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); white-space: nowrap;
+  }
+  :global(.js-plotly-plot[data-stage-cursor='grab'] .nsewdrag) { cursor: grab !important; }
   .empty {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     padding: 2rem; color: var(--text-dim); font-size: 0.85rem; pointer-events: none; text-align: center;

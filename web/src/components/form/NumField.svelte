@@ -13,6 +13,8 @@
   /** Log (×/÷) nudging and scrubbing — frequencies, times. Otherwise linear by `step`. */
   export let log = true
   export let step = 1
+  /** SI-prefix display; defaults to on for log (frequency) fields, off for dB / % / linear. */
+  export let si = log
   /** Validation message for this field, or '' / undefined. */
   export let error = ''
   /** 'row' = label beside the input, 'stack' = label above. */
@@ -37,7 +39,7 @@
     title={title || `Drag to adjust ${label}${log ? '' : ` (${step} ${unit} per 4 px)`}; Shift = fine`}
     use:scrub={{ get: () => value, set: v => (value = v), log, step, min, max }}
   >{#if group}<i class="mark {group}" aria-hidden="true"></i>{/if}{label}</span>
-  <SciInput bind:value {unit} {min} {max} logNudge={log} {step} invalid={!!error} on:change />
+  <SciInput bind:value {unit} {min} {max} {si} logNudge={log} {step} invalid={!!error} on:change />
   {#if error}<span class="hint">{error}</span>{/if}
 </div>
 

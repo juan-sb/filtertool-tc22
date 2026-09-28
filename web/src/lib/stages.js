@@ -16,6 +16,7 @@
 import { get } from 'svelte/store'
 import { getWorkerApi } from './worker-client.js'
 import { stages, filterParams } from '../stores/app.js'
+import { moveRoot, withQ, poleSummary } from './stage-math.js'
 
 const snapshot = s => ({ zeros: s.zeros, poles: s.poles, normtype: s.normtype, gainDb: s.gainDb })
 
@@ -99,4 +100,37 @@ export function resetAllStages() {
 
 export function removeStage(id) {
   stages.update(list => list.filter(s => s.id !== id))
+}
+
+// ── Root interaction on PZ maps ─────────────────────────────────────────────
+// Staged roots on a PzMap use refs 's:<stageId>:<p|z>:<index>'.
+
+export const rootRef = (stageId, kind, index) => `s:${stageId}:${kind}:${index}`
+
+/** { stageId, kind: 'p' | 'z', index } or null. */
+export function parseRootRef(ref) {
+  const m = typeof ref === 'string' && ref.match(/^s:([^:]+):([pz]):(\d+)$/)
+  return m ? { stageId: Number(m[1]), kind: m[2], index: Number(m[3]) } : null
+}
+
+/** Drag a staged root to (re, im) rad/s; poles stay in the LHP. */
+export function dragStageRoot(ref, re, im, snapIm) {
+  const r = parseRootRef(ref)
+  if (!r) return
+  updateStage(r.stageId, s => {
+    const list = r.kind === 'p' ? s.poles : s.zeros
+    if (r.index >= list.length) return {}
+    const scale = Math.max(1e-12, ...s.poles.map(([a, b]) => Math.hypot(a, b)))
+    const moved = moveRoot(list, r.index, [re, im], { snapIm, lhp: r.kind === 'p', minRe: 1e-6 * scale })
+    return r.kind === 'p' ? { poles: moved } : { zeros: moved }
+  })
+}
+
+/** Wheel over a pole: Q × 1.1^dir at fixed ω0 (2-pole stages). */
+export function wheelStageQ(stageId, dir) {
+  updateStage(stageId, s => {
+    if (s.poles.length !== 2) return {}
+    const { q } = poleSummary(s.poles)
+    return Number.isFinite(q) ? { poles: withQ(s.poles, q * Math.pow(1.1, dir)) } : {}
+  })
 }
