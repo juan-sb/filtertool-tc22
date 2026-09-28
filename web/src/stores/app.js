@@ -86,6 +86,9 @@ export const designForm = writable({ ...DEFAULT_FORM })
 /** Form fields whose template edge is hovered (form ↔ plot link), e.g. ['fp'] or ['fa', 'aaDb']. */
 export const hoveredFields = writable([])
 
+/** Stage under the pointer (stage card, stage curve or one of its roots): highlights it everywhere. */
+export const hoveredStageId = writable(null)
+
 /** Design action state (lib/design-action.js). */
 export const designBusy  = writable(false)
 export const designError = writable('')

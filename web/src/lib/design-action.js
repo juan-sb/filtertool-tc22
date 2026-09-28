@@ -12,6 +12,7 @@ import { TWO_PI, freqRangeFromParams } from './approx.js'
 import { buildParams, formFromParams, validateForm } from './params.js'
 import { withRoots } from './roots.js'
 import { remapStages } from './stage-remap.js'
+import { buildStage, rootsModified } from './stages.js'
 import { getWorkerApi } from './worker-client.js'
 import {
   designForm, dataUnit, bodePoints, filterParams, filterResult, bodeData, stages,
@@ -126,11 +127,20 @@ async function carryStages(api, prev, params, result) {
       && prev.params.approx_type === params.approx_type) {
     const moved = remapStages(prev.stages, prev.result.roots, result.roots)
     if (moved) {
+      // Roots follow the new design (user root edits are dropped); normalization
+      // and gain offset carry over. orig = the stage as it now stands on the new design.
+      const hadRootEdits = prev.stages.some(rootsModified)
       const rebuilt = await Promise.all(moved.map(async s => {
-        const r = await api.buildStageFromZPK(s.zeros, s.poles, 1, s.normtype ?? 'Passband', params.filter_type)
-        return r.error ? null : { ...s, gain: r.gain, num: r.num, den: r.den }
+        const next = {
+          ...s,
+          orig: { zeros: s.zeros, poles: s.poles, normtype: s.orig?.normtype ?? s.normtype, gainDb: s.orig?.gainDb ?? 0 },
+        }
+        try { return await buildStage(api, next, params.filter_type) } catch { return null }
       }))
-      if (rebuilt.every(Boolean)) return rebuilt
+      if (rebuilt.every(Boolean)) {
+        if (hadRootEdits) toast.set({ message: 'Stages follow the new design: moved poles / zeros were reset.', timeoutMs: 6000 })
+        return rebuilt
+      }
     }
   }
   offerUndo(prev)

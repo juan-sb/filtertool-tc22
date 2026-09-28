@@ -1,16 +1,11 @@
 <script>
-  import { onMount, onDestroy } from 'svelte'
-  import Plotly from 'plotly.js-dist'
-  import { filterResult, filterParams, stages, remainingPZ, comparisons, theme, colorMode, colorShuffle, showLegend, activeTab, plotUnit, dataUnit, plotCursor } from '../../stores/app.js'
+  import { filterResult, filterParams, stages, remainingPZ, comparisons, theme, colorMode, colorShuffle, activeTab, plotUnit, dataUnit, hoveredStageId } from '../../stores/app.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { APPROX_NAMES, plotColor, sPlaneAxis } from '../../lib/approx.js'
   import { isComplexRoot, rootValue } from '../../lib/roots.js'
-
-  let container
-  let plotMounted = false
-  let destroyed = false
-  let resizeObserver
-  let wasActive = false
+  import { makeStage, buildStage, rootsModified } from '../../lib/stages.js'
+  import { stageColor } from '../../lib/stage-colors.js'
+  import PzMap from '../PzMap.svelte'
 
   // Selection / hover state, by root id (lib/roots.js): repeated roots such as
   // the band-pass zeros at s = 0 stay individually selectable.
@@ -67,17 +62,15 @@
     addError = ''
     try {
       const api = getWorkerApi()
-      const zeros = selectedZeros.map(rootValue), poles = selectedPoles.map(rootValue)
-      const result = await api.buildStageFromZPK(zeros, poles, 1, normtype, $filterParams?.filter_type ?? 0)
-      if (result.error) { addError = result.error; return }
-      const id = Date.now()
-      const name = `Stage ${($stages.length ?? 0) + 1}`
-      stages.update(s => [...s, {
-        id, name, normtype,
+      const stage = makeStage({
+        id: Date.now(),
+        name: `Stage ${($stages.length ?? 0) + 1}`,
         zeroIds: selectedZeros.map(r => r.id), poleIds: selectedPoles.map(r => r.id),
-        zeros, poles,
-        gain: result.gain, num: result.num, den: result.den,
-      }])
+        zeros: selectedZeros.map(rootValue), poles: selectedPoles.map(rootValue),
+        normtype,
+      })
+      const built = await buildStage(api, stage, $filterParams?.filter_type ?? 0)
+      stages.update(s => [...s, built])
       selectedIds = new Set()
     } catch (e) {
       addError = e.message
@@ -86,198 +79,95 @@
     }
   }
 
-  // ── Plotly ─────────────────────────────────────────────────────────────────
-  $: C = $theme === 'light'
-    ? { hi: '#1f2328', used: '#8c959f', unit: '#d0d7de', grid: '#d8dee4', bg: '#f6f8fa', axis: '#afb8c1', zero: '#afb8c1' }
-    : { hi: '#e6edf3', used: '#484f58', unit: '#30363d', grid: '#21262d', bg: '#0d1117', axis: '#484f58', zero: '#52565c' }
-
+  // ── Pole-zero map ──────────────────────────────────────────────────────────
+  $: C = $theme === 'light' ? { hi: '#1f2328' } : { hi: '#e6edf3' }
   $: mainColor = plotColor($filterParams?.approx_type ?? 0, $theme, $colorMode, $colorShuffle)
 
-  function buildTraces(fr, remaining, selIds, hovId, mainCol, compList, k) {
-    if (!fr?.roots) return []
-    const avail = new Set([...(remaining.zeros ?? []), ...(remaining.poles ?? [])].map(r => r.id))
-    const θ = Array.from({ length: 361 }, (_, i) => i * Math.PI / 180)
-    // Unit circle (|s| = 1 rad/s) only — Re/Im axes come from Plotly zerolines
-    // (avoids double-thick axes).
-    const out = [
-      { x: θ.map(t => Math.cos(t) * k), y: θ.map(t => Math.sin(t) * k),
-        mode: 'lines', line: { color: C.unit, width: 1, dash: 'dot' },
-        hoverinfo: 'skip', showlegend: false },
-    ]
+  const asRoots = list => list.map(([re, im]) => ({ re, im }))
+  const labelled = (rs, k) => rs.map(r => ({ ...r, label: fmtComplex(r, k) }))
 
-    // Hover set: hovered root + its conjugate (so both of a complex pair light up)
+  // Refs: 'r:<root id>' for unassigned roots (selectable), 's:<stage id>' for staged ones.
+  function buildGroups(fr, remaining, stageList, selIds, hovId, hovStage, mainCol, compList, k) {
+    if (!fr?.roots) return []
+    const out = []
+
+    // Comparison filters behind the main filter
+    for (const comp of compList ?? []) {
+      const cc = plotColor(comp.approxType, $theme, $colorMode, $colorShuffle)
+      const cn = APPROX_NAMES[comp.approxType]
+      out.push({ roots: labelled(asRoots(comp.filterResult.poles), k), symbol: 'x', color: cc, size: 7, name: `${cn} poles` })
+      out.push({ roots: labelled(asRoots(comp.filterResult.zeros), k), symbol: 'circle-open', color: cc, size: 7, name: `${cn} zeros` })
+    }
+
+    // Staged roots, in their stage's colour, at their current (possibly moved)
+    // position; a faint ghost marks where a moved root was designed.
+    stageList.forEach((st, i) => {
+      const col = stageColor(i, $theme)
+      const dim = hovStage != null && hovStage !== st.id
+      const big = hovStage === st.id ? 4 : 0
+      const ref = `s:${st.id}`
+      if (rootsModified(st)) {
+        out.push({ roots: labelled(asRoots(st.orig.poles), k), symbol: 'x', color: col, size: 8, opacity: 0.3, name: `${st.name} poles (designed)`, showlegend: false })
+        out.push({ roots: labelled(asRoots(st.orig.zeros), k), symbol: 'circle-open', color: col, size: 8, opacity: 0.3, name: `${st.name} zeros (designed)`, showlegend: false })
+      }
+      out.push({ roots: labelled(asRoots(st.poles), k).map(r => ({ ...r, ref })), symbol: 'x', color: col, size: 9 + big, opacity: dim ? 0.35 : 1, name: `${st.name} poles` })
+      out.push({ roots: labelled(asRoots(st.zeros), k).map(r => ({ ...r, ref })), symbol: 'circle-open', color: col, size: 9 + big, opacity: dim ? 0.35 : 1, name: `${st.name} zeros` })
+    })
+
+    // Unassigned roots: normal / hover / selected / selected + hover
     const hoverSet = new Set()
     if (hovId) {
       hoverSet.add(hovId)
-      const hovRoot = [...fr.roots.zeros, ...fr.roots.poles].find(r => r.id === hovId)
-      if (hovRoot && isComplexRoot(hovRoot)) hoverSet.add(hovRoot.conj)
+      const h = [...fr.roots.zeros, ...fr.roots.poles].find(r => r.id === hovId)
+      if (h && isComplexRoot(h)) hoverSet.add(h.conj)
     }
-
-    // Partition each group into: normal / hoverOnly / selOnly / selHover
-    function partition(pts) {
-      const normal = [], hoverOnly = [], selOnly = [], selHover = []
-      for (const pt of pts) {
-        const h = hoverSet.has(pt.id), s = selIds.has(pt.id)
-        if (s && h)       selHover.push(pt)
-        else if (s)       selOnly.push(pt)
-        else if (h)       hoverOnly.push(pt)
-        else              normal.push(pt)
-      }
-      return { normal, hoverOnly, selOnly, selHover }
+    const part = (pts, symbol, noun) => {
+      const buckets = [[], [], [], []]   // normal, hover, selected, selected+hover
+      for (const r of pts) buckets[(selIds.has(r.id) ? 2 : 0) + (hoverSet.has(r.id) ? 1 : 0)].push({ ...r, ref: `r:${r.id}` })
+      const [n, h, sel, sh] = buckets
+      if (n.length)   out.push({ roots: labelled(n, k),   symbol, color: mainCol, size: 10, name: `${noun}` })
+      if (h.length)   out.push({ roots: labelled(h, k),   symbol, color: C.hi,    size: 12, name: `${noun} (hover)` })
+      if (sel.length) out.push({ roots: labelled(sel, k), symbol, color: C.hi,    size: 14, name: `Selected ${noun.toLowerCase()}` })
+      if (sh.length)  out.push({ roots: labelled(sh, k),  symbol, color: C.hi,    size: 16, name: `Selected ${noun.toLowerCase()} (hover)` })
     }
-
-    const usedPoles = fr.roots.poles.filter(p => !avail.has(p.id))
-    const usedZeros = fr.roots.zeros.filter(z => !avail.has(z.id))
-    const { normal: nP, hoverOnly: hoP, selOnly: soP, selHover: shP } = partition(remaining.poles ?? [])
-    const { normal: nZ, hoverOnly: hoZ, selOnly: soZ, selHover: shZ } = partition(remaining.zeros ?? [])
-
-    // Comparison filters drawn first (behind main filter)
-    for (const comp of (compList ?? [])) {
-      const cc = plotColor(comp.approxType, $theme, $colorMode, $colorShuffle)
-      const cn = APPROX_NAMES[comp.approxType]
-      const asRoots = list => list.map(([re, im]) => ({ re, im }))
-      if (comp.filterResult.poles.length) out.push(mkX(asRoots(comp.filterResult.poles), cc, 7, `${cn} poles`, k))
-      if (comp.filterResult.zeros.length) out.push(mkO(asRoots(comp.filterResult.zeros), cc, 7, `${cn} zeros`, k))
-    }
-
-    // Main filter
-    if (usedPoles.length) out.push(mkX(usedPoles, C.used,  8,  'Used poles', k))
-    if (usedZeros.length) out.push(mkO(usedZeros, C.used,  8,  'Used zeros', k))
-    if (nP.length)        out.push(mkX(nP,        mainCol, 10, 'Poles', k))
-    if (nZ.length)        out.push(mkO(nZ,        mainCol, 10, 'Zeros', k))
-    if (hoP.length)       out.push(mkX(hoP,       C.hi,    12, 'Poles (hover)', k))
-    if (hoZ.length)       out.push(mkO(hoZ,       C.hi,    12, 'Zeros (hover)', k))
-    if (soP.length)       out.push(mkX(soP,       C.hi,    14, 'Selected poles', k))
-    if (soZ.length)       out.push(mkO(soZ,       C.hi,    14, 'Selected zeros', k))
-    if (shP.length)       out.push(mkX(shP,       C.hi,    16, 'Selected poles (hover)', k))
-    if (shZ.length)       out.push(mkO(shZ,       C.hi,    16, 'Selected zeros (hover)', k))
+    part(remaining.poles ?? [], 'x', 'Poles')
+    part(remaining.zeros ?? [], 'circle-open', 'Zeros')
     return out
   }
 
-  function mkX(pts, color, size, name, k) {
-    return {
-      x: pts.map(p => p.re * k), y: pts.map(p => p.im * k),
-      mode: 'markers', name,
-      marker: { symbol: 'x', size, color, line: { width: 2, color } },
-      hovertemplate: pts.map(p => `${fmtComplex(p, k)}<extra>${name}</extra>`),
-    }
+  $: groups = buildGroups($filterResult, $remainingPZ, $stages, selectedIds, hoveredId, $hoveredStageId, mainColor, $comparisons, axis.scale)
+
+  function onMapHover(e) {
+    const ref = e.detail.ref
+    if (ref?.startsWith('r:')) { hoveredId = ref.slice(2); hoveredStageId.set(null) }
+    else if (ref?.startsWith('s:')) { hoveredId = null; hoveredStageId.set(Number(ref.slice(2))) }
+    else { hoveredId = null; hoveredStageId.set(null) }
   }
 
-  function mkO(pts, color, size, name, k) {
-    return {
-      x: pts.map(p => p.re * k), y: pts.map(p => p.im * k),
-      mode: 'markers', name,
-      marker: { symbol: 'circle-open', size, color, line: { width: 2 } },
-      hovertemplate: pts.map(p => `${fmtComplex(p, k)}<extra>${name}</extra>`),
-    }
+  // E3: click a root on the plot to (de)select it.
+  function onMapClick(e) {
+    const ref = e.detail.ref
+    if (!ref?.startsWith('r:')) return
+    const id = ref.slice(2)
+    const root = [...($remainingPZ.zeros ?? []), ...($remainingPZ.poles ?? [])].find(r => r.id === id)
+    if (root) toggleRoot(root)
   }
-
-  const mkLayout = () => {
-    const text = $theme === 'light' ? '#1f2328' : '#e6edf3'
-    const baseFont = { color: text, size: 12, family: 'system-ui, sans-serif' }
-    const tickFont = { color: text, size: 11, family: 'system-ui, sans-serif' }
-    return {
-    paper_bgcolor: C.bg, plot_bgcolor: C.bg,
-    font: baseFont,
-    showlegend: $showLegend,
-    margin: { t: 36, b: 56, l: 64, r: 24 },
-    legend: {
-      bgcolor:     $theme === 'light' ? '#ffffff' : '#161b22',
-      bordercolor: $theme === 'light' ? '#d0d7de' : '#30363d',
-      borderwidth: 1,
-      font:        { size: 11, family: 'system-ui, sans-serif' },
-      x: 1, xanchor: 'right',
-      y: 0.98, yanchor: 'top',
-      tracegroupgap: 4,
-    },
-    hovermode: $plotCursor ? 'closest' : false,
-    xaxis: {
-      title: { text: axis.xLabel, standoff: 8, font: baseFont },
-      gridcolor: C.grid,
-      linecolor: C.axis,
-      tickcolor: C.axis,
-      tickfont: tickFont,
-      zeroline: true,
-      zerolinecolor: C.zero,
-      zerolinewidth: 1.5,
-      scaleanchor: 'y', scaleratio: 1,
-    },
-    yaxis: {
-      title: { text: axis.yLabel, standoff: 8, font: baseFont },
-      gridcolor: C.grid,
-      linecolor: C.axis,
-      tickcolor: C.axis,
-      tickfont: tickFont,
-      zeroline: true,
-      zerolinecolor: C.zero,
-      zerolinewidth: 1.5,
-    },
-    modebar: {
-      color:       $theme === 'light' ? '#57606a' : '#7d8590',
-      activecolor: $theme === 'light' ? '#0969da' : '#58a6ff',
-      bgcolor:     $theme === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(22,27,34,0.85)',
-    },
-  }
-  }
-
-  const cfg = { responsive: true, displaylogo: false,
-    toImageButtonOptions: { format: 'svg', filename: 'filtool_pz' } }
-
-  function refreshTitles() {
-    if (!plotMounted || destroyed || !container) return
-    Plotly.react(
-      container,
-      buildTraces($filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, axis.scale),
-      mkLayout(),
-      cfg,
-    )
-    Plotly.Plots.resize(container)
-  }
-
-  $: if (plotMounted && $activeTab === 'poleZero' && !wasActive) {
-    wasActive = true
-    requestAnimationFrame(() => requestAnimationFrame(refreshTitles))
-  } else if ($activeTab !== 'poleZero') {
-    wasActive = false
-  }
-
-  function mountPlot() {
-    if (!container || destroyed) return
-    Plotly.newPlot(container, buildTraces($filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
-    plotMounted = true
-    wasActive = $activeTab === 'poleZero'
-    resizeObserver = new ResizeObserver(() => {
-      if (plotMounted && !destroyed && container) Plotly.Plots.resize(container)
-    })
-    resizeObserver.observe(container)
-    // Layout may not be final on first paint (esp. when tab was visibility-hidden).
-    requestAnimationFrame(() => {
-      if (plotMounted && !destroyed && container) {
-        Plotly.Plots.resize(container)
-        if ($activeTab === 'poleZero') refreshTitles()
-      }
-    })
-  }
-
-  function updatePlot() {
-    if (!plotMounted || destroyed || !container) return
-    Plotly.react(container, buildTraces($filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
-  }
-
-  $: updatePlot(), [$filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, $theme, $colorMode, $colorShuffle, $showLegend, axis, $plotCursor]
-
-  onMount(mountPlot)
-  onDestroy(() => {
-    destroyed = true
-    plotMounted = false
-    resizeObserver?.disconnect()
-    if (container) Plotly.purge(container)
-  })
 </script>
 
 <div class="pz-tab">
   <!-- Plot -->
-  <div class="plot-wrap" bind:this={container}></div>
+  <div class="plot-wrap">
+    <PzMap
+      {groups}
+      scale={axis.scale}
+      xLabel={axis.xLabel}
+      yLabel={axis.yLabel}
+      active={$activeTab === 'poleZero'}
+      resetKey={$filterResult}
+      on:hover={onMapHover}
+      on:click={onMapClick}
+    />
+  </div>
 
   <!-- Selection panel -->
   <div class="panel">

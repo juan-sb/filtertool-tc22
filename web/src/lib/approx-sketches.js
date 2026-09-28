@@ -10,6 +10,7 @@
 // moves it to ω ≈ 1.05 and the narrower span gives the transition room.
 
 import { buildParams, DEFAULT_FORM, LP } from './params.js'
+import { polyAbs } from './poly.js'
 
 export const SKETCH_W = 40, SKETCH_H = 20
 
@@ -18,13 +19,6 @@ const SPECS = [BASE, BASE, BASE, { ...BASE, n: 3, gp: 0.8, wMax: 1.6 }, BASE, BA
 const POINTS = 300, A_MAX = 1.05
 
 let cache = null
-
-/** |P(jω)| for descending-power real coefficients. */
-function polyAbs(c, w) {
-  let re = 0, im = 0
-  for (const a of c) [re, im] = [a - im * w, re * w]   // Horner: P ← P·jω + a
-  return Math.hypot(re, im)
-}
 
 /** y of amplitude a in sketch coordinates. */
 export const sketchY = a => 1 + (1 - Math.min(A_MAX, a) / A_MAX) * (SKETCH_H - 2)

@@ -5,6 +5,7 @@
 
 import { freqRangeFromParams } from './approx.js'
 import { withRoots } from './roots.js'
+import { makeStage, buildStage } from './stages.js'
 
 export const DESIGN_FILE_VERSION = 1
 export const DESIGN_FILE_EXT = '.ftjson'
@@ -33,6 +34,8 @@ export function serializeDesign(state) {
       zeros: s.zeros,
       poles: s.poles,
       normtype: s.normtype,
+      gainDb: s.gainDb ?? 0,
+      orig: s.orig,
       gain: s.gain,
       num: s.num,
       den: s.den,
@@ -162,18 +165,25 @@ export async function materializeDesign(design, api, onStatus) {
   }
   const stages = []
   for (const s of design.stages) {
-    const zeros = claim(result.roots.zeros, s.zeros)
-    const poles = claim(result.roots.poles, s.poles)
+    // Match on the roots as built (moved roots keep their saved position).
+    const moved = Array.isArray(s.orig?.zeros) && Array.isArray(s.orig?.poles)
+    const zeros = claim(result.roots.zeros, moved ? s.orig.zeros : s.zeros)
+    const poles = claim(result.roots.poles, moved ? s.orig.poles : s.poles)
     if (!poles.length && !zeros.length) continue
-    stages.push({
+    const complete = zeros.length === (s.zeros ?? []).length && poles.length === (s.poles ?? []).length
+    const designed = { zeros: zeros.map(r => [r.re, r.im]), poles: poles.map(r => [r.re, r.im]) }
+    stages.push(makeStage({
       id: s.id ?? Date.now() + stages.length,
       name: s.name || `Stage ${stages.length + 1}`,
-      normtype: s.normtype ?? 'Passband',
       zeroIds: zeros.map(r => r.id), poleIds: poles.map(r => r.id),
-      zeros: zeros.map(r => [r.re, r.im]), poles: poles.map(r => [r.re, r.im]),
-      gain: s.gain, num: s.num, den: s.den,
-    })
+      ...(moved && complete ? { zeros: s.zeros, poles: s.poles } : designed),
+      normtype: s.normtype ?? 'Passband',
+      gainDb: Number(s.gainDb) || 0,
+      orig: { ...designed, normtype: s.orig?.normtype ?? s.normtype ?? 'Passband', gainDb: Number(s.orig?.gainDb) || 0 },
+    }))
   }
+  // num / den from the engine, so they always match the stage values.
+  for (let i = 0; i < stages.length; i++) stages[i] = await buildStage(api, stages[i], params.filter_type)
 
   return {
     filterParams: params,
