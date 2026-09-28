@@ -15,14 +15,16 @@
 
 import { get } from 'svelte/store'
 import { getWorkerApi } from './worker-client.js'
-import { stages, filterParams } from '../stores/app.js'
+import { stages, filterParams, filterResult, remainingPZ } from '../stores/app.js'
+import { autoStages } from './auto-stage.js'
+import { nextColorIndex } from './stage-colors.js'
 import { moveRoot, withQ, poleSummary } from './stage-math.js'
 
 const snapshot = s => ({ zeros: s.zeros, poles: s.poles, normtype: s.normtype, gainDb: s.gainDb })
 
 /** A new stage from selected roots. */
-export function makeStage({ id, name, zeroIds, poleIds, zeros, poles, normtype = 'Passband', gainDb = 0, orig = null }) {
-  const s = { id, name, zeroIds, poleIds, zeros, poles, normtype, gainDb }
+export function makeStage({ id, name, zeroIds, poleIds, zeros, poles, normtype = 'Passband', gainDb = 0, orig = null, colorIndex = null }) {
+  const s = { id, name, zeroIds, poleIds, zeros, poles, normtype, gainDb, colorIndex }
   return { ...s, orig: orig ?? snapshot(s) }
 }
 
@@ -132,5 +134,39 @@ export function wheelStageQ(stageId, dir) {
     if (s.poles.length !== 2) return {}
     const { q } = poleSummary(s.poles)
     return Number.isFinite(q) ? { poles: withQ(s.poles, q * Math.pow(1.1, dir)) } : {}
+  })
+}
+
+/** Build stages from all unassigned roots (lib/auto-stage.js) and append them. */
+export async function autoStage() {
+  const fr = get(filterResult)
+  if (!fr?.roots) return 0
+  const { sections } = autoStages(get(remainingPZ))
+  if (!sections.length) return 0
+  const byId = new Map([...fr.roots.zeros, ...fr.roots.poles].map(r => [r.id, [r.re, r.im]]))
+  const ft = get(filterParams)?.filter_type ?? 0
+  const base = get(stages).length
+  const color0 = nextColorIndex(get(stages))
+  const api = getWorkerApi()
+  const built = await Promise.all(sections.map((sec, i) => buildStage(api, makeStage({
+    id: Date.now() + i,
+    name: `Stage ${base + i + 1}`,
+    colorIndex: color0 + i,
+    zeroIds: sec.zeroIds, poleIds: sec.poleIds,
+    zeros: sec.zeroIds.map(id => byId.get(id)), poles: sec.poleIds.map(id => byId.get(id)),
+  }), ft)))
+  stages.update(list => [...list, ...built])
+  return built.length
+}
+
+/** Move a stage to position `to` in the list (cascade order). */
+export function moveStage(id, to) {
+  stages.update(list => {
+    const from = list.findIndex(s => s.id === id)
+    if (from < 0 || to === from) return list
+    const next = list.slice()
+    const [s] = next.splice(from, 1)
+    next.splice(Math.max(0, Math.min(next.length, to)), 0, s)
+    return next
   })
 }

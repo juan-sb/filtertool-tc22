@@ -6,11 +6,12 @@
   } from '../../stores/app.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { freqAxis, freqRangeFromParams, sPlaneAxis, TWO_PI } from '../../lib/approx.js'
-  import { stageColor } from '../../lib/stage-colors.js'
+  import { colorOf } from '../../lib/stage-colors.js'
   import { normOmega, resolveNorm, scaleRoots, poleSummary } from '../../lib/stage-math.js'
   import { tfAbs, toDb } from '../../lib/poly.js'
   import {
     updateStage, resetAllStages, isModified, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ,
+    autoStage, moveStage,
   } from '../../lib/stages.js'
   import { formatSI } from '../../lib/si.js'
   import BodePlot from '../BodePlot.svelte'
@@ -74,7 +75,7 @@
       const on = hov === s.id, dim = hov != null && !on
       out.push({
         x: b.freq.map(f => f * ax.scale), y: dbArr(b), mode: 'lines', name: s.name,
-        line: { color: stageColor(i, th), width: on ? 3 : 1.6 }, opacity: dim ? 0.3 : 1,
+        line: { color: colorOf(s, i, th), width: on ? 3 : 1.6 }, opacity: dim ? 0.3 : 1,
       })
     })
     // Cascade = point-wise sum of stage dB, once every stage has a curve
@@ -102,7 +103,7 @@
       out.push({
         x: [fHz * ax.scale], y: [y], mode: 'markers', showlegend: false, hoverinfo: 'text',
         text: [`${s.name}: normalization point (${(s.gainDb ?? 0).toFixed(2)} dB)`],
-        marker: { symbol: 'diamond', size: hov === s.id ? 11 : 8, color: stageColor(i, th), line: { width: 1, color: light ? '#ffffff' : '#0d1117' } },
+        marker: { symbol: 'diamond', size: hov === s.id ? 11 : 8, color: colorOf(s, i, th), line: { width: 1, color: light ? '#ffffff' : '#0d1117' } },
         opacity: hov != null && hov !== s.id ? 0.3 : 1,
       })
     })
@@ -146,7 +147,7 @@
     out.push({ roots: ($remainingPZ.poles ?? []).map(r => ({ re: r.re, im: r.im })), symbol: 'x', color: grey, size: 7, opacity: 0.6, name: 'Unassigned poles' })
     out.push({ roots: ($remainingPZ.zeros ?? []).map(r => ({ re: r.re, im: r.im })), symbol: 'circle-open', color: grey, size: 7, opacity: 0.6, name: 'Unassigned zeros' })
     $stages.forEach((s, i) => {
-      const col = stageColor(i, $theme)
+      const col = colorOf(s, i, $theme)
       const on = hovered === s.id, dim = hovered != null && !on
       if (rootsModified(s)) {
         out.push({ roots: asRoots(s.orig.poles), symbol: 'x', color: col, size: 7, opacity: 0.3, name: `${s.name} (designed)` })
@@ -305,6 +306,36 @@
     if (ownHover) hoveredStageId.set(null)
   })
 
+  // ── Reorder cards (cascade order): drag the ⋮⋮ grip ────────────────────────
+  let reorderId = null
+  function onGrab(id, e) {
+    e.detail.preventDefault()
+    reorderId = id
+    window.addEventListener('pointermove', onReorderMove)
+    window.addEventListener('pointerup', onReorderEnd)
+  }
+  function onReorderMove(e) {
+    if (reorderId == null) return
+    const slots = [...document.querySelectorAll('.stages-tab .card-slot')]
+    // Insertion point = first slot whose midpoint is below the pointer (end if none)
+    const idx = slots.findIndex(el => { const r = el.getBoundingClientRect(); return e.clientY < r.top + r.height / 2 })
+    const ins = idx < 0 ? slots.length : idx
+    const from = $stages.findIndex(s => s.id === reorderId)
+    const target = ins > from ? ins - 1 : ins
+    if (from >= 0 && target !== from) moveStage(reorderId, target)
+  }
+  function onReorderEnd() {
+    reorderId = null
+    window.removeEventListener('pointermove', onReorderMove)
+    window.removeEventListener('pointerup', onReorderEnd)
+  }
+
+  let autoBusy = false
+  async function onAutoStage() {
+    autoBusy = true
+    try { await autoStage() } finally { autoBusy = false }
+  }
+
   $: yLabel = $plotUnit === 'rad' ? '$|H(\\omega)|$ [dB]' : '$|H(f)|$ [dB]'
   $: xRange = [freqRange.min * axis.scale, freqRange.max * axis.scale]
 </script>
@@ -348,13 +379,19 @@
         <button disabled={!anyEdited} on:click={resetAllStages} title="Reset every stage to how it was built">Reset all</button>
       </div>
       {#if unassigned}
-        <div class="note">{unassigned} root{unassigned === 1 ? '' : 's'} not in a stage yet</div>
+        <div class="note">
+          {unassigned} root{unassigned === 1 ? '' : 's'} not in a stage yet
+          <button class="link" disabled={autoBusy} on:click={onAutoStage}
+            title="Split every unassigned root into 2nd / 1st-order sections, low Q first">Auto-stage</button>
+        </div>
       {/if}
     </div>
 
     <div class="cards">
       {#each $stages as s, i (s.id)}
-        <StageCard stage={s} color={stageColor(i, $theme)} filterType={ft} />
+        <div class="card-slot" class:reordering={reorderId === s.id}>
+          <StageCard stage={s} color={colorOf(s, i, $theme)} filterType={ft} on:grab={e => onGrab(s.id, e)} />
+        </div>
       {/each}
     </div>
   </aside>
@@ -398,7 +435,14 @@
   }
   .actions button:hover:not(:disabled) { background: var(--hover); color: var(--text); }
   .actions button:disabled { opacity: 0.45; cursor: default; }
-  .note { font-size: 0.72rem; color: var(--text-dim); }
+  .note { font-size: 0.72rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .link {
+    background: none; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent);
+    cursor: pointer; font-size: 0.72rem; padding: 0.05rem 0.45rem;
+  }
+  .link:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .card-slot.reordering { opacity: 0.6; }
+  :global(body:has(.card-slot.reordering)) { cursor: grabbing; }
 
   .cards {
     flex: 1; min-height: 0; overflow-y: auto;

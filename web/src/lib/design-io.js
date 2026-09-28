@@ -36,6 +36,7 @@ export function serializeDesign(state) {
       normtype: s.normtype,
       gainDb: s.gainDb ?? 0,
       orig: s.orig,
+      colorIndex: s.colorIndex ?? null,
       gain: s.gain,
       num: s.num,
       den: s.den,
@@ -179,6 +180,7 @@ export async function materializeDesign(design, api, onStatus) {
       ...(moved && complete ? { zeros: s.zeros, poles: s.poles } : designed),
       normtype: s.normtype ?? 'Passband',
       gainDb: Number(s.gainDb) || 0,
+      colorIndex: Number.isInteger(s.colorIndex) ? s.colorIndex : null,
       orig: { ...designed, normtype: s.orig?.normtype ?? s.normtype ?? 'Passband', gainDb: Number(s.orig?.gainDb) || 0 },
     }))
   }

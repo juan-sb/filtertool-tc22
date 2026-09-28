@@ -3,8 +3,8 @@
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { APPROX_NAMES, plotColor, sPlaneAxis } from '../../lib/approx.js'
   import { isComplexRoot, rootValue } from '../../lib/roots.js'
-  import { makeStage, buildStage, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ } from '../../lib/stages.js'
-  import { stageColor } from '../../lib/stage-colors.js'
+  import { makeStage, buildStage, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ, autoStage } from '../../lib/stages.js'
+  import { colorOf, nextColorIndex } from '../../lib/stage-colors.js'
   import PzMap from '../PzMap.svelte'
 
   // Selection / hover state, by root id (lib/roots.js): repeated roots such as
@@ -68,6 +68,7 @@
         zeroIds: selectedZeros.map(r => r.id), poleIds: selectedPoles.map(r => r.id),
         zeros: selectedZeros.map(rootValue), poles: selectedPoles.map(rootValue),
         normtype,
+        colorIndex: nextColorIndex($stages),
       })
       const built = await buildStage(api, stage, $filterParams?.filter_type ?? 0)
       stages.update(s => [...s, built])
@@ -102,7 +103,7 @@
     // Staged roots, in their stage's colour, at their current (possibly moved)
     // position; a faint ghost marks where a moved root was designed.
     stageList.forEach((st, i) => {
-      const col = stageColor(i, $theme)
+      const col = colorOf(st, i, $theme)
       const dim = hovStage != null && hovStage !== st.id
       const big = hovStage === st.id ? 4 : 0
       if (rootsModified(st)) {
@@ -227,6 +228,11 @@
 
       <button class="add-btn" disabled={!selectionValid || adding} on:click={addStage}>
         {adding ? 'Adding…' : 'Add Stage'}
+      </button>
+      <button class="auto-btn" disabled={adding || !(($remainingPZ.poles ?? []).length)}
+        title="Split every unassigned root into 2nd / 1st-order sections, low Q first"
+        on:click={async () => { adding = true; try { await autoStage(); selectedIds = new Set() } finally { adding = false } }}>
+        Auto-stage remaining
       </button>
 
       {#if $stages.length > 0}
@@ -358,6 +364,12 @@
     font-size: 0.8rem; font-weight: 600;
     padding: 0.38rem; width: 100%;
   }
+  .auto-btn {
+    background: none; border: 1px solid var(--accent); border-radius: 6px; color: var(--accent);
+    cursor: pointer; font-size: 0.78rem; padding: 0.3rem; width: 100%; margin-top: 0.25rem;
+  }
+  .auto-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .auto-btn:disabled { opacity: 0.4; cursor: default; }
   .add-btn:hover:not(:disabled) { background: var(--accent-hover); }
   .add-btn:disabled { background: var(--surface-2); color: var(--disabled); cursor: default; }
 

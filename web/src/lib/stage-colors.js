@@ -7,3 +7,9 @@ export function stageColor(index, theme = 'dark') {
   const p = theme === 'light' ? LIGHT : DARK
   return p[((index % p.length) + p.length) % p.length]
 }
+
+/** A stage keeps its colour when stages are reordered or removed. */
+export const colorOf = (stage, fallbackIndex, theme) => stageColor(stage.colorIndex ?? fallbackIndex, theme)
+
+/** Colour index for a new stage: one past the highest in use. */
+export const nextColorIndex = list => list.reduce((m, s, i) => Math.max(m, (s.colorIndex ?? i) + 1), 0)

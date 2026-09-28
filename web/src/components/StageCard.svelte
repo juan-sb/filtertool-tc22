@@ -115,7 +115,13 @@
   }
 
   .head { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
-  .grip { cursor: grab; color: var(--text-dim); font-size: 0.7rem; letter-spacing: -2px; user-select: none; touch-action: none; }
+  .grip {
+    cursor: grab; color: var(--text-dim); font-size: 0.7rem; letter-spacing: -2px;
+    user-select: none; touch-action: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1rem; height: 1.2rem; margin-left: -0.2rem; border-radius: 3px;
+  }
+  .grip:hover { color: var(--text); background: var(--surface-2); }
   .swatch { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--c); flex-shrink: 0; }
   .name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .badge {
