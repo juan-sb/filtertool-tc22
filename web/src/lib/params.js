@@ -7,7 +7,7 @@
 export const LP = 0, HP = 1, BP = 2, BR = 3, GD = 4
 export const FREQS = 0, F0_BW = 1          // define_with
 export const MAX_ORDER = 50                // engine MAX_ORDER
-const GD_APPROX = new Set([5, 6])          // group delay: Bessel, Gauss only
+export const GD_APPROX = new Set([5, 6])   // group delay: Bessel, Gauss only
 
 /** Defaults, frequencies in Hz. */
 export const DEFAULT_FORM = {
@@ -175,19 +175,39 @@ export function validateForm(form) {
 }
 
 /**
- * Change filter type, swapping pass/stop values so the current numbers stay a
- * valid template (LP↔HP swap fp/fa; BP↔BR swap pass/stop widths and edges).
+ * Change filter type, swapping pass/stop values when they're oriented for the
+ * other response, so the current numbers stay a valid template whatever the
+ * previous type was (LP↔HP: fp/fa; BP↔BR: widths and band edges).
  */
 export function switchFilterType(form, ft) {
   const f = { ...form, filterType: ft }
-  const from = form.filterType
-  if ((from === LP && ft === HP) || (from === HP && ft === LP)) {
-    [f.fp, f.fa] = [form.fa, form.fp]
+  if ((ft === LP && f.fp > f.fa) || (ft === HP && f.fp < f.fa)) {
+    [f.fp, f.fa] = [f.fa, f.fp]
   }
-  if ((from === BP && ft === BR) || (from === BR && ft === BP)) {
-    [f.bwp, f.bwa] = [form.bwa, form.bwp]
-    ;[f.fp1, f.fa1] = [form.fa1, form.fp1]
-    ;[f.fp2, f.fa2] = [form.fa2, form.fp2]
+  if ((ft === BP && f.bwp > f.bwa) || (ft === BR && f.bwp < f.bwa)) {
+    [f.bwp, f.bwa] = [f.bwa, f.bwp]
+  }
+  // BP: a₁ < p₁ < p₂ < a₂ ; BR: p₁ < a₁ < a₂ < p₂
+  const bpOrder = f.fa1 < f.fp1 && f.fp2 < f.fa2
+  const brOrder = f.fp1 < f.fa1 && f.fa2 < f.fp2
+  if ((ft === BP && brOrder) || (ft === BR && bpOrder)) {
+    [f.fp1, f.fa1] = [f.fa1, f.fp1]
+    ;[f.fp2, f.fa2] = [f.fa2, f.fp2]
   }
   return f
+}
+
+/** Deep equality of two params objects, numbers compared with a relative tolerance. */
+export function paramsClose(a, b, rel = 1e-9) {
+  if (typeof a === 'number' && typeof b === 'number')
+    return a === b || Math.abs(a - b) <= rel * Math.max(Math.abs(a), Math.abs(b))
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
+    return a.every((v, i) => paramsClose(v, b[i], rel))
+  }
+  if (a && b && typeof a === 'object' && typeof b === 'object') {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+    return [...keys].every(k => paramsClose(a[k], b[k], rel))
+  }
+  return a === b
 }

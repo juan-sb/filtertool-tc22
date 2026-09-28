@@ -11,6 +11,8 @@
   // logNudge=false → arrow keys add/subtract `step` (good for dB, order, …)
   export let logNudge = true
   export let step     = 1
+  /** Outline the field as invalid (form-level validation, e.g. fp ≥ fa). */
+  export let invalid  = false
 
   const dispatch = createEventDispatcher()
 
@@ -93,20 +95,28 @@
     if (e.key === 'Escape') { text = format(value); error = false; e.target.blur(); return }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
-      const multiplier = e.shiftKey ? 10 : e.altKey ? 0.1 : 1
-      const direction  = e.key === 'ArrowUp' ? 1 : -1
-      const parsed     = parse(text)
-      const base       = isNaN(parsed) ? value : parsed
-      let next
-      if (logNudge) {
-        // multiply/divide — each arrow tick moves ~12% (≈ one decade per 20 steps)
-        next = base * Math.pow(10, direction * multiplier * 0.05)
-      } else {
-        // linear — add/subtract step
-        next = base + direction * step * multiplier
-      }
-      applyValue(next)
+      nudge(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey ? 10 : e.altKey ? 0.1 : 1)
     }
+  }
+
+  // Wheel nudges like the arrow keys, but only while focused, so scrolling the
+  // sidebar over a field never changes it.
+  function onWheel(e) {
+    if (!focused || disabled) return
+    e.preventDefault()
+    nudge(e.deltaY < 0 ? 1 : -1, e.shiftKey ? 10 : e.altKey ? 0.1 : 1)
+  }
+
+  function nudge(direction, multiplier) {
+    const parsed = parse(text)
+    const base   = isNaN(parsed) ? value : parsed
+    // log: each tick moves ~12% (≈ one decade per 20 steps); linear: ± step
+    const next = logNudge
+      ? base * Math.pow(10, direction * multiplier * 0.05)
+      : base + direction * step * multiplier
+    applyValue(next)
+    // keep the raw number visible while editing
+    if (focused) text = String(parseFloat(value.toPrecision(12)))
   }
 
   function commit() {
@@ -140,7 +150,7 @@
   {#if label}
     <span class="label">{label}</span>
   {/if}
-  <div class="input-row">
+  <div class="input-row" class:invalid={invalid && !error}>
     <input
       type="text"
       class:error
@@ -149,6 +159,7 @@
       on:focus={onFocus}
       on:blur={onBlur}
       on:keydown={onKeydown}
+      on:wheel={onWheel}
       autocomplete="off"
       spellcheck="false"
     />
@@ -192,6 +203,7 @@
     min-width: 0;
   }
   .input-row:focus-within { border-color: var(--accent); }
+  .input-row.invalid { border-color: var(--danger); }
 
   input {
     flex: 1;
