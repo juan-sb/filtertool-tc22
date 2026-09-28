@@ -7,7 +7,7 @@
   } from '../lib/params.js'
   import {
     designForm, filterParams, filterResult, uiEnabled, pendingFormHydration, dataUnit,
-    designBusy, designError,
+    designBusy, designError, liveAdjusting,
   } from '../stores/app.js'
   import Segmented  from './form/Segmented.svelte'
   import OrderRange from './form/OrderRange.svelte'
@@ -88,6 +88,23 @@
 
   function design() {
     if (!hasErrors) runDesign()
+  }
+
+  // ── Live denorm (T3) ──────────────────────────────────────────────────────
+  // While the slider moves, re-design from the last designed params with only
+  // denorm changed (pending form edits stay pending). runDesign coalesces, so
+  // only the newest value is computed. Comparisons wait for release.
+  let liveBase = null
+
+  function onDenormInput() {
+    if (!$filterParams) return
+    if (!liveBase) { liveBase = $filterParams; liveAdjusting.set(true) }
+    runDesign({ params: { ...liveBase, denorm: $designForm.denorm } })
+  }
+
+  function onDenormRelease() {
+    liveBase = null
+    liveAdjusting.set(false)
   }
 </script>
 
@@ -174,7 +191,8 @@
   <div class="denorm-row">
     <span class="lbl" title="Where the normalization lands between the passband edge (0 %) and the stopband edge (100 %)">Denorm</span>
     <div class="denorm">
-      <input class="slider" type="range" min="0" max="100" step="1" bind:value={$designForm.denorm} aria-label="Denormalization" />
+      <input class="slider" type="range" min="0" max="100" step="1" bind:value={$designForm.denorm} aria-label="Denormalization"
+        on:input={onDenormInput} on:change={onDenormRelease} on:pointerup={onDenormRelease} on:blur={onDenormRelease} />
       <span class="pct">{$designForm.denorm}%</span>
     </div>
   </div>

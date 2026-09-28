@@ -89,6 +89,11 @@ export const hoveredFields = writable([])
 /** Design action state (lib/design-action.js). */
 export const designBusy  = writable(false)
 export const designError = writable('')
+/** True while a live control (denorm slider) is held: comparisons wait for release. */
+export const liveAdjusting = writable(false)
+
+/** One transient notice: { message, actionLabel?, onAction?, timeoutMs? } or null. */
+export const toast = writable(null)
 
 // Filter design: snapshot of the last successful design
 export const filterParams = writable(null)

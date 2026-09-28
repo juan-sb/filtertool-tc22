@@ -20,6 +20,7 @@
   import ImpulseTab    from './components/tabs/ImpulseTab.svelte'
   import PoleZeroTab   from './components/tabs/PoleZeroTab.svelte'
   import StagesTab     from './components/tabs/StagesTab.svelte'
+  import Toast         from './components/Toast.svelte'
   import { shufflePalette } from './lib/approx.js'
   import { serializeDesign, downloadDesign, pickDesignFile, materializeDesign } from './lib/design-io.js'
 
@@ -282,6 +283,8 @@
     </div>
   </div>
 </div>
+
+<Toast />
 
 <style>
   :global(*, *::before, *::after) { box-sizing: border-box; margin: 0; padding: 0; }

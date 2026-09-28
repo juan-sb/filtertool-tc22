@@ -1,5 +1,5 @@
 <script>
-  import { filterParams, filterResult, comparisons, bodePoints, theme, colorMode, colorShuffle, compareApproxes, compareSameN } from '../stores/app.js'
+  import { filterParams, filterResult, comparisons, bodePoints, theme, colorMode, colorShuffle, compareApproxes, compareSameN, liveAdjusting } from '../stores/app.js'
   import { getWorkerApi } from '../lib/worker-client.js'
   import { APPROX_NAMES, plotColor, freqRangeFromParams } from '../lib/approx.js'
 
@@ -14,8 +14,9 @@
     compareApproxes.set($compareApproxes.filter(a => a !== mainApproxType))
   }
 
-  // Recompute whenever any dependency changes
-  $: triggerRecompute($filterParams, $filterResult, $compareApproxes, $compareSameN, $bodePoints)
+  // Recompute whenever any dependency changes; while a live control is held
+  // (denorm slider) keep the old comparisons and catch up on release.
+  $: if (!$liveAdjusting) triggerRecompute($filterParams, $filterResult, $compareApproxes, $compareSameN, $bodePoints)
 
   async function triggerRecompute(params, mainResult, selected, sameN, pts) {
     const id = ++computeId
