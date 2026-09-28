@@ -1,14 +1,13 @@
 <script>
-  import { getWorkerApi }  from '../lib/worker-client.js'
-  import { freqRangeFromParams, TWO_PI } from '../lib/approx.js'
+  import { TWO_PI } from '../lib/approx.js'
+  import { runDesign } from '../lib/design-action.js'
   import {
     LP, HP, BP, BR, GD, F0_BW, FREQS, MAX_ORDER, GD_APPROX,
     isBand as isBandType, buildParams, formFromParams, rescaleForm, validateForm, switchFilterType, paramsClose,
   } from '../lib/params.js'
-  import { withRoots } from '../lib/roots.js'
   import {
-    designForm, filterParams, filterResult, bodeData, stages, bodePoints, uiEnabled, engineStatus,
-    pendingFormHydration, dataUnit,
+    designForm, filterParams, filterResult, uiEnabled, pendingFormHydration, dataUnit,
+    designBusy, designError,
   } from '../stores/app.js'
   import Segmented  from './form/Segmented.svelte'
   import OrderRange from './form/OrderRange.svelte'
@@ -83,33 +82,12 @@
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
-  let computing = false
-  let errorMsg  = ''
-
   // Editing the form clears the last engine error (depends on $designForm only).
-  const clearError = () => { errorMsg = '' }
+  const clearError = () => designError.set('')
   $: clearError($designForm)
 
-  async function design() {
-    if (hasErrors) return
-    computing = true
-    engineStatus.set('Computing…')
-    try {
-      const params = buildParams($designForm, toRad)
-      const api    = getWorkerApi()
-      const result = await api.filterDesign(params)
-      if (result.error) { errorMsg = result.error.split('\n').at(-2) ?? result.error; return }
-      stages.set([])
-      filterParams.set(params)
-      filterResult.set(withRoots(result))
-      const r = freqRangeFromParams(params)
-      bodeData.set(await api.computeBode(result.num, result.den, r.min, r.max, $bodePoints))
-    } catch (e) {
-      errorMsg = e.message
-    } finally {
-      computing = false
-      engineStatus.set('Ready')
-    }
+  function design() {
+    if (!hasErrors) runDesign()
   }
 </script>
 
@@ -149,42 +127,42 @@
   {:else}
     {#if !isBand}
       <div class="pair">
-        <NumField layout="stack" label="{fsym}p (pass)" bind:value={$designForm.fp} unit={uLabel} min={fMin} max={fMax} error={formErrors.fp} />
-        <NumField layout="stack" label="{fsym}a (stop)" bind:value={$designForm.fa} unit={uLabel} min={fMin} max={fMax} error={formErrors.fa} />
+        <NumField layout="stack" label="{fsym}p (pass)" bind:value={$designForm.fp} edge="fp" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp} />
+        <NumField layout="stack" label="{fsym}a (stop)" bind:value={$designForm.fa} edge="fa" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa} />
       </div>
     {:else}
       <Segmented options={DEFINE_OPTIONS} bind:value={$designForm.defineWith} ariaLabel="Define band by" />
       {#if $designForm.defineWith === F0_BW}
-        <NumField label="{fsym}₀" bind:value={$designForm.f0} unit={uLabel} min={fMin} max={fMax} error={formErrors.f0} />
-        <NumField label="BWp (pass)" bind:value={$designForm.bwp} unit={uLabel} min={bwMin} max={fMax} error={formErrors.bwp} />
-        <NumField label="BWa (stop)" bind:value={$designForm.bwa} unit={uLabel} min={bwMin} max={fMax} error={formErrors.bwa} />
+        <NumField label="{fsym}₀" bind:value={$designForm.f0} edge="f0" group="centre" unit={uLabel} min={fMin} max={fMax} error={formErrors.f0} />
+        <NumField label="BWp (pass)" bind:value={$designForm.bwp} edge="bwp" group="pass" unit={uLabel} min={bwMin} max={fMax} error={formErrors.bwp} />
+        <NumField label="BWa (stop)" bind:value={$designForm.bwa} edge="bwa" group="stop" unit={uLabel} min={bwMin} max={fMax} error={formErrors.bwa} />
       {:else}
         <!-- Low edge first, in frequency order for the selected type -->
         {#if ft === BP}
           <div class="pair">
-            <NumField layout="stack" label="{fsym}a₁ (stop)" bind:value={$designForm.fa1} unit={uLabel} min={fMin} max={fMax} error={formErrors.fa1} />
-            <NumField layout="stack" label="{fsym}p₁ (pass)" bind:value={$designForm.fp1} unit={uLabel} min={fMin} max={fMax} error={formErrors.fp1} />
+            <NumField layout="stack" label="{fsym}a₁ (stop)" bind:value={$designForm.fa1} edge="fa1" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa1} />
+            <NumField layout="stack" label="{fsym}p₁ (pass)" bind:value={$designForm.fp1} edge="fp1" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp1} />
           </div>
           <div class="pair">
-            <NumField layout="stack" label="{fsym}p₂ (pass)" bind:value={$designForm.fp2} unit={uLabel} min={fMin} max={fMax} error={formErrors.fp2} />
-            <NumField layout="stack" label="{fsym}a₂ (stop)" bind:value={$designForm.fa2} unit={uLabel} min={fMin} max={fMax} error={formErrors.fa2} />
+            <NumField layout="stack" label="{fsym}p₂ (pass)" bind:value={$designForm.fp2} edge="fp2" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp2} />
+            <NumField layout="stack" label="{fsym}a₂ (stop)" bind:value={$designForm.fa2} edge="fa2" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa2} />
           </div>
         {:else}
           <div class="pair">
-            <NumField layout="stack" label="{fsym}p₁ (pass)" bind:value={$designForm.fp1} unit={uLabel} min={fMin} max={fMax} error={formErrors.fp1} />
-            <NumField layout="stack" label="{fsym}a₁ (stop)" bind:value={$designForm.fa1} unit={uLabel} min={fMin} max={fMax} error={formErrors.fa1} />
+            <NumField layout="stack" label="{fsym}p₁ (pass)" bind:value={$designForm.fp1} edge="fp1" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp1} />
+            <NumField layout="stack" label="{fsym}a₁ (stop)" bind:value={$designForm.fa1} edge="fa1" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa1} />
           </div>
           <div class="pair">
-            <NumField layout="stack" label="{fsym}a₂ (stop)" bind:value={$designForm.fa2} unit={uLabel} min={fMin} max={fMax} error={formErrors.fa2} />
-            <NumField layout="stack" label="{fsym}p₂ (pass)" bind:value={$designForm.fp2} unit={uLabel} min={fMin} max={fMax} error={formErrors.fp2} />
+            <NumField layout="stack" label="{fsym}a₂ (stop)" bind:value={$designForm.fa2} edge="fa2" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa2} />
+            <NumField layout="stack" label="{fsym}p₂ (pass)" bind:value={$designForm.fp2} edge="fp2" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp2} />
           </div>
         {/if}
       {/if}
     {/if}
 
     <div class="pair">
-      <NumField layout="stack" label="Ripple" bind:value={$designForm.apDb} unit="dB" min={0.001} max={40} log={false} step={0.1} error={formErrors.apDb} />
-      <NumField layout="stack" label="Attenuation" bind:value={$designForm.aaDb} unit="dB" min={1} max={120} log={false} step={1} error={formErrors.aaDb} />
+      <NumField layout="stack" label="Ripple" bind:value={$designForm.apDb} edge="apDb" group="pass" unit="dB" min={0.001} max={40} log={false} step={0.1} error={formErrors.apDb} />
+      <NumField layout="stack" label="Attenuation" bind:value={$designForm.aaDb} edge="aaDb" group="stop" unit="dB" min={1} max={120} log={false} step={1} error={formErrors.aaDb} />
     </div>
   {/if}
 
@@ -201,19 +179,19 @@
     </div>
   </div>
 
-  {#if errorMsg}
-    <p class="err">{errorMsg}</p>
+  {#if $designError}
+    <p class="err">{$designError}</p>
   {/if}
 
   <button
     class="btn"
     class:stale
-    disabled={!$uiEnabled || computing || hasErrors}
+    disabled={!$uiEnabled || $designBusy || hasErrors}
     title={hasErrors ? 'Fix the highlighted fields first' : stale ? 'The form changed since the last design' : ''}
     on:click={design}
   >
-    {computing ? 'Computing…' : 'Design Filter'}
-    {#if stale && !computing}<span class="badge">out of date</span>{/if}
+    {$designBusy ? 'Computing…' : 'Design Filter'}
+    {#if stale && !$designBusy}<span class="badge">out of date</span>{/if}
   </button>
 
 </div>

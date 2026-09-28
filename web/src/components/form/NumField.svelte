@@ -3,6 +3,7 @@
   // SI-prefix entry (SciInput), inline validation hint.
   import SciInput from '../SciInput.svelte'
   import { scrub } from '../../lib/scrub.js'
+  import { hoveredFields } from '../../stores/app.js'
 
   export let label
   export let value
@@ -17,20 +18,52 @@
   /** 'row' = label beside the input, 'stack' = label above. */
   export let layout = 'row'
   export let title = ''
+  /** Template edge this field controls (hover link with the plot), e.g. 'fp', 'apDb'. */
+  export let edge = null
+  /** Edge colour group: 'pass' | 'stop' | 'centre'. */
+  export let group = null
+
+  let ownHover = false
+  function enter() { if (edge) { hoveredFields.set([edge]); ownHover = true } }
+  function leave() { if (ownHover) { hoveredFields.set([]); ownHover = false } }
+
+  $: linked = !!edge && $hoveredFields.includes(edge)
 </script>
 
-<div class="nf {layout}">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="nf {layout}" class:linked on:mouseenter={enter} on:mouseleave={leave}>
   <span
     class="lbl"
     title={title || `Drag to adjust ${label}${log ? '' : ` (${step} ${unit} per 4 px)`}; Shift = fine`}
     use:scrub={{ get: () => value, set: v => (value = v), log, step, min, max }}
-  >{label}</span>
+  >{#if group}<i class="mark {group}" aria-hidden="true"></i>{/if}{label}</span>
   <SciInput bind:value {unit} {min} {max} logNudge={log} {step} invalid={!!error} on:change />
   {#if error}<span class="hint">{error}</span>{/if}
 </div>
 
 <style>
-  .nf { min-width: 0; }
+  .nf {
+    min-width: 0;
+    border-radius: 4px;
+    transition: box-shadow 0.12s, background 0.12s;
+  }
+  .nf.linked {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+
+  .mark {
+    display: inline-block;
+    width: 3px;
+    height: 0.8em;
+    border-radius: 2px;
+    margin-right: 0.35rem;
+    vertical-align: -0.05em;
+  }
+  .mark.pass   { background: var(--success); }
+  .mark.stop   { background: var(--warning); }
+  .mark.centre { background: var(--text-dim); }
+  .nf.linked .mark { width: 4px; }
   .nf.row {
     display: grid;
     grid-template-columns: var(--lbl-w, 5.5rem) minmax(0, 1fr);

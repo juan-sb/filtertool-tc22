@@ -83,6 +83,13 @@ export const sidebarOpen = writable(true)
 /** Live design form (FilterPanel; later the template handles). Frequencies in the data unit. */
 export const designForm = writable({ ...DEFAULT_FORM })
 
+/** Form fields whose template edge is hovered (form ↔ plot link), e.g. ['fp'] or ['fa', 'aaDb']. */
+export const hoveredFields = writable([])
+
+/** Design action state (lib/design-action.js). */
+export const designBusy  = writable(false)
+export const designError = writable('')
+
 // Filter design: snapshot of the last successful design
 export const filterParams = writable(null)
 export const filterResult = writable(null)   // { zeros, poles, num, den, gain, N, roots: { zeros, poles } }

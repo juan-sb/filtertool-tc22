@@ -10,6 +10,10 @@
   export let filename  = 'filtool_plot'
   export let shapes    = []
   export let yRange    = null
+  /** Explicit x range in data units (log axes convert internally); null = autorange. */
+  export let xRange    = null
+  /** Plotly uirevision: user zoom/pan survives re-renders while this stays the same. */
+  export let uirevision = undefined
   /** Fixed y-axis tick step (e.g. 45 for phase in degrees). */
   export let yDtick    = null
   /** When false (inactive keep-alive tab), skip Plotly work; rising edge re-typesets MathJax. */
@@ -49,8 +53,10 @@
       plot_bgcolor:  colors.background,
       font:          { color: colors.text, size: 12, family: 'system-ui, sans-serif' },
       margin:        { l: 64, r: 24, t: 36, b: 56 },
+      ...(uirevision !== undefined ? { uirevision } : {}),
       xaxis: {
         type:          logX ? 'log' : 'linear',
+        ...(xRange ? { range: logX ? xRange.map(Math.log10) : xRange, autorange: false } : { autorange: true }),
         title:         { text: xLabel, standoff: 8, font: { color: colors.text, size: 12 } },
         gridcolor:     colors.grid,
         linecolor:     colors.line,
@@ -176,9 +182,33 @@
     if (active) scheduleRefresh(0)
   })
 
+  // Shape-only updates (template drag / hover) skip the full react + MathJax +
+  // resize path and patch the shapes directly, coalesced per animation frame.
+  let lastInputs = null
+  let lastShapes = null
+  let shapesFrame = null
+
+  function patchShapes() {
+    if (shapesFrame != null) return
+    shapesFrame = requestAnimationFrame(() => {
+      shapesFrame = null
+      if (!initialized || destroyed || !container || !active) return
+      lastShapes = shapes
+      Plotly.relayout(container, { shapes })
+    })
+  }
+
   afterUpdate(() => {
     // Skip inactive tabs — overlapping reacts while hidden leave MathJax titles blank.
     if (!initialized || destroyed || !active) return
+    const inputs = [traces, _plotPrefs, yRange, xRange, uirevision, logX, yDtick]
+    const same = lastInputs && inputs.every((v, i) => v === lastInputs[i])
+    if (same && refreshTimer == null) {
+      if (shapes !== lastShapes) patchShapes()
+      return
+    }
+    lastInputs = inputs
+    lastShapes = shapes
     scheduleRefresh()
   })
 
@@ -186,10 +216,14 @@
     destroyed = true
     initialized = false
     if (refreshTimer != null) clearTimeout(refreshTimer)
+    if (shapesFrame != null) cancelAnimationFrame(shapesFrame)
     refreshToken++
     resizeObserver?.disconnect()
     if (container) Plotly.purge(container)
   })
+
+  /** The Plotly graph div (for overlays that hit-test in plot pixels). */
+  export function plotElement() { return container }
 
   export function exportSVG() {
     Plotly.downloadImage(container, { format: 'svg', filename, width: 1100, height: 650 })
@@ -198,6 +232,7 @@
 
 <div class="plot-wrap">
   <div bind:this={container} class="plot-div"></div>
+  <slot />
   <button class="export-btn" on:click={exportSVG} title="Export as SVG">
     SVG
   </button>
