@@ -2,11 +2,16 @@
   import { filterParams, filterResult, comparisons, bodePoints, theme, colorMode, colorShuffle, compareApproxes, compareSameN, liveAdjusting } from '../stores/app.js'
   import { getWorkerApi } from '../lib/worker-client.js'
   import { APPROX_NAMES, plotColor, freqRangeFromParams } from '../lib/approx.js'
+  import { GD, GD_APPROX } from '../lib/params.js'
 
   let computing = false
   let computeId = 0
 
   $: mainApproxType = $filterParams?.approx_type ?? -1
+  // Group delay designs only support Bessel / Gauss; other selections are kept
+  // but skipped (they come back when the type changes).
+  $: allowed = $filterParams?.filter_type === GD ? GD_APPROX : null
+  const can = (i, allow) => !allow || allow.has(i)
   $: selectedApproxes = new Set($compareApproxes)
 
   // Drop the main approx if it becomes selected after a redesign / load.
@@ -20,7 +25,8 @@
 
   async function triggerRecompute(params, mainResult, selected, sameN, pts) {
     const id = ++computeId
-    const sel = selected ?? []
+    const allow = params?.filter_type === GD ? GD_APPROX : null
+    const sel = (selected ?? []).filter(a => can(a, allow))
     if (!params || sel.length === 0) { comparisons.set([]); return }
 
     computing = true
@@ -80,10 +86,12 @@
   <div class="approx-list">
     {#each APPROX_NAMES as name, i}
       {#if i !== mainApproxType}
-        <label class="approx-row" class:sel={selectedApproxes.has(i)}>
+        <label class="approx-row" class:sel={selectedApproxes.has(i) && can(i, allowed)} class:off={!can(i, allowed)}
+          title={can(i, allowed) ? '' : `${name}: not available for group delay`}>
           <input
             type="checkbox"
-            checked={selectedApproxes.has(i)}
+            checked={selectedApproxes.has(i) && can(i, allowed)}
+            disabled={!can(i, allowed)}
             on:change={() => toggle(i)}
           />
           <span class="swatch" style="background: {plotColor(i, $theme, $colorMode, $colorShuffle)}"></span>
@@ -213,6 +221,8 @@
   }
 
   .main-row { cursor: default; opacity: 0.6; }
+  .approx-row.off { cursor: not-allowed; opacity: 0.35; }
+  .approx-row.off:hover { background: none; }
 
   .swatch {
     width: 9px; height: 9px;

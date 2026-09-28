@@ -12,7 +12,7 @@
   export let allowed = null
   export let disabledTitle = 'Not available for this filter type'
 
-  const SHORT = ['Butter', 'Cheb I', 'Cheb II', 'Cauer', 'Legendre', 'Bessel', 'Gauss']
+  const SHORT = ['Butter', 'Cheby I', 'Cheby II', 'Cauer', 'Legendre', 'Bessel', 'Gauss']
   const TRAIT = [
     'Maximally flat passband',
     'Equiripple passband, steep',
