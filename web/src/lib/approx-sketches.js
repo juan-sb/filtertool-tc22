@@ -1,26 +1,41 @@
 // Mini |H| sketches of every approximation, drawn from real engine designs:
-// a normalized 5th-order low-pass (fp = 1 Hz, fa = 2 Hz, 3 dB ripple, 25 dB
-// stop), so each curve shows its approximation's character (flatness,
-// passband / stopband ripple, roll-off). Computed once per session.
+// a normalized 4th-order low-pass (fp = 1, fa = 2 rad/s, Gp = 0.7, Ga = 0.3),
+// plotted as linear amplitude over a linear ω axis (textbook style), so
+// passband ripple, stopband ripple and transmission zeros are all visible.
+// (With specs this loose Cauer is very selective: its first zero sits at
+// ω ≈ 1.007, right after the last ripple peak, the second at ω ≈ 1.32.)
+// Computed once per session.
 
 import { buildParams, DEFAULT_FORM, LP } from './params.js'
 
 export const SKETCH_W = 40, SKETCH_H = 20
 
-const SPEC = { ...DEFAULT_FORM, filterType: LP, nMin: 5, nMax: 5, fp: 1, fa: 2, apDb: 3, aaDb: 25, gainDb: 0, denorm: 0 }
-const F_MIN = 0.1, F_MAX = 10, POINTS = 90
-const DB_TOP = 1, DB_BOTTOM = -40
+const GP = 0.7, GA = 0.3
+const SPEC = {
+  ...DEFAULT_FORM, filterType: LP, nMin: 4, nMax: 4, fp: 1, fa: 2, gainDb: 0, denorm: 0,
+  apDb: -20 * Math.log10(GP), aaDb: -20 * Math.log10(GA),
+}
+const W_MAX = 2.2, POINTS = 300, A_MAX = 1.05
 
 let cache = null
 
-function toPath(bode) {
-  const lx0 = Math.log10(F_MIN), lx1 = Math.log10(F_MAX)
-  const pts = bode.freq.map((f, i) => {
-    const m = bode.magnitude[i]
-    const db = m > 0 ? 20 * Math.log10(m) : DB_BOTTOM
-    const x = ((Math.log10(f) - lx0) / (lx1 - lx0)) * SKETCH_W
-    const t = (DB_TOP - Math.min(DB_TOP, Math.max(DB_BOTTOM, db))) / (DB_TOP - DB_BOTTOM)
-    return `${x.toFixed(2)},${(1 + t * (SKETCH_H - 2)).toFixed(2)}`
+/** |P(jω)| for descending-power real coefficients. */
+function polyAbs(c, w) {
+  let re = 0, im = 0
+  for (const a of c) [re, im] = [a - im * w, re * w]   // Horner: P ← P·jω + a
+  return Math.hypot(re, im)
+}
+
+function toPath({ num, den, zeros }) {
+  // Dense grid plus the exact transmission-zero frequencies, so nulls reach 0.
+  const ws = Array.from({ length: POINTS + 1 }, (_, i) => (i / POINTS) * W_MAX)
+  for (const [re, im] of zeros ?? []) if (Math.abs(re) < 1e-9 && im > 0 && im < W_MAX) ws.push(im)
+  ws.sort((a, b) => a - b)
+  const pts = ws.map(w => {
+    const m = Math.min(A_MAX, polyAbs(num, w) / polyAbs(den, w))
+    const x = (w / W_MAX) * SKETCH_W
+    const y = 1 + (1 - m / A_MAX) * (SKETCH_H - 2)
+    return `${x.toFixed(2)},${y.toFixed(2)}`
   })
   return `M${pts.join('L')}`
 }
@@ -33,9 +48,9 @@ export function loadSketches(api) {
   cache ??= Promise.all(
     Array.from({ length: 7 }, async (_, i) => {
       try {
-        const r = await api.filterDesign(buildParams({ ...SPEC, approxType: i }, 2 * Math.PI))
-        if (r.error) return null
-        return toPath(await api.computeBode(r.num, r.den, F_MIN, F_MAX, POINTS))
+        // toRad = 1: the sketch spec is already in rad/s
+        const r = await api.filterDesign(buildParams({ ...SPEC, approxType: i }, 1))
+        return r.error ? null : toPath(r)
       } catch {
         return null
       }
@@ -43,3 +58,7 @@ export function loadSketches(api) {
   ).catch(() => { cache = null; return Array(7).fill(null) })
   return cache
 }
+
+/** y of amplitude a in sketch coordinates (for guide lines). */
+export const sketchY = a => 1 + (1 - a / A_MAX) * (SKETCH_H - 2)
+export const SKETCH_GP = GP, SKETCH_GA = GA

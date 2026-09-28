@@ -3,7 +3,7 @@
   // (lib/approx-sketches.js) in its plot colour.
   import { createEventDispatcher } from 'svelte'
   import { APPROX_NAMES, plotColor } from '../../lib/approx.js'
-  import { loadSketches, SKETCH_W, SKETCH_H } from '../../lib/approx-sketches.js'
+  import { loadSketches, sketchY, SKETCH_W, SKETCH_H, SKETCH_GP, SKETCH_GA } from '../../lib/approx-sketches.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { engineReady, theme, colorMode, colorShuffle } from '../../stores/app.js'
 
@@ -71,7 +71,9 @@
       on:click={() => pick(i)}
     >
       <svg viewBox="0 0 {SKETCH_W} {SKETCH_H}" preserveAspectRatio="none" aria-hidden="true">
-        <line class="axis" x1="0" y1="1" x2={SKETCH_W} y2="1" />
+        <line class="guide" x1="0" y1={sketchY(SKETCH_GP)} x2={SKETCH_W} y2={sketchY(SKETCH_GP)} />
+        <line class="guide" x1="0" y1={sketchY(SKETCH_GA)} x2={SKETCH_W} y2={sketchY(SKETCH_GA)} />
+        <line class="axis" x1="0" y1={SKETCH_H - 1} x2={SKETCH_W} y2={SKETCH_H - 1} />
         {#if sketches[i]}
           <path d={sketches[i]} />
         {/if}
@@ -119,7 +121,7 @@
   svg {
     display: block;
     width: 100%;
-    height: 1.35rem;
+    height: 1.6rem;
     overflow: visible;
   }
   path {
@@ -129,12 +131,12 @@
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
   }
-  .axis {
+  .axis, .guide {
     stroke: var(--border);
     stroke-width: 1;
-    stroke-dasharray: 2 2;
     vector-effect: non-scaling-stroke;
   }
+  .guide { stroke-dasharray: 2 2; opacity: 0.8; }
 
   .name {
     font-size: 0.72rem;
