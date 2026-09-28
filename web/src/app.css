@@ -78,13 +78,13 @@ html, body {
 
 /* Plot crosshair pointer. The system crosshair Plotly asks for is a thin white
    cross on some platforms and vanishes on light backgrounds (e.g. the pale
-   template region). This is a 1 px cross that follows the theme: dark with a
-   hairline white outline in light mode, white with a dark outline in dark mode.
-   The handle / stage cursors set elsewhere (data-tpl-cursor, data-stage-cursor)
-   keep priority. */
+   template region). This is a 2 px cross that follows the theme: dark with a
+   white outline in light mode, white with a dark outline in dark mode; thick
+   enough to fully cover the system one. The handle / stage cursors set
+   elsewhere (data-tpl-cursor, data-stage-cursor) keep priority. */
 .js-plotly-plot:not([data-tpl-cursor]):not([data-stage-cursor='grab']) .cursor-crosshair {
-  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21' fill='none'><path d='M10.5 1.5v18M1.5 10.5h18' stroke='%230d1117' stroke-width='3'/><path d='M10.5 1.5v18M1.5 10.5h18' stroke='%23e6edf3' stroke-width='1'/></svg>") 10 10, crosshair !important;
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'><path d='M12 2v20M2 12h20' stroke='%230d1117' stroke-width='4'/><path d='M12 2v20M2 12h20' stroke='%23e6edf3' stroke-width='2'/></svg>") 12 12, crosshair !important;
 }
 :root[data-theme='light'] .js-plotly-plot:not([data-tpl-cursor]):not([data-stage-cursor='grab']) .cursor-crosshair {
-  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21' fill='none'><path d='M10.5 1.5v18M1.5 10.5h18' stroke='white' stroke-width='3'/><path d='M10.5 1.5v18M1.5 10.5h18' stroke='%231f2328' stroke-width='1'/></svg>") 10 10, crosshair !important;
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'><path d='M12 2v20M2 12h20' stroke='white' stroke-width='4'/><path d='M12 2v20M2 12h20' stroke='%231f2328' stroke-width='2'/></svg>") 12 12, crosshair !important;
 }
