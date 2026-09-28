@@ -1,4 +1,5 @@
 import { writable, derived } from 'svelte/store'
+import { DEFAULT_FORM } from '../lib/params.js'
 
 const preferredTheme = typeof window !== 'undefined'
   ? (localStorage.getItem('filtertool.theme')
@@ -79,12 +80,37 @@ export const engineProgress = writable(0)    // 0–100
 export const activeTab = writable('template')
 export const sidebarOpen = writable(true)
 
-// Filter design
+/** Live design form (FilterPanel; later the template handles). Frequencies in the data unit. */
+export const designForm = writable({ ...DEFAULT_FORM })
+
+/** Form fields whose template edge is hovered (form ↔ plot link), e.g. ['fp'] or ['fa', 'aaDb']. */
+export const hoveredFields = writable([])
+
+/** Stage under the pointer (stage card, stage curve or one of its roots): highlights it everywhere. */
+export const hoveredStageId = writable(null)
+
+/** Design action state (lib/design-action.js). */
+export const designBusy  = writable(false)
+export const designError = writable('')
+/** True while a live control (denorm slider) is held: comparisons wait for release. */
+export const liveAdjusting = writable(false)
+
+/** True while a template handle is dragged (the release re-designs). */
+export const templateDragging = writable(false)
+
+/** E6: re-design automatically (debounced) whenever the form changes. */
+export const liveMode = persistedBool('filtertool.liveMode', false)
+
+/** One transient notice: { message, actionLabel?, onAction?, timeoutMs? } or null. */
+export const toast = writable(null)
+
+// Filter design: snapshot of the last successful design
 export const filterParams = writable(null)
-export const filterResult = writable(null)   // { zeros, poles, num, den, gain, N }
+export const filterResult = writable(null)   // { zeros, poles, num, den, gain, N, roots: { zeros, poles } }
 export const bodeData     = writable(null)   // { freq, magnitude, phase, groupDelay }
 
-// Stages — each: { id, name, zeros, poles, gain, num, den, bode? }
+// Stages — each: { id, name, zeroIds, poleIds, zeros, poles, gain, num, den, normtype }
+// zeroIds/poleIds reference filterResult.roots (lib/roots.js); zeros/poles hold [re, im].
 export const stages = writable([])
 
 // Datalines (imported datasets + filter TFs) — Phase 7
@@ -107,16 +133,15 @@ export const pendingFormHydration = writable(null)
 // Number of frequency points used for all Bode computations
 export const bodePoints = writable(2000)
 
-// Derived: available (unassigned) poles and zeros
+// Derived: available (unassigned) roots, as root objects from filterResult.roots
 export const remainingPZ = derived(
   [filterResult, stages],
   ([$fr, $stages]) => {
-    if (!$fr) return { zeros: [], poles: [] }
-    const usedZeros = new Set($stages.flatMap(s => s.zeros.map(pzKey)))
-    const usedPoles = new Set($stages.flatMap(s => s.poles.map(pzKey)))
+    if (!$fr?.roots) return { zeros: [], poles: [] }
+    const used = new Set($stages.flatMap(s => [...(s.zeroIds ?? []), ...(s.poleIds ?? [])]))
     return {
-      zeros: $fr.zeros.filter(z => !usedZeros.has(pzKey(z))),
-      poles: $fr.poles.filter(p => !usedPoles.has(pzKey(p))),
+      zeros: $fr.roots.zeros.filter(r => !used.has(r.id)),
+      poles: $fr.roots.poles.filter(r => !used.has(r.id)),
     }
   }
 )
@@ -125,8 +150,3 @@ export const uiEnabled = derived(
   [engineReady, engineError],
   ([$ready, $error]) => $ready && !$error
 )
-
-// Stable key for a pole or zero [real, imag]
-export function pzKey([r, i]) {
-  return `${r.toFixed(10)},${i.toFixed(10)}`
-}

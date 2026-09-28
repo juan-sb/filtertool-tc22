@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import { SI, formatSI } from '../lib/si.js'
 
   export let value    = 1.0
   export let min      = -Infinity
@@ -11,22 +12,15 @@
   // logNudge=false → arrow keys add/subtract `step` (good for dB, order, …)
   export let logNudge = true
   export let step     = 1
+  /** Outline the field as invalid (form-level validation, e.g. fp ≥ fa). */
+  export let invalid  = false
+  /** SI-prefix display (2.2k, 4.7n). false = plain number (dB, %, Q: 0.5 not "500m"). */
+  export let si       = true
+
+  const plain = v => (isFinite(v) ? parseFloat(v.toPrecision(5)).toString() : '—')
+  const format = v => (si ? formatSI(v) : plain(v))
 
   const dispatch = createEventDispatcher()
-
-  // Ordered largest→smallest so we pick the best prefix for display
-  const SI = [
-    { p: 'T', f: 1e12 },
-    { p: 'G', f: 1e9  },
-    { p: 'M', f: 1e6  },
-    { p: 'k', f: 1e3  },
-    { p: '',  f: 1    },
-    { p: 'm', f: 1e-3 },
-    { p: 'µ', f: 1e-6 },
-    { p: 'n', f: 1e-9 },
-    { p: 'p', f: 1e-12 },
-    { p: 'f', f: 1e-15 },
-  ]
 
   function parse(str) {
     str = str.trim()
@@ -60,19 +54,6 @@
     return entry ? num * entry.f : NaN
   }
 
-  function format(num) {
-    if (!isFinite(num)) return '—'
-    const abs = Math.abs(num)
-    // Exact / near-zero must not pick a tiny SI prefix (0 would become "0f")
-    if (abs < 1e-15) return '0'
-    // find the best prefix: largest factor where abs >= factor (with small tolerance)
-    const entry = SI.find(s => abs >= s.f * 0.9995) ?? SI[SI.length - 1]
-    const scaled = num / entry.f
-    // 4 significant figures, strip trailing zeros
-    const str = parseFloat(scaled.toPrecision(4)).toString()
-    return `${str}${entry.p}`
-  }
-
   let text    = format(value)
   let focused = false
   let error   = false
@@ -93,20 +74,28 @@
     if (e.key === 'Escape') { text = format(value); error = false; e.target.blur(); return }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
-      const multiplier = e.shiftKey ? 10 : e.altKey ? 0.1 : 1
-      const direction  = e.key === 'ArrowUp' ? 1 : -1
-      const parsed     = parse(text)
-      const base       = isNaN(parsed) ? value : parsed
-      let next
-      if (logNudge) {
-        // multiply/divide — each arrow tick moves ~12% (≈ one decade per 20 steps)
-        next = base * Math.pow(10, direction * multiplier * 0.05)
-      } else {
-        // linear — add/subtract step
-        next = base + direction * step * multiplier
-      }
-      applyValue(next)
+      nudge(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey ? 10 : e.altKey ? 0.1 : 1)
     }
+  }
+
+  // Wheel nudges like the arrow keys, but only while focused, so scrolling the
+  // sidebar over a field never changes it.
+  function onWheel(e) {
+    if (!focused || disabled) return
+    e.preventDefault()
+    nudge(e.deltaY < 0 ? 1 : -1, e.shiftKey ? 10 : e.altKey ? 0.1 : 1)
+  }
+
+  function nudge(direction, multiplier) {
+    const parsed = parse(text)
+    const base   = isNaN(parsed) ? value : parsed
+    // log: each tick moves ~12% (≈ one decade per 20 steps); linear: ± step
+    const next = logNudge
+      ? base * Math.pow(10, direction * multiplier * 0.05)
+      : base + direction * step * multiplier
+    applyValue(next)
+    // keep the raw number visible while editing
+    if (focused) text = String(parseFloat(value.toPrecision(12)))
   }
 
   function commit() {
@@ -140,7 +129,7 @@
   {#if label}
     <span class="label">{label}</span>
   {/if}
-  <div class="input-row">
+  <div class="input-row" class:invalid={invalid && !error}>
     <input
       type="text"
       class:error
@@ -149,6 +138,7 @@
       on:focus={onFocus}
       on:blur={onBlur}
       on:keydown={onKeydown}
+      on:wheel={onWheel}
       autocomplete="off"
       spellcheck="false"
     />
@@ -192,6 +182,7 @@
     min-width: 0;
   }
   .input-row:focus-within { border-color: var(--accent); }
+  .input-row.invalid { border-color: var(--danger); }
 
   input {
     flex: 1;

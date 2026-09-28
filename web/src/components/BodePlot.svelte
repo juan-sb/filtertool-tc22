@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy, afterUpdate } from 'svelte'
+  import { onMount, onDestroy, afterUpdate, createEventDispatcher } from 'svelte'
   import Plotly from 'plotly.js-dist'
   import { theme, showLegend, plotCursor } from '../stores/app.js'
 
@@ -10,11 +10,16 @@
   export let filename  = 'filtool_plot'
   export let shapes    = []
   export let yRange    = null
+  /** Explicit x range in data units (log axes convert internally); null = autorange. */
+  export let xRange    = null
+  /** Plotly uirevision: user zoom/pan survives re-renders while this stays the same. */
+  export let uirevision = undefined
   /** Fixed y-axis tick step (e.g. 45 for phase in degrees). */
   export let yDtick    = null
   /** When false (inactive keep-alive tab), skip Plotly work; rising edge re-typesets MathJax. */
   export let active    = true
 
+  const dispatch = createEventDispatcher()
   let container
   let initialized = false
   let destroyed = false
@@ -39,6 +44,8 @@
       modebar:        light ? '#57606a' : '#8b949e',
       modebarActive:  light ? '#0969da' : '#58a6ff',
       modebarBg:      light ? 'rgba(255,255,255,0.85)' : 'rgba(22,27,34,0.85)',
+      // Cursor crosshair: Plotly's default is a 1 px dotted #444, barely visible
+      spike:          light ? '#57606a' : '#8b949e',
     }
   }
 
@@ -49,14 +56,18 @@
       plot_bgcolor:  colors.background,
       font:          { color: colors.text, size: 12, family: 'system-ui, sans-serif' },
       margin:        { l: 64, r: 24, t: 36, b: 56 },
+      ...(uirevision !== undefined ? { uirevision } : {}),
       xaxis: {
         type:          logX ? 'log' : 'linear',
+        ...(xRange ? { range: logX ? xRange.map(Math.log10) : xRange, autorange: false } : { autorange: true }),
         title:         { text: xLabel, standoff: 8, font: { color: colors.text, size: 12 } },
         gridcolor:     colors.grid,
         linecolor:     colors.line,
         zerolinecolor: colors.line,
         tickcolor:     colors.line,
         tickfont:      { color: colors.text, size: 11 },
+        showspikes: true, spikemode: 'across', spikesnap: 'cursor',
+        spikecolor: colors.spike, spikethickness: 1.5, spikedash: 'dash',
       },
       yaxis: {
         title:         { text: yLabel, standoff: 8, font: { color: colors.text, size: 12 } },
@@ -111,6 +122,7 @@
     await Plotly.react(container, traces, makeLayout(), CONFIG)
     if (token !== refreshToken || destroyed || !container || !active) return
     Plotly.Plots.resize(container)
+    dispatch('rendered')
   }
 
   /**
@@ -141,6 +153,7 @@
       'modebar.color':       c.modebar,
       'modebar.activecolor': c.modebarActive,
       'modebar.bgcolor':     c.modebarBg,
+      'xaxis.spikecolor':    c.spike,
       shapes,   // template mask fill is theme-dependent too
     })
   }
@@ -150,16 +163,31 @@
     recolor()
   }
 
+  // Throttle, not debounce: continuous updates (denorm slider, live mode) must
+  // redraw while they happen, not only once they stop. The pending refresh
+  // reads the latest props when it fires.
   function scheduleRefresh(delayMs = 32) {
-    if (refreshTimer != null) clearTimeout(refreshTimer)
+    if (refreshTimer != null) return
     refreshTimer = setTimeout(() => {
       refreshTimer = null
       refreshPlot()
     }, delayMs)
   }
 
+  // Props that changed while this keep-alive tab was hidden (its refresh is skipped).
+  let staleWhileHidden = false
+
   $: if (initialized && active && !wasActive) {
     wasActive = true
+    // Stale data: redraw now, in the same update that shows the tab, so the
+    // first painted frame is current (a timer here showed the old curve for
+    // ~90 ms, a visible flicker).
+    if (staleWhileHidden) {
+      staleWhileHidden = false
+      lastInputs = [traces, _plotPrefs, yRange, xRange, uirevision, logX, yDtick]
+      lastShapes = shapes
+      refreshPlot()
+    }
     // Hidden keep-alive tabs typeset MathJax at 0 size; re-draw once visible.
     scheduleRefresh(50)
   } else if (!active) {
@@ -176,9 +204,34 @@
     if (active) scheduleRefresh(0)
   })
 
+  // Shape-only updates (template drag / hover) skip the full react + MathJax +
+  // resize path and patch the shapes directly, coalesced per animation frame.
+  let lastInputs = null
+  let lastShapes = null
+  let shapesFrame = null
+
+  function patchShapes() {
+    if (shapesFrame != null) return
+    shapesFrame = requestAnimationFrame(() => {
+      shapesFrame = null
+      if (!initialized || destroyed || !container || !active) return
+      lastShapes = shapes
+      Plotly.relayout(container, { shapes })
+    })
+  }
+
   afterUpdate(() => {
     // Skip inactive tabs — overlapping reacts while hidden leave MathJax titles blank.
-    if (!initialized || destroyed || !active) return
+    if (initialized && !destroyed && !active) { staleWhileHidden = true; return }
+    if (!initialized || destroyed) return
+    const inputs = [traces, _plotPrefs, yRange, xRange, uirevision, logX, yDtick]
+    const same = lastInputs && inputs.every((v, i) => v === lastInputs[i])
+    if (same && refreshTimer == null) {
+      if (shapes !== lastShapes) patchShapes()
+      return
+    }
+    lastInputs = inputs
+    lastShapes = shapes
     scheduleRefresh()
   })
 
@@ -186,10 +239,14 @@
     destroyed = true
     initialized = false
     if (refreshTimer != null) clearTimeout(refreshTimer)
+    if (shapesFrame != null) cancelAnimationFrame(shapesFrame)
     refreshToken++
     resizeObserver?.disconnect()
     if (container) Plotly.purge(container)
   })
+
+  /** The Plotly graph div (for overlays that hit-test in plot pixels). */
+  export function plotElement() { return container }
 
   export function exportSVG() {
     Plotly.downloadImage(container, { format: 'svg', filename, width: 1100, height: 650 })
@@ -198,6 +255,7 @@
 
 <div class="plot-wrap">
   <div bind:this={container} class="plot-div"></div>
+  <slot />
   <button class="export-btn" on:click={exportSVG} title="Export as SVG">
     SVG
   </button>

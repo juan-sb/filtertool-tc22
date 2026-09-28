@@ -1,36 +1,39 @@
 <script>
-  import { getWorkerApi }  from '../lib/worker-client.js'
-  import { freqRangeFromParams, TWO_PI } from '../lib/approx.js'
-  import { filterParams, filterResult, bodeData, stages, bodePoints, uiEnabled, engineStatus, pendingFormHydration, dataUnit } from '../stores/app.js'
-  import SciInput from './SciInput.svelte'
+  import { TWO_PI } from '../lib/approx.js'
+  import { runDesign, liveDenorm } from '../lib/design-action.js'
+  import {
+    LP, HP, BP, BR, GD, F0_BW, FREQS, MAX_ORDER, GD_APPROX,
+    isBand as isBandType, buildParams, formFromParams, rescaleForm, validateForm, switchFilterType, paramsClose,
+  } from '../lib/params.js'
+  import {
+    designForm, filterParams, filterResult, uiEnabled, pendingFormHydration, dataUnit,
+    designBusy, designError, liveMode, liveAdjusting,
+  } from '../stores/app.js'
+  import Segmented  from './form/Segmented.svelte'
+  import OrderRange from './form/OrderRange.svelte'
+  import NumField   from './form/NumField.svelte'
+  import ApproxTiles from './form/ApproxTiles.svelte'
 
   // ── Constants ─────────────────────────────────────────────────────────────
-  const FILTER_TYPES  = ['Low-pass', 'High-pass', 'Band-pass', 'Band-reject', 'Group Delay']
-  const APPROX_TYPES  = ['Butterworth', 'Chebyshev I', 'Chebyshev II', 'Cauer', 'Legendre', 'Bessel', 'Gauss']
-
-  // ── Form state ────────────────────────────────────────────────────────────
-  // Frequencies below are held in the current data unit (Hz or rad/s); params
-  // sent to the engine are always rad/s.
-  let filterType  = 0
-  let approxType  = 0
-  let nMin = 1,   nMax = 10
-  let apDb = 3,   aaDb = 40,  gainDb = 0
-  let denorm      = 0     // 0–100 %
-
-  // LP / HP
-  let fp = 1000, fa = 2000
-
-  // BP / BR
-  let defineWith = 1
-  let f0 = 1000, bwp = 200, bwa = 600
-  let fp1 = 800, fp2 = 1200, fa1 = 600, fa2 = 1500
-
-  // Group Delay
-  let tau0 = 1e-3, frg = 1000, gamma = 5
+  // Response-shape glyphs, 24×12 viewBox.
+  const TYPE_OPTIONS = [
+    { value: LP, label: 'LP', title: 'Low-pass',    glyph: 'M1 3 H11 L17 10 H23' },
+    { value: HP, label: 'HP', title: 'High-pass',   glyph: 'M1 10 H7 L13 3 H23' },
+    { value: BP, label: 'BP', title: 'Band-pass',   glyph: 'M1 10 H5 L9 3 H15 L19 10 H23' },
+    { value: BR, label: 'BR', title: 'Band-reject', glyph: 'M1 3 H6 L10 10 H14 L18 3 H23' },
+    { value: GD, label: 'GD', title: 'Group delay', glyph: 'M1 6 H23 M3 2.5 V9.5 M21 2.5 V9.5' },
+  ]
+  const DEFINE_OPTIONS = [
+    { value: F0_BW, label: 'f₀ + BW', title: 'Define the band by its centre frequency and bandwidths' },
+    { value: FREQS, label: 'Edges', title: 'Define the band by its four edge frequencies' },
+  ]
 
   // ── Units ─────────────────────────────────────────────────────────────────
+  // Form frequencies ($designForm) are held in the current data unit (Hz or
+  // rad/s); params sent to the engine are always rad/s.
   /** Hz value × uf = value in the current data unit. */
   $: uf     = $dataUnit === 'rad' ? TWO_PI : 1
+  $: toRad  = TWO_PI / uf
   $: uLabel = $dataUnit === 'rad' ? 'rad/s' : 'Hz'
   /** Symbol prefix: f for Hz, ω for rad/s. */
   $: fsym   = $dataUnit === 'rad' ? 'ω' : 'f'
@@ -43,248 +46,172 @@
   $: if ($dataUnit !== lastUnit) {
     const k = $dataUnit === 'rad' ? TWO_PI : 1 / TWO_PI
     lastUnit = $dataUnit
-    fp *= k;  fa *= k
-    f0 *= k;  bwp *= k; bwa *= k
-    fp1 *= k; fp2 *= k; fa1 *= k; fa2 *= k
-    frg *= k
+    designForm.update(f => rescaleForm(f, k))
   }
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  $: isBand     = filterType === 2 || filterType === 3
-  $: isGD       = filterType === 4
+  $: ft         = $designForm.filterType
+  $: isBand     = isBandType(ft)
+  $: isGD       = ft === GD
+  $: formErrors = validateForm($designForm)
+  $: hasErrors  = Object.keys(formErrors).length > 0
+  /** First validation message of the band fields (shown under their one-row layout). */
+  $: bandError = ['f0', 'bwp', 'bwa', 'fp1', 'fp2', 'fa1', 'fa2'].map(k => formErrors[k]).find(Boolean) ?? ''
+  /** Form differs from the last successful design. */
+  // Not stale mid live-denorm: the form's denorm leads the design until release.
+  $: stale = !$liveAdjusting && !!$filterParams && !hasErrors && !paramsClose(buildParams($designForm, toRad), $filterParams)
+
+  function onTypeChange(e) {
+    designForm.update(f => {
+      const next = switchFilterType(f, e.detail)
+      // Group delay only supports Bessel / Gauss.
+      if (e.detail === GD && !GD_APPROX.has(next.approxType)) next.approxType = 5
+      return next
+    })
+  }
+
+  function setApprox(i) {
+    designForm.update(f => ({ ...f, approxType: i }))
+  }
+
+  function onOrderChange(e) {
+    designForm.update(f => ({ ...f, nMin: e.detail.lo, nMax: e.detail.hi }))
+  }
 
   // Apply params from Save/Load without re-running Design.
   $: if ($pendingFormHydration) {
-    applyParamsToForm($pendingFormHydration)
+    designForm.update(f => formFromParams($pendingFormHydration, toRad, f))
     pendingFormHydration.set(null)
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
-  let computing = false
-  let errorMsg  = ''
+  // Editing the form clears the last engine error (depends on $designForm only).
+  const clearError = () => designError.set('')
+  $: clearError($designForm)
 
-  async function design() {
-    computing = true
-    errorMsg  = ''
-    engineStatus.set('Computing…')
-    try {
-      const params = buildParams()
-      const api    = getWorkerApi()
-      const result = await api.filterDesign(params)
-      if (result.error) { errorMsg = result.error.split('\n').at(-2) ?? result.error; return }
-      stages.set([])
-      filterParams.set(params)
-      filterResult.set(result)
-      const r = freqRangeFromParams(params)
-      bodeData.set(await api.computeBode(result.num, result.den, r.min, r.max, $bodePoints))
-      engineStatus.set('Ready')
-    } catch (e) {
-      errorMsg = e.message
-      engineStatus.set('Ready')
-    } finally { computing = false }
+  function design() {
+    if (!hasErrors) runDesign()
   }
 
-  function applyParamsToForm(p) {
-    const fromRad = w => (Number(w) / TWO_PI) * uf
-    filterType = p.filter_type ?? 0
-    approxType = p.approx_type ?? 0
-    nMin = p.N_min ?? 1
-    nMax = p.N_max ?? 10
-    apDb = p.ap_dB ?? 3
-    aaDb = p.aa_dB ?? 40
-    gainDb = 20 * Math.log10(Math.max(p.gain ?? 1, 1e-12))
-    denorm = p.denorm ?? 0
-    defineWith = p.define_with ?? 1
-    gamma = p.gamma ?? 5
-    tau0 = p.tau0 ?? 1e-3
-
-    if (filterType === 4) {
-      frg = fromRad(p.wrg ?? 0) || 1000 * uf
-      return
-    }
-    if (filterType === 0 || filterType === 1) {
-      fp = fromRad(p.wp) || 1000 * uf
-      fa = fromRad(p.wa) || 2000 * uf
-      return
-    }
-    // Band-pass / band-reject
-    if (defineWith === 1) {
-      f0 = fromRad(p.w0) || 1000 * uf
-      bwp = fromRad(p.bw?.[0]) || 200 * uf
-      bwa = fromRad(p.bw?.[1]) || 600 * uf
-    } else {
-      fp1 = fromRad(p.wp?.[0]) || 800 * uf
-      fp2 = fromRad(p.wp?.[1]) || 1200 * uf
-      fa1 = fromRad(p.wa?.[0]) || 600 * uf
-      fa2 = fromRad(p.wa?.[1]) || 1500 * uf
-    }
+  // ── Live denorm (T3): see liveDenorm in lib/design-action.js ──────────────
+  function onDenormInput() {
+    if (liveDenorm.start()) liveDenorm.update($designForm.denorm)
   }
 
-  function buildParams() {
-    const toRad = v => v * TWO_PI / uf
-    const base = {
-      filter_type: filterType, approx_type: approxType,
-      N_min: nMin, N_max: nMax,
-      ap_dB: apDb, aa_dB: aaDb,
-      gain: Math.pow(10, gainDb / 20),
-      normalization: 'Passband',
-      is_helper: false, helper_approx: [], helper_N: -1,
-      define_with: defineWith, denorm,
-      gamma, tau0,
-    }
-    if (isGD) return { ...base, wrg: toRad(frg), wp: 0, wa: 0, w0: 0, bw: [0,0] }
-    if (!isBand) return { ...base, wp: toRad(fp), wa: toRad(fa), w0: 0, bw:[0,0], wrg:0 }
-    if (defineWith === 1) return {
-      ...base,
-      wp: [toRad(f0 - bwp/2), toRad(f0 + bwp/2)],
-      wa: [toRad(f0 - bwa/2), toRad(f0 + bwa/2)],
-      w0: toRad(f0), bw: [toRad(bwp), toRad(bwa)], wrg: 0,
-    }
-    return {
-      ...base,
-      wp: [toRad(fp1), toRad(fp2)], wa: [toRad(fa1), toRad(fa2)],
-      w0: toRad(Math.sqrt(fp1 * fp2)),
-      bw: [toRad(fp2 - fp1), toRad(fa2 - fa1)], wrg: 0,
-    }
+  function onDenormRelease() {
+    liveDenorm.end()
   }
 </script>
 
 <div class="fp">
 
-  <div class="pair">
-    <div class="stack">
-      <span class="lbl">Type</span>
-      <select class="ctl" bind:value={filterType}>
-        {#each FILTER_TYPES as t, i}<option value={i}>{t}</option>{/each}
-      </select>
-    </div>
-    <div class="stack">
-      <span class="lbl">Approx</span>
-      <select class="ctl" bind:value={approxType}>
-        {#each APPROX_TYPES as a, i}<option value={i}>{a}</option>{/each}
-      </select>
-    </div>
+  <!-- ── Specs ─────────────────────────────────────────────────────────── -->
+  <div class="group">Specs</div>
+
+  <Segmented options={TYPE_OPTIONS} value={ft} ariaLabel="Filter type" on:change={onTypeChange} />
+
+  <ApproxTiles
+    value={$designForm.approxType}
+    allowed={isGD ? GD_APPROX : null}
+    disabledTitle="not available for group delay"
+    on:change={e => setApprox(e.detail)}
+  />
+  {#if formErrors.approxType}<p class="hint">{formErrors.approxType}</p>{/if}
+
+  <div class="order-row">
+    <span class="lbl">Order</span>
+    <span class="order-val">N {$designForm.nMin}–{$designForm.nMax}</span>
+  </div>
+  <OrderRange
+    lo={$designForm.nMin} hi={$designForm.nMax} min={1} max={MAX_ORDER}
+    designed={$filterResult?.N ?? null} {stale}
+    on:change={onOrderChange}
+  />
+  {#if formErrors.nMin || formErrors.nMax}<p class="hint">{formErrors.nMin || formErrors.nMax}</p>{/if}
+
+  <!-- ── Template ──────────────────────────────────────────────────────── -->
+  <div class="group group-row">
+    <span>Template{#if isBand}<span class="unit-cap"> · {uLabel}</span>{/if}</span>
+    {#if isBand}
+      <Segmented size="sm" options={DEFINE_OPTIONS} bind:value={$designForm.defineWith} ariaLabel="Define band by" />
+    {/if}
   </div>
 
-  <div class="pair">
-    <div class="stack">
-      <span class="lbl">N min</span>
-      <input class="ctl num" type="number" min="1" max="50" bind:value={nMin} />
-    </div>
-    <div class="stack">
-      <span class="lbl">N max</span>
-      <input class="ctl num" type="number" min="1" max="50" bind:value={nMax} />
-    </div>
-  </div>
-
-  <div class="rule"></div>
-
-  {#if !isGD}
+  {#if isGD}
+    <NumField label="τ₀" bind:value={$designForm.tau0} unit="s" min={1e-12} max={1} error={formErrors.tau0} edge="tau0" group="centre" />
+    <NumField label="{fsym} ref" bind:value={$designForm.frg} unit={uLabel} min={fMin} max={fMax} error={formErrors.frg} edge="frg" group="pass" />
+    <NumField label="γ" bind:value={$designForm.gamma} unit="%" min={0.01} max={99} log={false} step={0.5} error={formErrors.gamma} edge="gamma" group="pass" />
+  {:else}
     {#if !isBand}
       <div class="pair">
-        <div class="stack">
-          <span class="lbl">{fsym}p</span>
-          <SciInput bind:value={fp} unit={uLabel} min={fMin} max={fMax} />
-        </div>
-        <div class="stack">
-          <span class="lbl">{fsym}a</span>
-          <SciInput bind:value={fa} unit={uLabel} min={fMin} max={fMax} />
-        </div>
+        <NumField layout="stack" label="{fsym}p (pass)" bind:value={$designForm.fp} edge="fp" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp} />
+        <NumField layout="stack" label="{fsym}a (stop)" bind:value={$designForm.fa} edge="fa" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa} />
       </div>
     {:else}
-      <div class="row">
-        <span class="lbl">Define</span>
-        <select class="ctl" bind:value={defineWith}>
-          <option value={1}>{fsym}₀ + BW</option>
-          <option value={0}>Frequencies</option>
-        </select>
-      </div>
-      {#if defineWith === 1}
-        <div class="row">
-          <span class="lbl">{fsym}₀</span>
-          <SciInput bind:value={f0} unit={uLabel} min={fMin} max={fMax} />
+      <!-- One row, like LP / HP, so band types don't make the sidebar scroll; unit in the header -->
+      {#if $designForm.defineWith === F0_BW}
+        <div class="tri">
+          <NumField layout="stack" label="{fsym}₀" title="Centre frequency, {uLabel}" bind:value={$designForm.f0} edge="f0" group="centre" min={fMin} max={fMax} showHint={false} error={formErrors.f0} />
+          <NumField layout="stack" label="BWp" title="Passband width, {uLabel} (drag the label to adjust)" bind:value={$designForm.bwp} edge="bwp" group="pass" min={bwMin} max={fMax} showHint={false} error={formErrors.bwp} />
+          <NumField layout="stack" label="BWa" title="Stopband width, {uLabel} (drag the label to adjust)" bind:value={$designForm.bwa} edge="bwa" group="stop" min={bwMin} max={fMax} showHint={false} error={formErrors.bwa} />
         </div>
-        <div class="row">
-          <span class="lbl">BWp</span>
-          <SciInput bind:value={bwp} unit={uLabel} min={bwMin} max={fMax} />
-        </div>
-        <div class="row">
-          <span class="lbl">BWa</span>
-          <SciInput bind:value={bwa} unit={uLabel} min={bwMin} max={fMax} />
-        </div>
+        {#if bandError}<p class="hint">{bandError}</p>{/if}
       {:else}
-        <div class="row">
-          <span class="lbl">{fsym}p₁</span>
-          <SciInput bind:value={fp1} unit={uLabel} min={fMin} max={fMax} />
+        <!-- Edges in frequency order (green = passband, amber = stopband); unit in the header -->
+        <div class="quad">
+          {#each (ft === BP ? ['fa1', 'fp1', 'fp2', 'fa2'] : ['fp1', 'fa1', 'fa2', 'fp2']) as k (k)}
+            {@const pass = k.startsWith('fp')}
+            <NumField layout="stack" label="{fsym}{pass ? 'p' : 'a'}{k.endsWith('1') ? '₁' : '₂'}"
+              title="{pass ? 'Passband' : 'Stopband'} edge {k.endsWith('1') ? '1 (low)' : '2 (high)'}, {uLabel}"
+              bind:value={$designForm[k]} edge={k} group={pass ? 'pass' : 'stop'} min={fMin} max={fMax} showHint={false} error={formErrors[k]} />
+          {/each}
         </div>
-        <div class="row">
-          <span class="lbl">{fsym}p₂</span>
-          <SciInput bind:value={fp2} unit={uLabel} min={fMin} max={fMax} />
-        </div>
-        <div class="row">
-          <span class="lbl">{fsym}a₁</span>
-          <SciInput bind:value={fa1} unit={uLabel} min={fMin} max={fMax} />
-        </div>
-        <div class="row">
-          <span class="lbl">{fsym}a₂</span>
-          <SciInput bind:value={fa2} unit={uLabel} min={fMin} max={fMax} />
-        </div>
+        {#if bandError}<p class="hint">{bandError}</p>{/if}
       {/if}
     {/if}
 
-    <div class="rule"></div>
-
     <div class="pair">
-      <div class="stack">
-        <span class="lbl">Ripple</span>
-        <SciInput bind:value={apDb} unit="dB" min={0.001} max={40} logNudge={false} step={0.5} />
-      </div>
-      <div class="stack">
-        <span class="lbl">Attenuation</span>
-        <SciInput bind:value={aaDb} unit="dB" min={1} max={120} logNudge={false} step={1} />
-      </div>
-    </div>
-
-  {:else}
-    <div class="row">
-      <span class="lbl">τ₀</span>
-      <SciInput bind:value={tau0} unit="s" min={1e-12} max={1} />
-    </div>
-    <div class="row">
-      <span class="lbl">{fsym} ref</span>
-      <SciInput bind:value={frg} unit={uLabel} min={fMin} max={fMax} />
-    </div>
-    <div class="row">
-      <span class="lbl">γ</span>
-      <div class="with-unit">
-        <input class="ctl num" type="number" min="0.01" max="99" step="0.5" bind:value={gamma} />
-        <span class="unit">%</span>
-      </div>
+      <NumField layout="stack" label="Ripple" bind:value={$designForm.apDb} edge="apDb" group="pass" unit="dB" min={0.001} max={40} log={false} step={0.1} error={formErrors.apDb} />
+      <NumField layout="stack" label="Attenuation" bind:value={$designForm.aaDb} edge="aaDb" group="stop" unit="dB" min={1} max={120} log={false} step={1} error={formErrors.aaDb} />
     </div>
   {/if}
 
-  <div class="rule"></div>
+  <!-- ── Output ────────────────────────────────────────────────────────── -->
+  <div class="group">Output</div>
 
-  <div class="row">
-    <span class="lbl">Gain</span>
-    <SciInput bind:value={gainDb} unit="dB" logNudge={false} step={1} />
-  </div>
+  <NumField label="Gain" bind:value={$designForm.gainDb} unit="dB" min={-200} max={200} log={false} step={1} />
 
-  <div class="row">
-    <span class="lbl">Denorm</span>
+  <!-- Group delay has no denormalization: the engine scales the prototype by 1/τ₀ only. -->
+  <div class="denorm-row" class:off={isGD}
+    title={isGD ? 'Not used for group delay: the design is set by τ₀, f ref and γ' : ''}>
+    <span class="lbl" title={isGD ? '' : 'Where the normalization lands between the passband edge (0 %) and the stopband edge (100 %)'}>Denorm</span>
     <div class="denorm">
-      <input class="slider" type="range" min="0" max="100" step="1" bind:value={denorm} />
-      <span class="pct">{denorm}%</span>
+      <input class="slider" type="range" min="0" max="100" step="1" bind:value={$designForm.denorm} aria-label="Denormalization"
+        disabled={isGD}
+        on:input={onDenormInput} on:change={onDenormRelease} on:pointerup={onDenormRelease} on:blur={onDenormRelease} />
+      <span class="pct">{isGD ? '—' : `${$designForm.denorm}%`}</span>
     </div>
   </div>
 
-  {#if errorMsg}
-    <p class="err">{errorMsg}</p>
+  {#if $designError}
+    <p class="err">{$designError}</p>
   {/if}
 
-  <button class="btn" disabled={!$uiEnabled || computing} on:click={design}>
-    {computing ? 'Computing…' : 'Design Filter'}
+  <div class="design-row">
+  <button
+    class="btn"
+    class:stale
+    disabled={!$uiEnabled || $designBusy || hasErrors}
+    title={hasErrors ? 'Fix the highlighted fields first' : stale ? 'The form changed since the last design' : ''}
+    on:click={design}
+  >
+    {$designBusy ? 'Computing…' : 'Design Filter'}
+    {#if stale && !$designBusy && !$liveMode}<span class="badge">out of date</span>{/if}
   </button>
+  <label class="live" class:on={$liveMode} title="Live mode: re-design automatically whenever the form changes (Ctrl+Enter still designs)">
+    <input type="checkbox" bind:checked={$liveMode} /> Live
+  </label>
+  </div>
 
 </div>
 
@@ -297,26 +224,30 @@
     padding: 0.5rem 0.7rem 0.75rem;
   }
 
-  .row {
-    display: grid;
-    grid-template-columns: var(--lbl-w) minmax(0, 1fr);
-    align-items: center;
-    gap: 0.45rem;
-    min-width: 0;
+  .group {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 0.35rem;
+    padding-bottom: 0.15rem;
+    border-bottom: 1px solid var(--surface-2);
   }
+  .group:first-child { margin-top: 0; }
+  .group-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; min-height: 1.35rem; }
+  .unit-cap { text-transform: none; font-weight: 500; letter-spacing: 0; }
+
+  .tri, .quad { display: grid; gap: 0.4rem; min-width: 0; align-items: start; }
+  .tri  { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .quad { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; }
 
   .pair {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.45rem;
     min-width: 0;
-  }
-
-  .stack {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    min-width: 0;
+    align-items: start;
   }
 
   .lbl {
@@ -324,36 +255,37 @@
     color: var(--text-muted);
     line-height: 1.2;
     white-space: nowrap;
-    text-align: left;
   }
 
-  .ctl {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text);
-    font-size: 0.88rem;
-    padding: 0.35rem 0.45rem;
-    width: 100%;
-    min-width: 0;
-    outline: none;
+  .hint {
+    font-size: 0.75rem;
+    color: var(--danger);
+    margin: -0.2rem 0 0;
+    overflow-wrap: anywhere;
   }
-  .ctl:focus { border-color: var(--accent); }
-  .ctl.num { font-family: ui-monospace, 'SF Mono', Consolas, monospace; }
 
-  .with-unit {
+  /* Order */
+  .order-row {
     display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    min-width: 0;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: -0.35rem;
   }
-  .with-unit .ctl { flex: 1; }
-  .unit {
-    font-size: 0.8rem;
-    color: var(--text-dim);
-    flex-shrink: 0;
+  .order-val {
+    font-size: 0.82rem;
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+    color: var(--text);
   }
 
+  /* Denorm */
+  .denorm-row.off { opacity: 0.4; }
+  .denorm-row.off .slider { cursor: not-allowed; }
+  .denorm-row {
+    display: grid;
+    grid-template-columns: var(--lbl-w) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.45rem;
+  }
   .denorm {
     display: flex;
     align-items: center;
@@ -413,13 +345,21 @@
     cursor: pointer;
   }
 
-  .rule {
-    height: 1px;
-    background: var(--surface-2);
-    margin: 0.15rem 0;
+  .design-row { display: flex; gap: 0.4rem; align-items: stretch; margin-top: 0.15rem; }
+  .design-row .btn { flex: 1; margin-top: 0; }
+  .live {
+    display: flex; align-items: center; gap: 0.3rem;
+    padding: 0 0.55rem; border-radius: 4px; cursor: pointer; user-select: none;
+    border: 1px solid var(--border); background: var(--bg);
+    font-size: 0.8rem; color: var(--text-muted);
   }
-
+  .live.on { border-color: var(--success); color: var(--success); background: color-mix(in srgb, var(--success) 12%, var(--bg)); }
+  .live input { accent-color: var(--success); margin: 0; }
   .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     background: var(--accent-strong);
     border: none;
     border-radius: 4px;
@@ -433,6 +373,13 @@
   }
   .btn:hover:not(:disabled) { background: var(--accent-hover); }
   .btn:disabled { background: var(--surface-2); color: var(--disabled); cursor: default; }
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 0.05rem 0.45rem;
+  }
 
   .err {
     font-size: 0.82rem;
