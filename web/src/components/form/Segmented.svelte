@@ -5,6 +5,8 @@
   export let options = []
   export let value
   export let ariaLabel = ''
+  /** 'sm' = compact inline control (e.g. in a section header). */
+  export let size = 'md'
 
   const dispatch = createEventDispatcher()
 
@@ -28,7 +30,7 @@
 </script>
 
 <!-- svelte-ignore a11y-interactive-supports-focus -->
-<div class="seg" role="radiogroup" aria-label={ariaLabel} on:keydown={onKeydown}>
+<div class="seg" class:sm={size === 'sm'} role="radiogroup" aria-label={ariaLabel} on:keydown={onKeydown}>
   {#each options as o, i}
     <button
       type="button"
@@ -86,6 +88,9 @@
     color: var(--accent);
     box-shadow: inset 0 0 0 1px var(--accent);
   }
+
+  .seg.sm { padding: 1px; gap: 1px; border-radius: 4px; }
+  .seg.sm button { font-size: 0.68rem; padding: 0.1rem 0.45rem; letter-spacing: 0; text-transform: none; }
 
   svg {
     width: 1.5rem;

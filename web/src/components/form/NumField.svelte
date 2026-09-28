@@ -17,6 +17,8 @@
   export let si = log
   /** Validation message for this field, or '' / undefined. */
   export let error = ''
+  /** false: only outline the field; the parent shows the message (narrow rows). */
+  export let showHint = true
   /** 'row' = label beside the input, 'stack' = label above. */
   export let layout = 'row'
   export let title = ''
@@ -40,7 +42,7 @@
     use:scrub={{ get: () => value, set: v => (value = v), log, step, min, max }}
   >{#if group}<i class="mark {group}" aria-hidden="true"></i>{/if}{label}</span>
   <SciInput bind:value {unit} {min} {max} {si} logNudge={log} {step} invalid={!!error} on:change />
-  {#if error}<span class="hint">{error}</span>{/if}
+  {#if error && showHint}<span class="hint">{error}</span>{/if}
 </div>
 
 <style>

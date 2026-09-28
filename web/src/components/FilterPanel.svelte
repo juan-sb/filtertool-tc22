@@ -24,8 +24,8 @@
     { value: GD, label: 'GD', title: 'Group delay', glyph: 'M1 6 H23 M3 2.5 V9.5 M21 2.5 V9.5' },
   ]
   const DEFINE_OPTIONS = [
-    { value: F0_BW, label: 'Centre + BW' },
-    { value: FREQS, label: 'Band edges' },
+    { value: F0_BW, label: 'f₀ + BW', title: 'Define the band by its centre frequency and bandwidths' },
+    { value: FREQS, label: 'Edges', title: 'Define the band by its four edge frequencies' },
   ]
 
   // ── Units ─────────────────────────────────────────────────────────────────
@@ -55,6 +55,8 @@
   $: isGD       = ft === GD
   $: formErrors = validateForm($designForm)
   $: hasErrors  = Object.keys(formErrors).length > 0
+  /** First validation message of the band fields (shown under their one-row layout). */
+  $: bandError = ['f0', 'bwp', 'bwa', 'fp1', 'fp2', 'fa1', 'fa2'].map(k => formErrors[k]).find(Boolean) ?? ''
   /** Form differs from the last successful design. */
   $: stale = !!$filterParams && !hasErrors && !paramsClose(buildParams($designForm, toRad), $filterParams)
 
@@ -127,7 +129,12 @@
   {#if formErrors.nMin || formErrors.nMax}<p class="hint">{formErrors.nMin || formErrors.nMax}</p>{/if}
 
   <!-- ── Template ──────────────────────────────────────────────────────── -->
-  <div class="group">Template</div>
+  <div class="group group-row">
+    <span>Template{#if isBand}<span class="unit-cap"> · {uLabel}</span>{/if}</span>
+    {#if isBand}
+      <Segmented size="sm" options={DEFINE_OPTIONS} bind:value={$designForm.defineWith} ariaLabel="Define band by" />
+    {/if}
+  </div>
 
   {#if isGD}
     <NumField label="τ₀" bind:value={$designForm.tau0} unit="s" min={1e-12} max={1} error={formErrors.tau0} edge="tau0" group="centre" />
@@ -140,32 +147,25 @@
         <NumField layout="stack" label="{fsym}a (stop)" bind:value={$designForm.fa} edge="fa" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa} />
       </div>
     {:else}
-      <Segmented options={DEFINE_OPTIONS} bind:value={$designForm.defineWith} ariaLabel="Define band by" />
+      <!-- One row, like LP / HP, so band types don't make the sidebar scroll; unit in the header -->
       {#if $designForm.defineWith === F0_BW}
-        <NumField label="{fsym}₀" bind:value={$designForm.f0} edge="f0" group="centre" unit={uLabel} min={fMin} max={fMax} error={formErrors.f0} />
-        <NumField label="BWp (pass)" bind:value={$designForm.bwp} edge="bwp" group="pass" unit={uLabel} min={bwMin} max={fMax} error={formErrors.bwp} />
-        <NumField label="BWa (stop)" bind:value={$designForm.bwa} edge="bwa" group="stop" unit={uLabel} min={bwMin} max={fMax} error={formErrors.bwa} />
+        <div class="tri">
+          <NumField layout="stack" label="{fsym}₀" title="Centre frequency, {uLabel}" bind:value={$designForm.f0} edge="f0" group="centre" min={fMin} max={fMax} showHint={false} error={formErrors.f0} />
+          <NumField layout="stack" label="BWp" title="Passband width, {uLabel} (drag the label to adjust)" bind:value={$designForm.bwp} edge="bwp" group="pass" min={bwMin} max={fMax} showHint={false} error={formErrors.bwp} />
+          <NumField layout="stack" label="BWa" title="Stopband width, {uLabel} (drag the label to adjust)" bind:value={$designForm.bwa} edge="bwa" group="stop" min={bwMin} max={fMax} showHint={false} error={formErrors.bwa} />
+        </div>
+        {#if bandError}<p class="hint">{bandError}</p>{/if}
       {:else}
-        <!-- Low edge first, in frequency order for the selected type -->
-        {#if ft === BP}
-          <div class="pair">
-            <NumField layout="stack" label="{fsym}a₁ (stop)" bind:value={$designForm.fa1} edge="fa1" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa1} />
-            <NumField layout="stack" label="{fsym}p₁ (pass)" bind:value={$designForm.fp1} edge="fp1" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp1} />
-          </div>
-          <div class="pair">
-            <NumField layout="stack" label="{fsym}p₂ (pass)" bind:value={$designForm.fp2} edge="fp2" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp2} />
-            <NumField layout="stack" label="{fsym}a₂ (stop)" bind:value={$designForm.fa2} edge="fa2" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa2} />
-          </div>
-        {:else}
-          <div class="pair">
-            <NumField layout="stack" label="{fsym}p₁ (pass)" bind:value={$designForm.fp1} edge="fp1" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp1} />
-            <NumField layout="stack" label="{fsym}a₁ (stop)" bind:value={$designForm.fa1} edge="fa1" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa1} />
-          </div>
-          <div class="pair">
-            <NumField layout="stack" label="{fsym}a₂ (stop)" bind:value={$designForm.fa2} edge="fa2" group="stop" unit={uLabel} min={fMin} max={fMax} error={formErrors.fa2} />
-            <NumField layout="stack" label="{fsym}p₂ (pass)" bind:value={$designForm.fp2} edge="fp2" group="pass" unit={uLabel} min={fMin} max={fMax} error={formErrors.fp2} />
-          </div>
-        {/if}
+        <!-- Edges in frequency order (green = passband, amber = stopband); unit in the header -->
+        <div class="quad">
+          {#each (ft === BP ? ['fa1', 'fp1', 'fp2', 'fa2'] : ['fp1', 'fa1', 'fa2', 'fp2']) as k (k)}
+            {@const pass = k.startsWith('fp')}
+            <NumField layout="stack" label="{fsym}{pass ? 'p' : 'a'}{k.endsWith('1') ? '₁' : '₂'}"
+              title="{pass ? 'Passband' : 'Stopband'} edge {k.endsWith('1') ? '1 (low)' : '2 (high)'}, {uLabel}"
+              bind:value={$designForm[k]} edge={k} group={pass ? 'pass' : 'stop'} min={fMin} max={fMax} showHint={false} error={formErrors[k]} />
+          {/each}
+        </div>
+        {#if bandError}<p class="hint">{bandError}</p>{/if}
       {/if}
     {/if}
 
@@ -234,6 +234,12 @@
     border-bottom: 1px solid var(--surface-2);
   }
   .group:first-child { margin-top: 0; }
+  .group-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; min-height: 1.35rem; }
+  .unit-cap { text-transform: none; font-weight: 500; letter-spacing: 0; }
+
+  .tri, .quad { display: grid; gap: 0.4rem; min-width: 0; align-items: start; }
+  .tri  { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .quad { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; }
 
   .pair {
     display: grid;
