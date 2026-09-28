@@ -28,8 +28,15 @@
   export let canWheel = null
   /** Changing this resets zoom / frozen ranges (e.g. a new design). */
   export let resetKey = null
+  /**
+   * Live markers drawn on a canvas over the plot, synchronously on every change
+   * (drag previews): [{ re, im, symbol: 'x' | 'o', color, size }] in rad/s, or null.
+   */
+  export let overlayMarkers = null
 
   const dispatch = createEventDispatcher()
+  let overlay
+  let overlayNo = 0
 
   let container
   let initialized = false
@@ -122,6 +129,37 @@
     await awaitMathJax()
     if (token !== refreshToken || destroyed || !container || !active) return
     await Plotly.react(container, buildTraces(), makeLayout(), cfg())
+    if (token === refreshToken && !destroyed) dispatch('rendered')
+  }
+
+  // ── Live overlay ──────────────────────────────────────────────────────────
+  $: drawOverlay(overlayMarkers, scale)
+
+  function drawOverlay(list) {
+    if (!overlay || !container) return
+    const dpr = window.devicePixelRatio || 1, w = container.clientWidth, h = container.clientHeight
+    if (overlay.width !== Math.round(w * dpr) || overlay.height !== Math.round(h * dpr)) {
+      overlay.width = Math.round(w * dpr); overlay.height = Math.round(h * dpr)
+      overlay.style.width = `${w}px`; overlay.style.height = `${h}px`
+    }
+    const ctx = overlay.getContext('2d')
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    const ax = axes()
+    if (!list?.length || !ax) { overlay.dataset.frame = ''; return }
+    const { xa, ya } = ax
+    ctx.save()
+    ctx.beginPath(); ctx.rect(xa._offset, ya._offset, xa._length, ya._length); ctx.clip()
+    for (const m of list) {
+      const x = xa._offset + xa.l2p(m.re * scale), y = ya._offset + ya.l2p(m.im * scale), r = (m.size ?? 11) / 2
+      ctx.strokeStyle = m.color; ctx.lineWidth = 2.5; ctx.lineCap = 'round'
+      ctx.beginPath()
+      if (m.symbol === 'x') { ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r); ctx.moveTo(x + r, y - r); ctx.lineTo(x - r, y + r) }
+      else ctx.arc(x, y, r, 0, 2 * Math.PI)
+      ctx.stroke()
+    }
+    ctx.restore()
+    overlay.dataset.frame = String(++overlayNo)
   }
 
   // Throttle, not debounce: during a drag changes arrive every frame, and a
@@ -283,8 +321,13 @@
   export function plotElement() { return container }
 </script>
 
-<div class="pz-map" bind:this={container}></div>
+<div class="pz-wrap">
+  <div class="pz-map" bind:this={container}></div>
+  <canvas class="pz-overlay" bind:this={overlay} aria-hidden="true"></canvas>
+</div>
 
 <style>
+  .pz-wrap { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; }
   .pz-map { width: 100%; height: 100%; min-width: 0; min-height: 0; }
+  .pz-overlay { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 4; }
 </style>

@@ -3,7 +3,10 @@
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { APPROX_NAMES, plotColor, sPlaneAxis } from '../../lib/approx.js'
   import { isComplexRoot, rootValue } from '../../lib/roots.js'
-  import { makeStage, buildStage, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ, autoStage } from '../../lib/stages.js'
+  import {
+    makeStage, buildStage, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ, autoStage,
+    stagePreview, beginStagePreview, endStagePreview,
+  } from '../../lib/stages.js'
   import { colorOf, nextColorIndex } from '../../lib/stage-colors.js'
   import PzMap from '../PzMap.svelte'
 
@@ -88,7 +91,7 @@
   const labelled = (rs, k) => rs.map(r => ({ ...r, label: fmtComplex(r, k) }))
 
   // Refs: 'r:<root id>' for unassigned roots (selectable), 's:<stage id>' for staged ones.
-  function buildGroups(fr, remaining, stageList, selIds, hovId, hovStage, mainCol, compList, k) {
+  function buildGroups(fr, remaining, stageList, selIds, hovId, hovStage, mainCol, compList, k, ghostId = null) {
     if (!fr?.roots) return []
     const out = []
 
@@ -104,7 +107,7 @@
     // position; a faint ghost marks where a moved root was designed.
     stageList.forEach((st, i) => {
       const col = colorOf(st, i, $theme)
-      const dim = hovStage != null && hovStage !== st.id
+      const dim = (hovStage != null && hovStage !== st.id) || st.id === ghostId
       const big = hovStage === st.id ? 4 : 0
       if (rootsModified(st)) {
         out.push({ roots: labelled(asRoots(st.orig.poles), k), symbol: 'x', color: col, size: 8, opacity: 0.3, name: `${st.name} poles (designed)`, showlegend: false })
@@ -135,23 +138,52 @@
     return out
   }
 
-  $: groups = buildGroups($filterResult, $remainingPZ, $stages, selectedIds, hoveredId, $hoveredStageId, mainColor, $comparisons, axis.scale)
+  // During a staged-root preview (drag / wheel) the Plotly markers stay frozen,
+  // with that stage faint as the "before" position; the live roots are drawn by
+  // PzMap's canvas overlay on every move. After the commit, the overlay stays
+  // until Plotly has redrawn.
+  $: previewId = $stagePreview?.id ?? null
+  let groups = []
+  let ghostFor = null
+  let holdOverlay = false
+  $: if (previewId == null) { ghostFor = null; groups = buildGroups($filterResult, $remainingPZ, $stages, selectedIds, hoveredId, $hoveredStageId, mainColor, $comparisons, axis.scale) }
+  $: if (previewId != null && ghostFor !== previewId) {
+    ghostFor = previewId
+    holdOverlay = true
+    groups = buildGroups($filterResult, $remainingPZ, $stages, selectedIds, hoveredId, null, mainColor, $comparisons, axis.scale, previewId)
+  }
+  $: overlayStage = holdOverlay ? $stages.find(st => st.id === (previewId ?? ghostForOverlay)) : null
+  let ghostForOverlay = null
+  $: if (previewId != null) ghostForOverlay = previewId
+  $: overlayMarkers = overlayStage ? liveMarkers(overlayStage) : null
+  function liveMarkers(st) {
+    const col = colorOf(st, $stages.indexOf(st), $theme)
+    return [
+      ...st.poles.map(([re, im]) => ({ re, im, symbol: 'x', color: col, size: 13 })),
+      ...st.zeros.map(([re, im]) => ({ re, im, symbol: 'o', color: col, size: 13 })),
+    ]
+  }
+  function onMapRendered() { if (holdOverlay && previewId == null) { holdOverlay = false; ghostForOverlay = null } }
 
   function onMapHover(e) {
     const ref = e.detail.ref
     if (ref?.startsWith('r:')) { hoveredId = ref.slice(2); hoveredStageId.set(null) }
-    else if (ref?.startsWith('s:')) { hoveredId = null; hoveredStageId.set(Number(ref.slice(2))) }
+    // Staged roots: 's:<stageId>:<p|z>:<index>'
+    else if (ref?.startsWith('s:')) { hoveredId = null; hoveredStageId.set(Number(ref.split(':')[1])) }
     else { hoveredId = null; hoveredStageId.set(null) }
   }
 
   const isStageRoot = ref => !!parseRootRef(ref)
   const isStagePole = ref => parseRootRef(ref)?.kind === 'p'
-  const onMapDrag  = e => dragStageRoot(e.detail.ref, e.detail.re, e.detail.im, e.detail.snapIm)
+  const onMapDragStart = e => { const r = parseRootRef(e.detail.ref); if (r) beginStagePreview(r.stageId) }
+  const onMapDrag  = e => dragStageRoot(e.detail.ref, e.detail.re, e.detail.im, e.detail.snapIm, { preview: true })
+  const onMapDragEnd = () => endStagePreview(true)
   const onMapWheel = e => { const r = parseRootRef(e.detail.ref); if (r) wheelStageQ(r.stageId, e.detail.dir) }
 
   // E3: click a root on the plot to (de)select it.
   function onMapClick(e) {
     const ref = e.detail.ref
+    if (parseRootRef(ref) && $stagePreview?.phase === 'drag') { endStagePreview(false); return }
     if (!ref?.startsWith('r:')) return
     const id = ref.slice(2)
     const root = [...($remainingPZ.zeros ?? []), ...($remainingPZ.poles ?? [])].find(r => r.id === id)
@@ -172,8 +204,12 @@
       canDrag={isStageRoot}
       canWheel={isStagePole}
       on:hover={onMapHover}
+      {overlayMarkers}
       on:click={onMapClick}
+      on:dragstart={onMapDragStart}
       on:drag={onMapDrag}
+      on:dragend={onMapDragEnd}
+      on:rendered={onMapRendered}
       on:wheel={onMapWheel}
     />
   </div>

@@ -184,7 +184,8 @@ export function dragStageRoot(ref, re, im, snapIm, { preview = false } = {}) {
 
 /** Wheel over a pole: Q × 1.1^dir at fixed ω0 (2-pole stages). */
 export function wheelStageQ(stageId, dir) {
-  updateStage(stageId, s => {
+  // Live preview now, one engine commit after the wheel stops (editStageLive).
+  editStageLive(stageId, s => {
     if (s.poles.length !== 2) return {}
     const { q } = poleSummary(s.poles)
     return Number.isFinite(q) ? { poles: withQ(s.poles, q * Math.pow(1.1, dir)) } : {}
