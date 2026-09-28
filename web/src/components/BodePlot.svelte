@@ -43,6 +43,8 @@
       modebar:        light ? '#57606a' : '#8b949e',
       modebarActive:  light ? '#0969da' : '#58a6ff',
       modebarBg:      light ? 'rgba(255,255,255,0.85)' : 'rgba(22,27,34,0.85)',
+      // Cursor crosshair: Plotly's default is a 1 px dotted #444, barely visible
+      spike:          light ? '#57606a' : '#8b949e',
     }
   }
 
@@ -63,6 +65,8 @@
         zerolinecolor: colors.line,
         tickcolor:     colors.line,
         tickfont:      { color: colors.text, size: 11 },
+        showspikes: true, spikemode: 'across', spikesnap: 'cursor',
+        spikecolor: colors.spike, spikethickness: 1.5, spikedash: 'dash',
       },
       yaxis: {
         title:         { text: yLabel, standoff: 8, font: { color: colors.text, size: 12 } },
@@ -147,6 +151,7 @@
       'modebar.color':       c.modebar,
       'modebar.activecolor': c.modebarActive,
       'modebar.bgcolor':     c.modebarBg,
+      'xaxis.spikecolor':    c.spike,
       shapes,   // template mask fill is theme-dependent too
     })
   }
