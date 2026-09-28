@@ -169,3 +169,18 @@ export function compliance(g, bode) {
   const check = w => (w.at == null ? null : { ok: w.margin >= -TOL_DB, margin: w.margin, at: w.at })
   return { pass: check(worst.pass), stop: check(worst.stop), bad }
 }
+
+/**
+ * The transition band (passband edge → stopband edge, Hz) nearest to fHz:
+ * denorm 0 % puts the design on the passband edge, 100 % on the stopband edge.
+ */
+export function transitionNear(g, fHz) {
+  const lf = Math.log10(fHz)
+  let best = null, bestD = Infinity
+  g.passEdges.forEach((p, i) => {
+    const s = g.stopEdges[i]
+    const d = Math.abs(lf - (Math.log10(p.x) + Math.log10(s.x)) / 2)
+    if (d < bestD) { bestD = d; best = { passHz: p.x, stopHz: s.x } }
+  })
+  return best
+}

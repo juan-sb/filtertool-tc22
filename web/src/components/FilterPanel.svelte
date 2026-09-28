@@ -1,13 +1,13 @@
 <script>
   import { TWO_PI } from '../lib/approx.js'
-  import { runDesign } from '../lib/design-action.js'
+  import { runDesign, liveDenorm } from '../lib/design-action.js'
   import {
     LP, HP, BP, BR, GD, F0_BW, FREQS, MAX_ORDER, GD_APPROX,
     isBand as isBandType, buildParams, formFromParams, rescaleForm, validateForm, switchFilterType, paramsClose,
   } from '../lib/params.js'
   import {
     designForm, filterParams, filterResult, uiEnabled, pendingFormHydration, dataUnit,
-    designBusy, designError, liveAdjusting,
+    designBusy, designError,
   } from '../stores/app.js'
   import Segmented  from './form/Segmented.svelte'
   import OrderRange from './form/OrderRange.svelte'
@@ -90,21 +90,13 @@
     if (!hasErrors) runDesign()
   }
 
-  // ── Live denorm (T3) ──────────────────────────────────────────────────────
-  // While the slider moves, re-design from the last designed params with only
-  // denorm changed (pending form edits stay pending). runDesign coalesces, so
-  // only the newest value is computed. Comparisons wait for release.
-  let liveBase = null
-
+  // ── Live denorm (T3): see liveDenorm in lib/design-action.js ──────────────
   function onDenormInput() {
-    if (!$filterParams) return
-    if (!liveBase) { liveBase = $filterParams; liveAdjusting.set(true) }
-    runDesign({ params: { ...liveBase, denorm: $designForm.denorm } })
+    if (liveDenorm.start()) liveDenorm.update($designForm.denorm)
   }
 
   function onDenormRelease() {
-    liveBase = null
-    liveAdjusting.set(false)
+    liveDenorm.end()
   }
 </script>
 

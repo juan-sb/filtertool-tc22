@@ -15,7 +15,7 @@ import { remapStages } from './stage-remap.js'
 import { getWorkerApi } from './worker-client.js'
 import {
   designForm, dataUnit, bodePoints, filterParams, filterResult, bodeData, stages,
-  engineStatus, designBusy, designError, toast,
+  engineStatus, designBusy, designError, toast, liveAdjusting,
 } from '../stores/app.js'
 
 /**
@@ -49,6 +49,35 @@ export async function runDesign(request = {}) {
     running = false
   }
   return ok
+}
+
+/**
+ * Live denorm (slider or curve drag): re-design the last designed params with
+ * only denorm changed, so pending form edits stay pending. Comparisons wait
+ * for end() (liveAdjusting).
+ */
+let liveBase = null
+export const liveDenorm = {
+  /** @returns {boolean} false when there's no design to adjust */
+  start() {
+    if (liveBase) return true
+    const p = get(filterParams)
+    if (!p) return false
+    liveBase = p
+    liveAdjusting.set(true)
+    return true
+  },
+  update(denorm) {
+    if (!liveBase) return
+    designForm.update(f => (f.denorm === denorm ? f : { ...f, denorm }))
+    runDesign({ params: { ...liveBase, denorm } })
+  },
+  end() {
+    liveBase = null
+    liveAdjusting.set(false)
+  },
+  /** Params the live session started from (null when idle). */
+  get base() { return liveBase },
 }
 
 const toRadNow = () => (get(dataUnit) === 'rad' ? 1 : TWO_PI)

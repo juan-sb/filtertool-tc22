@@ -5,9 +5,9 @@
     plotUnit, dataUnit, designForm, hoveredFields, designBusy,
   } from '../../stores/app.js'
   import { APPROX_NAMES, plotColor, compareLine, freqAxis, freqRangeFromParams, TWO_PI } from '../../lib/approx.js'
-  import { GD, buildParams, paramsClose, validateForm } from '../../lib/params.js'
-  import { templateGeom, templateHandles, dragTo, compliance } from '../../lib/template.js'
-  import { runDesign } from '../../lib/design-action.js'
+  import { GD, DEFAULT_FORM, buildParams, formFromParams, paramsClose, validateForm } from '../../lib/params.js'
+  import { templateGeom, templateHandles, dragTo, compliance, transitionNear } from '../../lib/template.js'
+  import { runDesign, liveDenorm } from '../../lib/design-action.js'
   import { formatSI } from '../../lib/si.js'
   import BodePlot from '../BodePlot.svelte'
 
@@ -36,9 +36,13 @@
   $: comp    = showTemplate ? compliance(geom, $bodeData) : null
 
   // ── Drag state ───────────────────────────────────────────────────────────
-  /** @type {null | { h: any, gx: number, gy: number, startForm: any, moved: boolean }} */
+  /**
+   * Template handle drag: { kind: 'handle', h, gx, gy, startForm, moved }
+   * Curve drag (denorm): { kind: 'curve', startDenorm, grabLog, gap, levelDb, d, moved }
+   */
   let drag = null
-  let dragging = false
+  let dragging = false      // handle drag: freezes traces and axes
+  let curveGuide = null     // { passHz, stopHz, levelDb, d } shown while dragging the curve
   let hoverId = null
   let label = null          // { x, y, text } floating value label
   let plot                  // BodePlot instance
@@ -132,7 +136,33 @@
     return out
   }
 
-  $: shapes = showTemplate ? buildShapes(geom, handles, axis, $theme, $hoveredFields, drag?.h.id ?? hoverId) : []
+  // Denorm guide while dragging the curve: the transition band (0 % at the
+  // passband edge, 100 % at the stopband edge) with a dot at the current value.
+  const ACCENT = { dark: '#58a6ff', light: '#0969da' }
+  function guideShapes(gd, ax, th) {
+    if (!gd) return []
+    const C = HANDLE[th] ?? HANDLE.dark
+    const lp = Math.log10(gd.passHz), ls = Math.log10(gd.stopHz)
+    const xd = 10 ** (lp + ((ls - lp) * gd.d) / 100)
+    const dot = (x, r, color) => ({
+      type: 'circle', xref: 'x', yref: 'y', xsizemode: 'pixel', ysizemode: 'pixel',
+      xanchor: x * ax.scale, yanchor: gd.levelDb, x0: -r, x1: r, y0: -r, y1: r,
+      fillcolor: color, line: { color: C.bg, width: 1.5 },
+    })
+    return [
+      {
+        type: 'line', xref: 'x', yref: 'y', x0: gd.passHz * ax.scale, x1: gd.stopHz * ax.scale,
+        y0: gd.levelDb, y1: gd.levelDb, line: { color: C.centre, width: 2, dash: 'dot' },
+      },
+      dot(gd.passHz, 3.5, C.pass),
+      dot(gd.stopHz, 3.5, C.stop),
+      dot(xd, 6, ACCENT[th] ?? ACCENT.dark),
+    ]
+  }
+
+  $: shapes = showTemplate
+    ? [...buildShapes(geom, handles, axis, $theme, $hoveredFields, drag?.h?.id ?? hoverId), ...guideShapes(curveGuide, axis, $theme)]
+    : []
 
   // ── Pixel geometry / hit testing ─────────────────────────────────────────
   const HIT_EDGE = 6, HIT_CORNER = 9
@@ -175,10 +205,47 @@
     return best
   }
 
-  const CURSOR = { v: 'ew', f0: 'ew', h: 'ns', c: 'move' }
+  const CURSOR = { v: 'ew', f0: 'ew', h: 'ns', c: 'move', curve: 'col' }
   function setCursor(gd, h) {
     if (h) gd.dataset.tplCursor = CURSOR[h.kind]
     else delete gd.dataset.tplCursor
+  }
+
+  // ── Curve hit test (drag the designed |H| sideways → denorm) ─────────────
+  $: curveDb = $bodeData?.magnitude?.map(toDb) ?? null
+  const HIT_CURVE = 6
+
+  function lowerBound(arr, v) {
+    let lo = 0, hi = arr.length
+    while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < v) lo = m + 1; else hi = m }
+    return lo
+  }
+
+  function curveHit(px, py) {
+    if (!showTemplate || !curveDb || !$filterParams || $filterParams.filter_type === GD) return false
+    const ax = axesOf(gd)
+    if (!ax) return false
+    const { xa, ya } = ax
+    if (px < xa._offset || px > xa._offset + xa._length || py < ya._offset || py > ya._offset + ya._length) return false
+    const f = $bodeData.freq
+    const fAt = p => xa.l2d(xa.p2l(p - xa._offset)) / axis.scale
+    const i0 = Math.max(0, lowerBound(f, fAt(px - 10)) - 1)
+    const i1 = Math.min(f.length - 1, lowerBound(f, fAt(px + 10)) + 1)
+    let best = Infinity
+    for (let i = i0; i < i1; i++) {
+      if (curveDb[i] == null || curveDb[i + 1] == null) continue
+      const x0 = xPx(xa, f[i] * axis.scale), y0 = yPx(ya, curveDb[i])
+      const x1 = xPx(xa, f[i + 1] * axis.scale), y1 = yPx(ya, curveDb[i + 1])
+      const dx = x1 - x0, dy = y1 - y0, L2 = dx * dx + dy * dy
+      const t = L2 ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / L2)) : 0
+      best = Math.min(best, Math.hypot(px - (x0 + t * dx), py - (y0 + t * dy)))
+    }
+    return best <= HIT_CURVE
+  }
+
+  const pointerHz = px => {
+    const { xa } = axesOf(gd)
+    return xa.l2d(xa.p2l(px - xa._offset)) / axis.scale
   }
 
   const fieldsOf = h => [h.xf, h.yf].filter(Boolean)
@@ -224,7 +291,7 @@
     const [px, py] = rel(e)
     const h = hitTest(gd, px, py)
     if ((h?.id ?? null) !== hoverId) setHover(h)
-    setCursor(gd, h)
+    setCursor(gd, h ?? (curveHit(px, py) ? { kind: 'curve' } : null))
   }
 
   function onLeave() {
@@ -237,18 +304,33 @@
     if (!showTemplate || e.button !== 0 || drag) return
     const [px, py] = rel(e)
     const h = hitTest(gd, px, py)
-    if (!h) return
+    if (h) {
+      const { xa, ya } = axesOf(gd)
+      const hx = h.x != null ? xPx(xa, h.x * axis.scale) : px
+      const hy = h.y != null ? yPx(ya, h.y) : py
+      drag = { kind: 'handle', h, gx: px - hx, gy: py - hy, startForm: { ...$designForm }, moved: false }
+      dragging = true
+      setHover(h)
+      setCursor(gd, h)
+    } else if (curveHit(px, py) && liveDenorm.start()) {
+      // Geometry of the design being adjusted (not the live form, which may have pending edits).
+      const base = liveDenorm.base
+      const g = templateGeom(formFromParams(base, 1, DEFAULT_FORM), TWO_PI)
+      const grabHz = pointerHz(px)
+      const d = base.denorm ?? 0
+      drag = {
+        kind: 'curve', startDenorm: d, grabLog: Math.log10(grabHz),
+        gap: transitionNear(g, grabHz), levelDb: (g.passDb + g.stopDb) / 2, d, moved: false,
+      }
+      curveGuide = { ...drag.gap, levelDb: drag.levelDb, d }
+      setCursor(gd, { kind: 'curve' })
+    } else {
+      return
+    }
     // Ours: keep Plotly from starting a zoom / pan.
     e.stopPropagation()
     e.preventDefault()
     swallowMouse = true
-    const { xa, ya } = axesOf(gd)
-    const hx = h.x != null ? xPx(xa, h.x * axis.scale) : px
-    const hy = h.y != null ? yPx(ya, h.y) : py
-    drag = { h, gx: px - hx, gy: py - hy, startForm: { ...$designForm }, moved: false }
-    dragging = true
-    setHover(h)
-    setCursor(gd, h)
     window.addEventListener('pointermove', onDragMove)
     window.addEventListener('pointerup', onDragEnd)
     window.addEventListener('pointercancel', onDragCancel)
@@ -276,6 +358,17 @@
     const ax = axesOf(gd)
     if (!ax) return
     const [px, py] = lastMove
+    if (drag.kind === 'curve') {
+      // Pointer travel across the transition band maps to 0–100 % denorm.
+      const { passHz, stopHz } = drag.gap
+      const span = Math.log10(stopHz) - Math.log10(passHz)
+      const raw = drag.startDenorm + (100 * (Math.log10(pointerHz(px)) - drag.grabLog)) / span
+      const d = Math.round(Math.min(100, Math.max(0, raw)))
+      if (d !== drag.d) { drag.d = d; drag.moved = true; liveDenorm.update(d) }
+      curveGuide = { ...drag.gap, levelDb: drag.levelDb, d }
+      label = { x: px + 14, y: py - 30, text: `Denorm = ${d}%` }
+      return
+    }
     const tx = px - drag.gx, ty = py - drag.gy
     const xPlot = ax.xa.l2d(ax.xa.p2l(tx - ax.xa._offset))
     const yDb   = ax.ya.l2d(ax.ya.p2l(ty - ax.ya._offset))
@@ -296,19 +389,22 @@
     dragging = false
     label = null
     lastMove = null
+    curveGuide = null
+    if (d?.kind === 'curve') liveDenorm.end()
     return d
   }
 
   function onDragEnd() {
     if (moveFrame != null) applyMove()
     const d = endDrag()
-    // Q3: releasing a template drag re-designs.
-    if (d?.moved) runDesign()
+    // Q3: releasing a template drag re-designs (a curve drag already did, live).
+    if (d?.kind === 'handle' && d.moved) runDesign()
   }
 
   function onDragCancel() {
+    if (drag?.kind === 'curve' && drag.moved) liveDenorm.update(drag.startDenorm)
     const d = endDrag()
-    if (d) designForm.set(d.startForm)
+    if (d?.kind === 'handle') designForm.set(d.startForm)
   }
 
   function onKey(e) {
@@ -449,4 +545,6 @@
   :global(.js-plotly-plot[data-tpl-cursor='ns'] .drag) { cursor: ns-resize !important; }
   :global(.js-plotly-plot[data-tpl-cursor='move'] .nsewdrag),
   :global(.js-plotly-plot[data-tpl-cursor='move'] .drag) { cursor: move !important; }
+  :global(.js-plotly-plot[data-tpl-cursor='col'] .nsewdrag),
+  :global(.js-plotly-plot[data-tpl-cursor='col'] .drag) { cursor: col-resize !important; }
 </style>
