@@ -65,6 +65,19 @@ export function updateStage(id, patch) {
   if (found) scheduleRebuild(id)
 }
 
+/**
+ * Live preview: apply `patch` to the store without an engine rebuild (the
+ * Stages tab draws it from lib/stage-eval.js); commitStage() rebuilds once.
+ */
+export function previewStage(id, patch) {
+  stages.update(list => list.map(s => (s.id === id ? { ...s, ...(typeof patch === 'function' ? patch(s) : patch) } : s)))
+}
+
+/** Rebuild num / den after a preview. */
+export function commitStage(id) {
+  scheduleRebuild(id)
+}
+
 function scheduleRebuild(id) {
   if (inflight.get(id)) { queued.set(id, true); return }
   inflight.set(id, true)
@@ -115,11 +128,11 @@ export function parseRootRef(ref) {
   return m ? { stageId: Number(m[1]), kind: m[2], index: Number(m[3]) } : null
 }
 
-/** Drag a staged root to (re, im) rad/s; poles stay in the LHP. */
-export function dragStageRoot(ref, re, im, snapIm) {
+/** Drag a staged root to (re, im) rad/s; poles stay in the LHP. preview: no engine rebuild. */
+export function dragStageRoot(ref, re, im, snapIm, { preview = false } = {}) {
   const r = parseRootRef(ref)
   if (!r) return
-  updateStage(r.stageId, s => {
+  ;(preview ? previewStage : updateStage)(r.stageId, s => {
     const list = r.kind === 'p' ? s.poles : s.zeros
     if (r.index >= list.length) return {}
     const scale = Math.max(1e-12, ...s.poles.map(([a, b]) => Math.hypot(a, b)))

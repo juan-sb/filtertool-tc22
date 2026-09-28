@@ -252,6 +252,7 @@ Deviations from the brief worth knowing:
 - Stage roots are draggable on both PZ maps; wheel-Q works on poles and stage curves, not on cards (it would fight card-list scrolling).
 - A redesign keeps stage gain offsets / normalization but resets moved roots to the new design (with a notice).
 - E5 crosshair: upstream's Cursor toggle already gives the readout; Plotly double-click resets the view.
+- Q5 revisited: stage drags on the Stages tab are previewed from JS (`lib/stage-eval.js`, matches the engine to ~1e-13 dB) on a canvas overlay, neandertool-style; the engine still rebuilds once on release. Drag latency went from ~75 ms to ~21 ms (p50).
 
 ## 6. Suggested milestones
 

@@ -11,8 +11,9 @@
   import { tfAbs, toDb } from '../../lib/poly.js'
   import {
     updateStage, resetAllStages, isModified, rootsModified, rootRef, parseRootRef, dragStageRoot, wheelStageQ,
-    autoStage, moveStage,
+    autoStage, moveStage, previewStage, commitStage,
   } from '../../lib/stages.js'
+  import { stageDb } from '../../lib/stage-eval.js'
   import { formatSI } from '../../lib/si.js'
   import BodePlot from '../BodePlot.svelte'
   import PzMap from '../PzMap.svelte'
@@ -58,9 +59,13 @@
 
   // ── Traces ────────────────────────────────────────────────────────────────
   $: hovered = $hoveredStageId
-  $: traces = buildTraces($stages, bodes, $bodeData, axis, $theme, hovered)
+  // While a stage is previewed (dragged) the Plotly traces stay frozen, with the
+  // stage and the cascade faint as the "before" ghost; the live curves are drawn
+  // on the canvas overlay below.
+  let traces = []
+  $: if (!preview) traces = buildTraces($stages, bodes, $bodeData, axis, $theme, hovered, null)
 
-  function buildTraces(list, bmap, designed, ax, th, hov) {
+  function buildTraces(list, bmap, designed, ax, th, hov, ghostId) {
     const out = []
     const light = th === 'light'
     if (designed) {
@@ -72,10 +77,10 @@
     list.forEach((s, i) => {
       const b = bmap.get(s.id)?.bode
       if (!b) return
-      const on = hov === s.id, dim = hov != null && !on
+      const on = hov === s.id && ghostId == null, dim = (hov != null && !on) || s.id === ghostId
       out.push({
         x: b.freq.map(f => f * ax.scale), y: dbArr(b), mode: 'lines', name: s.name,
-        line: { color: colorOf(s, i, th), width: on ? 3 : 1.6 }, opacity: dim ? 0.3 : 1,
+        line: { color: colorOf(s, i, th), width: on ? 3 : 1.6 }, opacity: s.id === ghostId ? 0.22 : dim ? 0.3 : 1,
       })
     })
     // Cascade = point-wise sum of stage dB, once every stage has a curve
@@ -88,7 +93,7 @@
       })
       out.push({
         x: bs[0].freq.map(f => f * ax.scale), y, mode: 'lines', name: 'Cascade',
-        line: { color: light ? '#24292f' : '#e6edf3', width: 2, dash: 'dot' },
+        line: { color: light ? '#24292f' : '#e6edf3', width: 2, dash: 'dot' }, opacity: ghostId != null ? 0.22 : 1,
       })
     }
     // 0 dB reference marker per stage: where its normalization sets unity (plus the gain offset)
@@ -165,8 +170,108 @@
   }
   const isStageRoot = ref => !!parseRootRef(ref)
   const isStagePole = ref => parseRootRef(ref)?.kind === 'p'
-  const onMapDrag  = e => dragStageRoot(e.detail.ref, e.detail.re, e.detail.im, e.detail.snapIm)
+  const onMapDrag  = e => dragStageRoot(e.detail.ref, e.detail.re, e.detail.im, e.detail.snapIm, { preview: true })
   const onMapWheel = e => { const r = parseRootRef(e.detail.ref); if (r) wheelStageQ(r.stageId, e.detail.dir) }
+
+  // ── Live preview on a canvas overlay (the neandertool approach) ───────────
+  // Drags only change the stage in the store; the next animation frame
+  // evaluates its |H| in JS (lib/stage-eval.js, same maths as the engine) and
+  // draws it with the cascade. On release the engine rebuilds once and the
+  // overlay stays until the new Plotly curves are in.
+  let preview = null        // { id, phase: 'drag' | 'commit', num0, t0 }
+  let overlay
+  let drawFrame = null, frameNo = 0
+  const dbCache = new WeakMap()
+  const dbOf = b => { if (!b) return null; let a = dbCache.get(b); if (!a) { a = b.magnitude.map(m => toDb(m)); dbCache.set(b, a) } return a }
+
+  function beginPreview(id) {
+    preview = { id, phase: 'drag', num0: $stages.find(st => st.id === id)?.num, t0: 0 }
+    traces = buildTraces($stages, bodes, $bodeData, axis, $theme, null, id)
+    scheduleDraw()
+  }
+  function endPreview(changed) {
+    if (!preview) return
+    if (!changed) { preview = null; scheduleDraw(); return }
+    commitStage(preview.id)
+    preview = { ...preview, phase: 'commit', t0: performance.now() }
+    const mine = preview
+    setTimeout(() => { if (preview === mine) { preview = null; scheduleDraw() } }, 2000)
+  }
+  // Commit done once the rebuilt stage has its new Bode (or after a safety timeout).
+  $: if (preview?.phase === 'commit') {
+    const st = $stages.find(x => x.id === preview.id)
+    const done = !st || (st.num !== preview.num0 && bodes.get(st.id)?.num === st.num)
+    if (done || performance.now() - preview.t0 > 2000) { preview = null; scheduleDraw() }
+  }
+  $: if (preview) scheduleDraw(), [$stages, $theme, axis]
+
+  function scheduleDraw() { if (drawFrame == null) drawFrame = requestAnimationFrame(drawOverlay) }
+
+  function drawOverlay() {
+    drawFrame = null
+    if (!overlay || !gd) return
+    const dpr = window.devicePixelRatio || 1
+    const w = gd.clientWidth, h = gd.clientHeight
+    if (overlay.width !== Math.round(w * dpr) || overlay.height !== Math.round(h * dpr)) {
+      overlay.width = Math.round(w * dpr); overlay.height = Math.round(h * dpr)
+      overlay.style.width = `${w}px`; overlay.style.height = `${h}px`
+    }
+    const ctx = overlay.getContext('2d')
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    const fl = gd._fullLayout
+    const s = preview && $stages.find(st => st.id === preview.id)
+    if (!s || !fl?.xaxis) { overlay.dataset.frame = ''; return }
+    const xa = fl.xaxis, ya = fl.yaxis
+    const grid = bodes.get(s.id)?.bode?.freq ?? [...bodes.values()][0]?.bode?.freq
+    if (!grid) return
+    const db = stageDb(s, ft, grid)
+    const X = f => xa._offset + xa.l2p(xa.d2l(f * axis.scale))
+    const Y = d => ya._offset + ya.l2p(d)
+    const stroke = (ys, color, width, dash) => {
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash)
+      ctx.beginPath()
+      let pen = false
+      for (let i = 0; i < grid.length; i++) {
+        const v = ys[i]
+        if (!Number.isFinite(v)) { pen = false; continue }
+        const x = X(grid[i]), y = Y(v)
+        if (pen) ctx.lineTo(x, y); else { ctx.moveTo(x, y); pen = true }
+      }
+      ctx.stroke()
+    }
+    ctx.save()
+    ctx.beginPath(); ctx.rect(xa._offset, ya._offset, xa._length, ya._length); ctx.clip()
+    ctx.lineJoin = 'round'
+    const light = $theme === 'light'
+    const idx = $stages.indexOf(s)
+    // Cascade = this stage (live) + the others (their current Bode)
+    const others = $stages.filter(o => o.id !== s.id).map(o => dbOf(bodes.get(o.id)?.bode))
+    if (others.every(a => a && a.length === grid.length)) {
+      const cas = new Float64Array(grid.length)
+      for (let i = 0; i < grid.length; i++) { let v = db[i]; for (const a of others) v += a[i] ?? NaN; cas[i] = v }
+      stroke(cas, light ? '#24292f' : '#e6edf3', 2, [2, 4])
+    }
+    stroke(db, colorOf(s, idx, $theme), 3, [])
+    // Normalization point
+    const wN = normOmega(s, ft)
+    if (wN != null) {
+      const fN = wN === 0 ? grid[0] : wN === Infinity ? grid[grid.length - 1] : wN / TWO_PI
+      const yN = wN === 0 ? db[0] : wN === Infinity ? db[grid.length - 1] : stageDb(s, ft, [fN])[0]
+      if (Number.isFinite(yN)) {
+        const x = X(fN), y = Y(yN), r = 6
+        ctx.setLineDash([]); ctx.fillStyle = colorOf(s, idx, $theme); ctx.strokeStyle = light ? '#ffffff' : '#0d1117'; ctx.lineWidth = 1
+        ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fill(); ctx.stroke()
+      }
+    }
+    ctx.restore()
+    overlay.dataset.frame = String(++frameNo)
+  }
+
+  // Mini-map root drags go through the preview too.
+  function onMapDragStart(e) { const r = parseRootRef(e.detail.ref); if (r) beginPreview(r.stageId) }
+  function onMapDragEnd() { endPreview(true) }
+  function onMapClickRoot() { if (preview?.phase === 'drag') endPreview(false) }
 
   // ── Bode hover: nearest stage curve ───────────────────────────────────────
   let plot, gd
@@ -222,8 +327,9 @@
     frozenY = ya.range.slice()
     cdrag = {
       id: s.id, zeros: s.zeros, poles: s.poles, gainDb: s.gainDb ?? 0, x0: px, y0: py,
-      f0: xa.l2d(xa.p2l(px - xa._offset)), db0: ya.p2l(py - ya._offset),
+      f0: xa.l2d(xa.p2l(px - xa._offset)), db0: ya.p2l(py - ya._offset), moved: false,
     }
+    beginPreview(s.id)
     hoveredStageId.set(s.id)
     window.addEventListener('pointermove', onCurveMove)
     window.addEventListener('pointerup', onCurveUp)
@@ -242,7 +348,8 @@
     if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0 }
     const ratio = xa.l2d(xa.p2l(cdrag.x0 + dx - xa._offset)) / cdrag.f0
     const dDb = ya.p2l(cdrag.y0 + dy - ya._offset) - cdrag.db0
-    updateStage(cdrag.id, {
+    cdrag.moved = true
+    previewStage(cdrag.id, {
       zeros: scaleRoots(cdrag.zeros, ratio), poles: scaleRoots(cdrag.poles, ratio), gainDb: cdrag.gainDb + dDb,
     })
     const w0 = poleSummary(scaleRoots(cdrag.poles, ratio)).w0
@@ -260,12 +367,13 @@
     frozenY = null
     dragLabel = null
   }
-  function onCurveUp() { endCurveDrag() }
+  function onCurveUp() { const moved = cdrag?.moved; endCurveDrag(); endPreview(!!moved) }
   function onCurveKey(e) {
     if (e.key !== 'Escape' || !cdrag) return
     e.preventDefault()
-    updateStage(cdrag.id, { zeros: cdrag.zeros, poles: cdrag.poles, gainDb: cdrag.gainDb })
+    previewStage(cdrag.id, { zeros: cdrag.zeros, poles: cdrag.poles, gainDb: cdrag.gainDb })
     endCurveDrag()
+    endPreview(false)
   }
   // Wheel over a stage curve: its Q (2-pole stages)
   function onBodeWheel(e) {
@@ -344,6 +452,7 @@
   <div class="bode">
     <BodePlot bind:this={plot} {traces} {yLabel} {xRange} yRange={frozenY} xLabel={axis.xLabel} uirevision={`stages-${$plotUnit}`}
       filename="filtool_stages" {active}>
+      <canvas class="stage-overlay" bind:this={overlay} aria-hidden="true"></canvas>
       {#if dragLabel}
         <div class="drag-label" style="left: {dragLabel.x}px; top: {dragLabel.y}px">{dragLabel.text}</div>
       {/if}
@@ -363,7 +472,8 @@
     <div class="map">
       <PzMap groups={mapGroups} scale={sAxis.scale} compact {active} resetKey={$filterResult}
         filename="filtool_stages_pz" canDrag={isStageRoot} canWheel={isStagePole}
-        on:hover={onMapHover} on:drag={onMapDrag} on:wheel={onMapWheel} />
+        on:hover={onMapHover} on:dragstart={onMapDragStart} on:drag={onMapDrag} on:dragend={onMapDragEnd}
+        on:click={onMapClickRoot} on:wheel={onMapWheel} />
     </div>
 
     <div class="bar">
@@ -400,6 +510,7 @@
 <style>
   .stages-tab { display: flex; height: 100%; min-height: 0; overflow: hidden; }
   .bode { flex: 1; min-width: 0; position: relative; }
+  .stage-overlay { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 4; }
   .drag-label {
     position: absolute; pointer-events: none; z-index: 6;
     font-size: 0.76rem; font-family: ui-monospace, 'SF Mono', Consolas, monospace;
