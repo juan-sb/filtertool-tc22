@@ -12,6 +12,7 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte'
   import Plotly from 'plotly.js-dist'
   import { theme, showLegend, plotCursor } from '../stores/app.js'
+  import { zoomHistory, zoomButtons } from '../lib/zoom-history.js'
 
   export let groups = []
   export let scale = 1
@@ -86,7 +87,7 @@
       title: compact ? undefined : { text: title, standoff: 8, font: baseFont },
       gridcolor: C.grid, linecolor: C.axis, tickcolor: C.axis, tickfont: tickFont,
       zeroline: true, zerolinecolor: C.zero, zerolinewidth: 1.5,
-      ...(range ? { range, autorange: false } : { autorange: true }),
+      ...(range ? { range: range.slice(), autorange: false } : { autorange: true }),   // copy: Plotly mutates it on zoom
     })
     return {
       paper_bgcolor: C.bg, plot_bgcolor: C.bg,
@@ -111,10 +112,16 @@
     }
   }
 
+  // Back / Home / double-click as on the Bode plots; Home = autoscale (and
+  // drops the ranges frozen by a root drag).
+  let zoom = null
   const cfg = () => ({
     responsive: true, displaylogo: false, displayModeBar: !compact,
+    modeBarButtonsToRemove: ['autoScale2d', 'resetScale2d', 'zoomOut2d'],
+    ...zoomButtons(() => zoom),
     toImageButtonOptions: { format: 'svg', filename },
   })
+  const onDblClick = () => zoom?.reset()
 
   async function awaitMathJax() {
     try { const mj = globalThis.MathJax; if (mj?.startup?.promise) await mj.startup.promise } catch { /* optional */ }
@@ -295,6 +302,10 @@
   onMount(() => {
     Plotly.newPlot(container, buildTraces(), makeLayout(), cfg())
     initialized = true
+    zoom = zoomHistory(container, () => ({ x: null, y: null }), () => { frozen = null })
+    // Plotly lays a drag cover over the plot on mousedown, so the browser never
+    // fires a native dblclick; Plotly still emits its own double-click event.
+    container.on('plotly_doubleclick', onDblClick)
     resizeObserver = new ResizeObserver(() => { if (initialized && !destroyed && active && container) Plotly.Plots.resize(container) })
     resizeObserver.observe(container)
     container.addEventListener('pointerdown', onDown, true)
@@ -315,6 +326,7 @@
     window.removeEventListener('pointermove', onDragMove)
     window.removeEventListener('pointerup', onDragEnd)
     window.removeEventListener('pointerup', onPressEnd)
+    zoom?.detach()
     if (container) Plotly.purge(container)
   })
 
