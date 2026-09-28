@@ -6,7 +6,7 @@
   } from '../../stores/app.js'
   import { APPROX_NAMES, plotColor, compareLine, freqAxis, freqRangeFromParams, TWO_PI } from '../../lib/approx.js'
   import { GD, DEFAULT_FORM, buildParams, formFromParams, paramsClose, validateForm } from '../../lib/params.js'
-  import { templateGeom, templateHandles, dragTo, compliance, transitionNear } from '../../lib/template.js'
+  import { templateGeom, templateHandles, dragTo, compliance, transitionNear, symmetrizedGeom } from '../../lib/template.js'
   import { runDesign, liveDenorm } from '../../lib/design-action.js'
   import { formatSI } from '../../lib/si.js'
   import BodePlot from '../BodePlot.svelte'
@@ -31,6 +31,8 @@
   // An invalid form keeps showing the last valid template.
   $: geom    = showTemplate ? (formValid ? templateGeom($designForm, uf) : lastGeom) : null
   $: handles = templateHandles(geom)
+  // Edges mode: the geometrically symmetric template the engine actually designs to
+  $: symGeom = showTemplate ? symmetrizedGeom(geom) : null
   $: stale   = showTemplate && !!$filterParams && formValid &&
                !paramsClose(buildParams($designForm, toRad), $filterParams)
   $: comp    = showTemplate ? compliance(geom, $bodeData) : null
@@ -93,7 +95,9 @@
   }
   const X_OPEN = [1e-30, 1e30], Y_OPEN = [-1e4, 1e4]
 
-  function buildShapes(g, hs, ax, th, hovered, activeId) {
+  const SYM_LINE = { dark: '#8b949e', light: '#6e7781' }
+
+  function buildShapes(g, hs, ax, th, hovered, activeId, sym) {
     if (!g) return []
     const C = HANDLE[th] ?? HANDLE.dark
     const X = v => (v <= 0 ? X_OPEN[0] : v === Infinity ? X_OPEN[1] : v * ax.scale)
@@ -107,6 +111,18 @@
       ...g.pass.map(([a, b]) => rect(a, b, -Infinity, g.passDb)),
       ...g.stop.map(([a, b]) => rect(a, b, g.stopDb, Infinity)),
     ]
+    // Symmetrized template (what the engine designs to): only the edges that
+    // differ, as a very thin dotted grey line: the moved edge plus the step at its level.
+    if (sym) {
+      const line = { color: SYM_LINE[th] ?? SYM_LINE.dark, width: 1, dash: 'dot' }
+      const seg = (x0, x1, y0, y1) => ({ type: 'line', xref: 'x', yref: 'y', layer: 'above', x0: X(x0), x1: X(x1), y0: Y(y0), y1: Y(y1), line })
+      for (const c of sym.changed) {
+        const level = c.group === 'stop' ? g.stopDb : g.passDb
+        const [yA, yB] = c.group === 'stop' ? [level, Infinity] : [-Infinity, level]
+        out.push(seg(c.to, c.to, yA, yB))
+        out.push(seg(Math.min(c.from, c.to), Math.max(c.from, c.to), level, level))
+      }
+    }
     const lit = h => h.id === activeId || hovered.includes(h.xf) || hovered.includes(h.yf)
     for (const h of hs) {
       const color = C[h.group], on = lit(h)
@@ -161,7 +177,7 @@
   }
 
   $: shapes = showTemplate
-    ? [...buildShapes(geom, handles, axis, $theme, $hoveredFields, drag?.h?.id ?? hoverId), ...guideShapes(curveGuide, axis, $theme)]
+    ? [...buildShapes(geom, handles, axis, $theme, $hoveredFields, drag?.h?.id ?? hoverId, symGeom), ...guideShapes(curveGuide, axis, $theme)]
     : []
 
   // ── Pixel geometry / hit testing ─────────────────────────────────────────
@@ -466,6 +482,11 @@
       {#if $bodeData && comp?.stop}
         <span class="chip" class:bad={!comp.stop.ok} title="Worst-case margin below the stopband limit">
           Stop {comp.stop.ok ? '✓' : '✗'} <b>{fmtMargin(comp.stop)}</b>
+        </span>
+      {/if}
+      {#if symGeom}
+        <span class="chip muted" title="With band edges the engine keeps the {geom.ft === 2 ? 'passband' : 'stopband'} centre and tightens the looser {geom.ft === 2 ? 'stop' : 'pass'} edge so the band is geometrically symmetric; the design is made for that template">
+          Dotted grey: symmetric template used by the design
         </span>
       {/if}
       {#if !$filterParams}

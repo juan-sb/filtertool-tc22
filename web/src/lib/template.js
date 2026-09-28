@@ -184,3 +184,34 @@ export function transitionNear(g, fHz) {
   })
   return best
 }
+
+/**
+ * Band edges as the engine actually designs them in "Edges" mode: it keeps the
+ * inner band's geometric centre (BP: √(fp₁fp₂), BR: √(fa₁fa₂)) and tightens the
+ * outer edge that is less restrictive so the outer band is geometrically
+ * symmetric too (engine.rs normalized_parameters). Returns a geometry like
+ * templateGeom's with the adjusted edges plus `changed: [{ group, from, to }]`
+ * (the moved outer edges, Hz), or null when nothing changes (centre + BW mode,
+ * LP / HP / GD, or already symmetric).
+ */
+export function symmetrizedGeom(g) {
+  if (!g || g.f0bw || (g.ft !== BP && g.ft !== BR)) return null
+  const inner = (g.ft === BP ? g.passEdges : g.stopEdges).map(e => e.x)
+  const outer = (g.ft === BP ? g.stopEdges : g.passEdges).map(e => e.x)
+  const w02 = inner[0] * inner[1]
+  const lo = w02 / outer[1], hi = w02 / outer[0]
+  const o = outer.slice()
+  if (lo > o[0]) o[0] = lo
+  else if (hi < o[1]) o[1] = hi
+  const changed = o.flatMap((v, i) => (Math.abs(v / outer[i] - 1) < 1e-9 ? [] : [{ group: g.ft === BP ? 'stop' : 'pass', from: outer[i], to: v }]))
+  if (!changed.length) return null
+  const fp = g.ft === BP ? inner : o, fa = g.ft === BP ? o : inner
+  return {
+    ...g,
+    pass: g.ft === BP ? [fp] : [[0, fp[0]], [fp[1], Infinity]],
+    stop: g.ft === BP ? [[0, fa[0]], [fa[1], Infinity]] : [fa],
+    passEdges: g.passEdges.map((e, i) => ({ ...e, x: fp[i] })),
+    stopEdges: g.stopEdges.map((e, i) => ({ ...e, x: fa[i] })),
+    changed,
+  }
+}
