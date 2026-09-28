@@ -1,6 +1,6 @@
 <script>
   import { getWorkerApi }  from '../lib/worker-client.js'
-  import { freqRangeFromParams, TWO_PI, APPROX_NAMES, plotColor } from '../lib/approx.js'
+  import { freqRangeFromParams, TWO_PI } from '../lib/approx.js'
   import {
     LP, HP, BP, BR, GD, F0_BW, FREQS, MAX_ORDER, GD_APPROX,
     isBand as isBandType, buildParams, formFromParams, rescaleForm, validateForm, switchFilterType, paramsClose,
@@ -8,11 +8,12 @@
   import { withRoots } from '../lib/roots.js'
   import {
     designForm, filterParams, filterResult, bodeData, stages, bodePoints, uiEnabled, engineStatus,
-    pendingFormHydration, dataUnit, theme, colorMode, colorShuffle,
+    pendingFormHydration, dataUnit,
   } from '../stores/app.js'
   import Segmented  from './form/Segmented.svelte'
   import OrderRange from './form/OrderRange.svelte'
   import NumField   from './form/NumField.svelte'
+  import ApproxTiles from './form/ApproxTiles.svelte'
 
   // ── Constants ─────────────────────────────────────────────────────────────
   // Response-shape glyphs, 24×12 viewBox.
@@ -27,7 +28,6 @@
     { value: F0_BW, label: 'Centre + BW' },
     { value: FREQS, label: 'Band edges' },
   ]
-  const APPROX_SHORT = ['Butterworth', 'Cheb I', 'Cheb II', 'Cauer', 'Legendre', 'Bessel', 'Gauss']
 
   // ── Units ─────────────────────────────────────────────────────────────────
   // Form frequencies ($designForm) are held in the current data unit (Hz or
@@ -120,24 +120,12 @@
 
   <Segmented options={TYPE_OPTIONS} value={ft} ariaLabel="Filter type" on:change={onTypeChange} />
 
-  <div class="chips" role="radiogroup" aria-label="Approximation">
-    {#each APPROX_NAMES as name, i}
-      {@const allowed = !isGD || GD_APPROX.has(i)}
-      <button
-        type="button"
-        role="radio"
-        class="chip"
-        class:on={$designForm.approxType === i}
-        aria-checked={$designForm.approxType === i}
-        disabled={!allowed}
-        title={allowed ? name : `${name}: not available for group delay`}
-        on:click={() => setApprox(i)}
-      >
-        <span class="dot" style="background: {plotColor(i, $theme, $colorMode, $colorShuffle)}"></span>
-        {APPROX_SHORT[i]}
-      </button>
-    {/each}
-  </div>
+  <ApproxTiles
+    value={$designForm.approxType}
+    allowed={isGD ? GD_APPROX : null}
+    disabledTitle="not available for group delay"
+    on:change={e => setApprox(e.detail)}
+  />
   {#if formErrors.approxType}<p class="hint">{formErrors.approxType}</p>{/if}
 
   <div class="order-row">
@@ -271,42 +259,6 @@
     color: var(--danger);
     margin: -0.2rem 0 0;
     overflow-wrap: anywhere;
-  }
-
-  /* Approximation chips */
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    color: var(--text-muted);
-    cursor: pointer;
-    font: inherit;
-    font-size: 0.8rem;
-    padding: 0.2rem 0.6rem 0.2rem 0.45rem;
-    white-space: nowrap;
-  }
-  .chip:hover:not(:disabled):not(.on) { background: var(--surface-2); }
-  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .chip.on {
-    background: var(--selected);
-    border-color: var(--accent);
-    color: var(--text);
-    font-weight: 600;
-  }
-  .chip:disabled { opacity: 0.35; cursor: not-allowed; }
-  .dot {
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 50%;
-    flex-shrink: 0;
   }
 
   /* Order */
