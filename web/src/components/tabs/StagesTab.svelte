@@ -1,7 +1,7 @@
 <script>
-  import { stages, filterResult, bodePoints, theme, activeTab, plotUnit } from '../../stores/app.js'
+  import { stages, filterParams, bodePoints, theme, activeTab, plotUnit } from '../../stores/app.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
-  import { freqAxis } from '../../lib/approx.js'
+  import { freqAxis, freqRangeFromParams } from '../../lib/approx.js'
   import BodePlot from '../BodePlot.svelte'
 
   const COLORS = ['#58a6ff', '#3fb950', '#d29922', '#bc8cff', '#f78166', '#79c0ff', '#ffa657', '#39d353']
@@ -9,14 +9,8 @@
   let stageBodes = []
   let computeId  = 0
 
-  // Frequency range derived from the largest pole magnitude (natural frequency).
-  $: freqRange = (() => {
-    if (!$filterResult?.poles?.length) return { min: 0.1, max: 1e5 }
-    const maxOmega = Math.max(...$filterResult.poles.map(([r, i]) => Math.sqrt(r*r + i*i)))
-    if (maxOmega < 1e-9) return { min: 0.1, max: 1e5 }
-    const fRef = maxOmega / (2 * Math.PI)
-    return { min: fRef * 0.01, max: fRef * 100 }
-  })()
+  // Same x-range as the Magnitude / Compare plots.
+  $: freqRange = freqRangeFromParams($filterParams)
 
   $: recompute($stages, freqRange, $bodePoints)
 

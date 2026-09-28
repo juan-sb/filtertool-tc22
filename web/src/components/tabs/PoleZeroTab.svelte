@@ -1,9 +1,10 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import Plotly from 'plotly.js-dist'
-  import { filterResult, filterParams, stages, remainingPZ, comparisons, pzKey, theme, colorMode, colorShuffle, showLegend, activeTab, plotUnit, dataUnit, plotCursor } from '../../stores/app.js'
+  import { filterResult, filterParams, stages, remainingPZ, comparisons, theme, colorMode, colorShuffle, showLegend, activeTab, plotUnit, dataUnit, plotCursor } from '../../stores/app.js'
   import { getWorkerApi } from '../../lib/worker-client.js'
   import { APPROX_NAMES, plotColor, sPlaneAxis } from '../../lib/approx.js'
+  import { isComplexRoot, rootValue } from '../../lib/roots.js'
 
   let container
   let plotMounted = false
@@ -11,54 +12,50 @@
   let resizeObserver
   let wasActive = false
 
-  // Selection / hover state
-  let selectedKeys = new Set()
-  let hoveredKey = null   // pzKey of the list row currently under the mouse
+  // Selection / hover state, by root id (lib/roots.js): repeated roots such as
+  // the band-pass zeros at s = 0 stay individually selectable.
+  let selectedIds = new Set()
+  let hoveredId = null   // id of the list row currently under the mouse
 
   // Reset selection whenever a new filter is designed
-  $: $filterResult, selectedKeys = new Set(), hoveredKey = null
+  $: $filterResult, selectedIds = new Set(), hoveredId = null
 
   // Engine poles/zeros are rad/s: the plot follows plotUnit, the list dataUnit.
   $: axis     = sPlaneAxis($plotUnit)
   $: listAxis = sPlaneAxis($dataUnit)
 
   // Format a complex number for display, scaled into the target unit
-  function fmtComplex([r, i], k = 1) {
+  function fmtComplex({ re: r, im: i }, k = 1) {
     const rr = (r * k).toFixed(4)
     if (Math.abs(i) < 1e-9) return rr
     const sign = i >= 0 ? '+' : '−'
     return `${rr} ${sign} j${Math.abs(i * k).toFixed(4)}`
   }
 
-  function toggleKey(pt) {
-    const key = pzKey(pt)
-    const s = new Set(selectedKeys)
-    if (s.has(key)) {
-      s.delete(key)
-      if (isComplex(pt)) s.delete(conjugateKey(pt))
-    } else {
-      s.add(key)
-      if (isComplex(pt)) s.add(conjugateKey(pt))
+  // A complex root toggles together with its conjugate; real roots one at a time.
+  function toggleRoot(root) {
+    const s = new Set(selectedIds)
+    const on = !s.has(root.id)
+    for (const id of [root.id, root.conj]) {
+      if (id === null) continue
+      if (on) s.add(id); else s.delete(id)
     }
-    selectedKeys = s
+    selectedIds = s
   }
 
-  function isComplex([, i]) { return Math.abs(i) > 1e-9 }
-  function conjugateKey([r, i]) { return pzKey([r, -i]) }
+  $: selectedZeros = ($remainingPZ.zeros ?? []).filter(z => selectedIds.has(z.id))
+  $: selectedPoles = ($remainingPZ.poles ?? []).filter(p => selectedIds.has(p.id))
 
-  $: selectedZeros = ($remainingPZ.zeros ?? []).filter(z => selectedKeys.has(pzKey(z)))
-  $: selectedPoles = ($remainingPZ.poles ?? []).filter(p => selectedKeys.has(pzKey(p)))
-
-  $: selectionValid = (() => {
-    if (selectedPoles.length === 0) return false
-    for (const p of selectedPoles) {
-      if (isComplex(p) && !selectedKeys.has(conjugateKey(p))) return false
-    }
-    for (const z of selectedZeros) {
-      if (isComplex(z) && !selectedKeys.has(conjugateKey(z))) return false
-    }
-    return true
+  // Mirrors the engine's build_stage() limits.
+  $: selectionError = (() => {
+    if (selectedIds.size === 0) return ''
+    if (selectedPoles.length === 0) return 'Select at least one pole.'
+    if (selectedPoles.length > 2) return `A stage takes one or two poles (${selectedPoles.length} selected).`
+    if (selectedZeros.length > selectedPoles.length)
+      return `More zeros (${selectedZeros.length}) than poles (${selectedPoles.length}): the stage would be improper.`
+    return ''
   })()
+  $: selectionValid = selectedPoles.length > 0 && !selectionError
 
   const NORM_OPTIONS = ['Passband', 'ω→0', 'ω→∞', 'ω→ω0']
   let normtype = 'Passband'
@@ -70,16 +67,18 @@
     addError = ''
     try {
       const api = getWorkerApi()
-      const result = await api.buildStageFromZPK(selectedZeros, selectedPoles, 1, normtype, $filterParams?.filter_type ?? 0)
+      const zeros = selectedZeros.map(rootValue), poles = selectedPoles.map(rootValue)
+      const result = await api.buildStageFromZPK(zeros, poles, 1, normtype, $filterParams?.filter_type ?? 0)
       if (result.error) { addError = result.error; return }
       const id = Date.now()
       const name = `Stage ${($stages.length ?? 0) + 1}`
       stages.update(s => [...s, {
-        id, name,
-        zeros: selectedZeros, poles: selectedPoles,
+        id, name, normtype,
+        zeroIds: selectedZeros.map(r => r.id), poleIds: selectedPoles.map(r => r.id),
+        zeros, poles,
         gain: result.gain, num: result.num, den: result.den,
       }])
-      selectedKeys = new Set()
+      selectedIds = new Set()
     } catch (e) {
       addError = e.message
     } finally {
@@ -94,12 +93,9 @@
 
   $: mainColor = plotColor($filterParams?.approx_type ?? 0, $theme, $colorMode, $colorShuffle)
 
-  function buildTraces(fr, remaining, selKeys, hovKey, mainCol, compList, k) {
-    if (!fr) return []
-    const avail = new Set([
-      ...(remaining.zeros ?? []).map(pzKey),
-      ...(remaining.poles ?? []).map(pzKey),
-    ])
+  function buildTraces(fr, remaining, selIds, hovId, mainCol, compList, k) {
+    if (!fr?.roots) return []
+    const avail = new Set([...(remaining.zeros ?? []), ...(remaining.poles ?? [])].map(r => r.id))
     const θ = Array.from({ length: 361 }, (_, i) => i * Math.PI / 180)
     // Unit circle (|s| = 1 rad/s) only — Re/Im axes come from Plotly zerolines
     // (avoids double-thick axes).
@@ -109,22 +105,19 @@
         hoverinfo: 'skip', showlegend: false },
     ]
 
-    // Hover set: hovered key + its conjugate (so both of a complex pair light up)
+    // Hover set: hovered root + its conjugate (so both of a complex pair light up)
     const hoverSet = new Set()
-    if (hovKey) {
-      hoverSet.add(hovKey)
-      // find the point to get its conjugate
-      const allPts = [...(remaining.zeros ?? []), ...(remaining.poles ?? [])]
-      const hovPt = allPts.find(pt => pzKey(pt) === hovKey)
-      if (hovPt && isComplex(hovPt)) hoverSet.add(conjugateKey(hovPt))
+    if (hovId) {
+      hoverSet.add(hovId)
+      const hovRoot = [...fr.roots.zeros, ...fr.roots.poles].find(r => r.id === hovId)
+      if (hovRoot && isComplexRoot(hovRoot)) hoverSet.add(hovRoot.conj)
     }
 
     // Partition each group into: normal / hoverOnly / selOnly / selHover
     function partition(pts) {
       const normal = [], hoverOnly = [], selOnly = [], selHover = []
       for (const pt of pts) {
-        const k = pzKey(pt)
-        const h = hoverSet.has(k), s = selKeys.has(k)
+        const h = hoverSet.has(pt.id), s = selIds.has(pt.id)
         if (s && h)       selHover.push(pt)
         else if (s)       selOnly.push(pt)
         else if (h)       hoverOnly.push(pt)
@@ -133,8 +126,8 @@
       return { normal, hoverOnly, selOnly, selHover }
     }
 
-    const usedPoles = fr.poles.filter(p => !avail.has(pzKey(p)))
-    const usedZeros = fr.zeros.filter(z => !avail.has(pzKey(z)))
+    const usedPoles = fr.roots.poles.filter(p => !avail.has(p.id))
+    const usedZeros = fr.roots.zeros.filter(z => !avail.has(z.id))
     const { normal: nP, hoverOnly: hoP, selOnly: soP, selHover: shP } = partition(remaining.poles ?? [])
     const { normal: nZ, hoverOnly: hoZ, selOnly: soZ, selHover: shZ } = partition(remaining.zeros ?? [])
 
@@ -142,8 +135,9 @@
     for (const comp of (compList ?? [])) {
       const cc = plotColor(comp.approxType, $theme, $colorMode, $colorShuffle)
       const cn = APPROX_NAMES[comp.approxType]
-      if (comp.filterResult.poles.length) out.push(mkX(comp.filterResult.poles, cc, 7, `${cn} poles`, k))
-      if (comp.filterResult.zeros.length) out.push(mkO(comp.filterResult.zeros, cc, 7, `${cn} zeros`, k))
+      const asRoots = list => list.map(([re, im]) => ({ re, im }))
+      if (comp.filterResult.poles.length) out.push(mkX(asRoots(comp.filterResult.poles), cc, 7, `${cn} poles`, k))
+      if (comp.filterResult.zeros.length) out.push(mkO(asRoots(comp.filterResult.zeros), cc, 7, `${cn} zeros`, k))
     }
 
     // Main filter
@@ -162,7 +156,7 @@
 
   function mkX(pts, color, size, name, k) {
     return {
-      x: pts.map(([r]) => r * k), y: pts.map(([, i]) => i * k),
+      x: pts.map(p => p.re * k), y: pts.map(p => p.im * k),
       mode: 'markers', name,
       marker: { symbol: 'x', size, color, line: { width: 2, color } },
       hovertemplate: pts.map(p => `${fmtComplex(p, k)}<extra>${name}</extra>`),
@@ -171,7 +165,7 @@
 
   function mkO(pts, color, size, name, k) {
     return {
-      x: pts.map(([r]) => r * k), y: pts.map(([, i]) => i * k),
+      x: pts.map(p => p.re * k), y: pts.map(p => p.im * k),
       mode: 'markers', name,
       marker: { symbol: 'circle-open', size, color, line: { width: 2 } },
       hovertemplate: pts.map(p => `${fmtComplex(p, k)}<extra>${name}</extra>`),
@@ -233,7 +227,7 @@
     if (!plotMounted || destroyed || !container) return
     Plotly.react(
       container,
-      buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, axis.scale),
+      buildTraces($filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, axis.scale),
       mkLayout(),
       cfg,
     )
@@ -249,7 +243,7 @@
 
   function mountPlot() {
     if (!container || destroyed) return
-    Plotly.newPlot(container, buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
+    Plotly.newPlot(container, buildTraces($filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
     plotMounted = true
     wasActive = $activeTab === 'poleZero'
     resizeObserver = new ResizeObserver(() => {
@@ -267,10 +261,10 @@
 
   function updatePlot() {
     if (!plotMounted || destroyed || !container) return
-    Plotly.react(container, buildTraces($filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
+    Plotly.react(container, buildTraces($filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, axis.scale), mkLayout(), cfg)
   }
 
-  $: updatePlot(), [$filterResult, $remainingPZ, selectedKeys, hoveredKey, mainColor, $comparisons, $theme, $colorMode, $colorShuffle, $showLegend, axis, $plotCursor]
+  $: updatePlot(), [$filterResult, $remainingPZ, selectedIds, hoveredId, mainColor, $comparisons, $theme, $colorMode, $colorShuffle, $showLegend, axis, $plotCursor]
 
   onMount(mountPlot)
   onDestroy(() => {
@@ -295,13 +289,10 @@
       {#if ($remainingPZ.poles ?? []).length === 0}
         <p class="hint-sm">All poles assigned.</p>
       {:else}
-        <!-- Keyed by position too: band-pass/reject filters repeat poles/zeros
-             at the origin, and a value-only key collides. -->
-        {#each ($remainingPZ.poles ?? []) as p, i (`${pzKey(p)}#${i}`)}
-          {@const key = pzKey(p)}
-          <label class="pz-row" class:sel={selectedKeys.has(key)} class:hov={hoveredKey === key}
-            on:mouseenter={() => hoveredKey = key} on:mouseleave={() => hoveredKey = null}>
-            <input type="checkbox" checked={selectedKeys.has(key)} on:change={() => toggleKey(p)} />
+        {#each ($remainingPZ.poles ?? []) as p (p.id)}
+          <label class="pz-row" class:sel={selectedIds.has(p.id)} class:hov={hoveredId === p.id}
+            on:mouseenter={() => hoveredId = p.id} on:mouseleave={() => hoveredId = null}>
+            <input type="checkbox" checked={selectedIds.has(p.id)} on:change={() => toggleRoot(p)} />
             <span class="val" style="color: {mainColor}">{fmtComplex(p, listAxis.scale)}</span>
           </label>
         {/each}
@@ -312,11 +303,10 @@
         {#if ($remainingPZ.zeros ?? []).length === 0}
           <p class="hint-sm">All zeros assigned.</p>
         {:else}
-          {#each ($remainingPZ.zeros ?? []) as z, i (`${pzKey(z)}#${i}`)}
-            {@const key = pzKey(z)}
-            <label class="pz-row" class:sel={selectedKeys.has(key)} class:hov={hoveredKey === key}
-              on:mouseenter={() => hoveredKey = key} on:mouseleave={() => hoveredKey = null}>
-              <input type="checkbox" checked={selectedKeys.has(key)} on:change={() => toggleKey(z)} />
+          {#each ($remainingPZ.zeros ?? []) as z (z.id)}
+            <label class="pz-row" class:sel={selectedIds.has(z.id)} class:hov={hoveredId === z.id}
+              on:mouseenter={() => hoveredId = z.id} on:mouseleave={() => hoveredId = null}>
+              <input type="checkbox" checked={selectedIds.has(z.id)} on:change={() => toggleRoot(z)} />
               <span class="val" style="color: {mainColor}">{fmtComplex(z, listAxis.scale)}</span>
             </label>
           {/each}
@@ -325,8 +315,8 @@
 
       <div class="div"></div>
 
-      {#if selectedKeys.size > 0 && !selectionValid}
-        <p class="warn">Select at least one pole.</p>
+      {#if selectionError}
+        <p class="warn">{selectionError}</p>
       {/if}
       {#if addError}<p class="err">{addError}</p>{/if}
 

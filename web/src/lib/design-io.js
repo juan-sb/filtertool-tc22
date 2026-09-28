@@ -4,6 +4,7 @@
  */
 
 import { freqRangeFromParams } from './approx.js'
+import { withRoots } from './roots.js'
 
 export const DESIGN_FILE_VERSION = 1
 export const DESIGN_FILE_EXT = '.ftjson'
@@ -31,6 +32,7 @@ export function serializeDesign(state) {
       name: s.name,
       zeros: s.zeros,
       poles: s.poles,
+      normtype: s.normtype,
       gain: s.gain,
       num: s.num,
       den: s.den,
@@ -136,26 +138,39 @@ export function pickDesignFile() {
 export async function materializeDesign(design, api, onStatus) {
   onStatus?.('Loading design…')
   const params = design.filterParams
-  const result = await api.filterDesign(params)
-  if (result.error) throw new Error(result.error.split('\n').at(-2) ?? result.error)
+  const raw = await api.filterDesign(params)
+  if (raw.error) throw new Error(raw.error.split('\n').at(-2) ?? raw.error)
+  const result = withRoots(raw)
 
   const range = freqRangeFromParams(params)
   const pts = design.bodePoints
   onStatus?.('Computing Bode…')
   const bode = await api.computeBode(result.num, result.den, range.min, range.max, pts)
 
-  // Keep only stages whose poles/zeros still exist on the redesigned filter.
-  const okZ = new Set((result.zeros ?? []).map(pzKey))
-  const okP = new Set((result.poles ?? []).map(pzKey))
+  // Re-attach saved stages to the redesigned roots. Each saved value claims one
+  // unused root (repeated roots stay distinct); values that no longer exist are dropped.
+  const usedIds = new Set()
+  const claim = (roots, values) => {
+    const out = []
+    for (const v of values ?? []) {
+      const root = matchRoot(roots, v, usedIds)
+      if (!root) continue
+      usedIds.add(root.id)
+      out.push(root)
+    }
+    return out
+  }
   const stages = []
   for (const s of design.stages) {
-    const zeros = (s.zeros ?? []).filter(z => okZ.has(pzKey(z)))
-    const poles = (s.poles ?? []).filter(p => okP.has(pzKey(p)))
+    const zeros = claim(result.roots.zeros, s.zeros)
+    const poles = claim(result.roots.poles, s.poles)
     if (!poles.length && !zeros.length) continue
     stages.push({
       id: s.id ?? Date.now() + stages.length,
       name: s.name || `Stage ${stages.length + 1}`,
-      zeros, poles,
+      normtype: s.normtype ?? 'Passband',
+      zeroIds: zeros.map(r => r.id), poleIds: poles.map(r => r.id),
+      zeros: zeros.map(r => [r.re, r.im]), poles: poles.map(r => [r.re, r.im]),
       gain: s.gain, num: s.num, den: s.den,
     })
   }
@@ -171,6 +186,14 @@ export async function materializeDesign(design, api, onStatus) {
   }
 }
 
-function pzKey([r, i]) {
-  return `${Number(r).toFixed(10)},${Number(i).toFixed(10)}`
+/** Nearest unused root to [re, im], within a relative tolerance. */
+function matchRoot(roots, [re, im], usedIds) {
+  let best = null, bestD = Infinity
+  for (const r of roots) {
+    if (usedIds.has(r.id)) continue
+    const d = Math.hypot(r.re - Number(re), r.im - Number(im))
+    if (d < bestD) { bestD = d; best = r }
+  }
+  const tol = 1e-7 * Math.max(1, Math.hypot(Number(re), Number(im)))
+  return best && bestD <= tol ? best : null
 }
