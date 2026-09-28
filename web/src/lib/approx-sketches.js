@@ -4,18 +4,18 @@
 // "ghost" of the same spec, so e.g. Legendre's steeper monotonic edge or
 // Bessel's gentle roll-off read by contrast. Computed once per session.
 //
-// Spec: Gp = 0.6, Ga = 0.4 for all; N = 5 except Cauer. At a fixed order an
-// elliptic design spends loose specs on selectivity: at N ≥ 3 its zeros land at
-// ω ≈ 1.00–1.02, on top of the passband edge. N = 2 puts the zero at ω ≈ 1.17,
-// and (even order) the stopband climbs back to Ga, a full-height bounce.
+// Spec: N = 5, Gp = 0.6, Ga = 0.4, except Cauer (N = 3, Gp = 0.8, ω ≤ 1.6).
+// At a fixed order an elliptic design spends loose specs on selectivity: with
+// Gp = 0.6 its zero lands at ω ≈ 1.01, on top of the passband edge. Gp = 0.8
+// moves it to ω ≈ 1.05 and the narrower span gives the transition room.
 
 import { buildParams, DEFAULT_FORM, LP } from './params.js'
 
 export const SKETCH_W = 40, SKETCH_H = 20
 
-const BASE = { n: 5, gp: 0.6, ga: 0.4 }
-const SPECS = [BASE, BASE, BASE, { ...BASE, n: 2 }, BASE, BASE, BASE]
-const W_MAX = 2.2, POINTS = 300, A_MAX = 1.05
+const BASE = { n: 5, gp: 0.6, ga: 0.4, wMax: 2.2 }
+const SPECS = [BASE, BASE, BASE, { ...BASE, n: 3, gp: 0.8, wMax: 1.6 }, BASE, BASE, BASE]
+const POINTS = 300, A_MAX = 1.05
 
 let cache = null
 
@@ -29,7 +29,7 @@ function polyAbs(c, w) {
 /** y of amplitude a in sketch coordinates. */
 export const sketchY = a => 1 + (1 - Math.min(A_MAX, a) / A_MAX) * (SKETCH_H - 2)
 
-function toPath({ num, den, zeros }) {
+function toPath({ num, den, zeros }, W_MAX) {
   // Dense grid plus the exact transmission-zero frequencies, so nulls reach 0.
   const ws = Array.from({ length: POINTS + 1 }, (_, i) => (i / POINTS) * W_MAX)
   for (const [re, im] of zeros ?? []) if (Math.abs(re) < 1e-9 && im > 0 && im < W_MAX) ws.push(im)
@@ -38,14 +38,14 @@ function toPath({ num, den, zeros }) {
   return `M${pts.join('L')}`
 }
 
-async function design(api, approxType, { n, gp, ga }) {
+async function design(api, approxType, { n, gp, ga, wMax }) {
   const form = {
     ...DEFAULT_FORM, filterType: LP, approxType, nMin: n, nMax: n, fp: 1, fa: 2, gainDb: 0, denorm: 0,
     apDb: -20 * Math.log10(gp), aaDb: -20 * Math.log10(ga),
   }
   // toRad = 1: the sketch spec is already in rad/s
   const r = await api.filterDesign(buildParams(form, 1))
-  return r.error ? null : toPath(r)
+  return r.error ? null : toPath(r, wMax)
 }
 
 /**
