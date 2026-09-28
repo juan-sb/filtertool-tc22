@@ -113,7 +113,10 @@
     try { const mj = globalThis.MathJax; if (mj?.startup?.promise) await mj.startup.promise } catch { /* optional */ }
   }
 
+  let staleWhileHidden = false
+
   async function refresh() {
+    if (initialized && !active) { staleWhileHidden = true; return }
     if (!initialized || destroyed || !container || !active) return
     const token = ++refreshToken
     await awaitMathJax()
@@ -132,6 +135,8 @@
 
   $: if (initialized && active && !wasActive) {
     wasActive = true
+    // Stale data: redraw in the same update that shows the tab (no stale first frame).
+    if (staleWhileHidden) { staleWhileHidden = false; refresh() }
     requestAnimationFrame(() => requestAnimationFrame(() => { if (container) { Plotly.Plots.resize(container); schedule(0) } }))
   } else if (!active) {
     wasActive = false

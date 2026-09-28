@@ -172,8 +172,20 @@
     }, delayMs)
   }
 
+  // Props that changed while this keep-alive tab was hidden (its refresh is skipped).
+  let staleWhileHidden = false
+
   $: if (initialized && active && !wasActive) {
     wasActive = true
+    // Stale data: redraw now, in the same update that shows the tab, so the
+    // first painted frame is current (a timer here showed the old curve for
+    // ~90 ms, a visible flicker).
+    if (staleWhileHidden) {
+      staleWhileHidden = false
+      lastInputs = [traces, _plotPrefs, yRange, xRange, uirevision, logX, yDtick]
+      lastShapes = shapes
+      refreshPlot()
+    }
     // Hidden keep-alive tabs typeset MathJax at 0 size; re-draw once visible.
     scheduleRefresh(50)
   } else if (!active) {
@@ -208,7 +220,8 @@
 
   afterUpdate(() => {
     // Skip inactive tabs — overlapping reacts while hidden leave MathJax titles blank.
-    if (!initialized || destroyed || !active) return
+    if (initialized && !destroyed && !active) { staleWhileHidden = true; return }
+    if (!initialized || destroyed) return
     const inputs = [traces, _plotPrefs, yRange, xRange, uirevision, logX, yDtick]
     const same = lastInputs && inputs.every((v, i) => v === lastInputs[i])
     if (same && refreshTimer == null) {
